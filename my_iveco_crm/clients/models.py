@@ -14,12 +14,33 @@ class Client(models.Model):
         return self.name
 
 class Truck(models.Model):
+    TRANSMISSION_CHOICES = [
+        ('MANUAL', 'Ручна'),
+        ('AUTOMATIC', 'Автоматична'),
+    ]
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
-    vin_code = models.CharField(max_length=17, unique=True, verbose_name="VIN-код")
+    
+    # Поле для повного VIN-коду
+    full_vin = models.CharField(max_length=17, unique=True, verbose_name="Повний VIN-код")
+    # Поле, що заповнюється автоматично останніми 7 символами
+    last_seven_vin = models.CharField(max_length=7, blank=True, verbose_name="Останні 7 символів VIN")
     model = models.CharField(max_length=100, verbose_name="Модель")
     license_plate = models.CharField(max_length=20, verbose_name="Держномер")
     year_of_manufacture = models.PositiveIntegerField(verbose_name="Рік випуску")
-    current_mileage = models.PositiveIntegerField(default=0, verbose_name="Поточний пробіг (км)") 
+    current_mileage = models.PositiveIntegerField(default=0, verbose_name="Поточний пробіг (км)")
+    transmission_type = models.CharField(
+        max_length=10,
+        choices=TRANSMISSION_CHOICES,
+        default='MANUAL',
+        verbose_name="Тип трансмісії"
+    )
 
     def __str__(self):
         return f"Iveco {self.model} ({self.license_plate})"
+
+    def save(self, *args, **kwargs):
+        # Логіка автоматичного заповнення останніх 7 символів VIN-коду
+        if self.full_vin and len(self.full_vin) >= 7:
+            self.last_seven_vin = self.full_vin[-7:]
+        super().save(*args, **kwargs)
