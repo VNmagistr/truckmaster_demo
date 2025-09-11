@@ -6,6 +6,7 @@ class Employee(models.Model):
     Модель для зберігання інформації про працівників СТО.
     """
     name = models.CharField(max_length=255, verbose_name="Ім'я")
+    surname = models.CharField(max_length=255, blank=True, verbose_name="Прізвище")
     position = models.CharField(max_length=100, verbose_name="Посада")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
 
@@ -22,7 +23,7 @@ class ServiceOrder(models.Model):
         ('CANCELED', 'Скасовано'),
         ('PAID', 'Оплачено'),
     ]
-    
+    order_number = models.CharField(max_length=20, primary_key=True, verbose_name="Номер замовлення")
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='IN_PROGRESS', verbose_name="Статус")
