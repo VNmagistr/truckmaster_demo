@@ -24,9 +24,11 @@ class TruckListSerializer(serializers.ModelSerializer):
             'specific_model_name',
             'license_plate',
             'client',
+            'client_id',
             'base_model',
             'current_mileage',
-            'emission_standard' # Додали стандарт
+            'emission_standard', # Додали стандарт
+            'last_seven_vin',
         ]
 
 # А цей - для створення та редагування (POST, PUT)
