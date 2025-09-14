@@ -20,11 +20,16 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 # Імпортуємо новий ViewSet
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
+from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
+from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet # 1. Імпортуємо
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet)
 router.register(r'trucks', TruckViewSet)
-router.register(r'base-models', IvecoBaseModelViewSet) # Новий маршрут
+router.register(r'base-models', IvecoBaseModelViewSet)
+router.register(r'service-orders', ServiceOrderViewSet)
+router.register(r'service-works', ServiceWorkViewSet) # 2. Додаємо
+router.register(r'used-parts', UsedPartViewSet) # 3. Додаємо
 
 urlpatterns = [
     path('admin/', admin.site.urls),
