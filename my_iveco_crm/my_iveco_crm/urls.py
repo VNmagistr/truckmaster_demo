@@ -16,8 +16,18 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from clients.views import ClientViewSet, TruckViewSet
+
+# Створюємо роутер
+router = DefaultRouter()
+# Реєструємо наші ViewSets
+router.register(r'clients', ClientViewSet)
+router.register(r'trucks', TruckViewSet)
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('admin/', admin.site.urls),
+    # Додаємо URL-адреси, згенеровані роутером
+    path('api/', include(router.urls)), 
 ]
