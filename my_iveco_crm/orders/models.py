@@ -1,13 +1,15 @@
+# orders/models.py
+
 from django.db import models
-from clients.models import Client, Truck, IvecoModel
+from clients.models import Client, Truck, IvecoBaseModel
 
 class Employee(models.Model):
     """
-    Модель для зберігання інформації про працівників СТО.
+    Працівник СТО (майстер, менеджер).
     """
-    name = models.CharField(max_length=255, verbose_name="Ім'я")
+    name = models.CharField(max_length=255, verbose_name="Ім'я та прізвище")
     position = models.CharField(max_length=100, verbose_name="Посада")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Номер телефону")
 
     class Meta:
         verbose_name = "Працівник"
@@ -18,39 +20,40 @@ class Employee(models.Model):
 
 class ServiceOrder(models.Model):
     """
-    Модель для обліку замовлень-нарядів.
+    Замовлення-наряд, основний документ по роботі з автомобілем.
     """
-    STATUS_CHOICES = [
-        ('IN_PROGRESS', 'В роботі'),
-        ('COMPLETED', 'Виконано'),
-        ('CANCELED', 'Скасовано'),
-        ('PAID', 'Оплачено'),
-    ]
-    
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Автомобіль")
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
-    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='IN_PROGRESS', verbose_name="Статус")
-    start_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата початку")
-    end_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата завершення")
-    description = models.TextField(blank=True, verbose_name="Опис робіт")
+    
+    class StatusChoices(models.TextChoices):
+        NEW = 'new', 'Нове'
+        IN_PROGRESS = 'in_progress', 'В роботі'
+        COMPLETED = 'completed', 'Завершено'
+        CANCELED = 'canceled', 'Скасовано'
+
+    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NEW, verbose_name="Статус")
+    description = models.TextField(verbose_name="Причина звернення / Скарги клієнта")
+    start_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата відкриття")
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата закриття")
     total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Загальна вартість")
 
     class Meta:
         verbose_name = "Замовлення-наряд"
         verbose_name_plural = "Замовлення-наряди"
+        ordering = ['-start_date']
 
     def __str__(self):
-        return f"Замовлення №{self.id} для {self.client.name} ({self.truck.license_plate})"
+        return f"Замовлення №{self.id} для {self.truck.license_plate}"
 
 class ServiceWork(models.Model):
     """
-    Модель для деталізації робіт в замовленні-наряді.
+    Конкретна робота, виконана в рамках замовлення-наряду.
     """
-    service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, verbose_name="Замовлення-наряд")
-    job_description = models.CharField(max_length=255, verbose_name="Назва роботи")
-    labor_cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Вартість робіт")
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Тривалість (години)")
+    service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
+    job_description = models.CharField(max_length=255, verbose_name="Опис роботи")
+    labor_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Вартість роботи")
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
 
     class Meta:
         verbose_name = "Виконана робота"
@@ -61,30 +64,23 @@ class ServiceWork(models.Model):
 
 class MaintenanceRule(models.Model):
     """
-    Модель для зберігання правил регламентних робіт, 
-    з урахуванням типу трансмісії та моделей Iveco.
+    Правило для відстеження регламентних робіт.
     """
-    name = models.CharField(max_length=255, verbose_name="Назва роботи")
+    name = models.CharField(max_length=255, verbose_name="Назва регламентної роботи")
     interval_km = models.PositiveIntegerField(verbose_name="Інтервал пробігу (км)")
-    
-    TRANSMISSION_CHOICES = [
-        ('ALL', 'Для всіх типів'),
-        ('MANUAL', 'Ручна'),
-        ('ROBOTIC', 'Роботизована'),
-        ('AUTOMATIC', 'Автоматична'),
-    ]
-    applicable_transmission = models.CharField(
-        max_length=15,
-        choices=TRANSMISSION_CHOICES,
-        default='ALL',
-        verbose_name="Застосовується до типу трансмісії"
-    )
+    applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до базових моделей")
 
-    applicable_models = models.ManyToManyField(
-        IvecoModel, 
-        blank=True, 
-        verbose_name="Застосовується до моделей Iveco",
-        help_text="Оберіть моделі Iveco, до яких застосовується це правило. Якщо не обрано жодної, правило застосовується до всіх моделей."
+    class TransmissionChoices(models.TextChoices):
+        ANY = 'any', 'Будь-яка'
+        MANUAL = 'manual', 'Механічна'
+        AUTOMATIC = 'automatic', 'Автоматична'
+        ROBOT = 'robot', 'Робот'
+
+    applicable_transmission = models.CharField(
+        max_length=10,
+        choices=TransmissionChoices.choices,
+        default=TransmissionChoices.ANY,
+        verbose_name="Застосовується до типу КПП"
     )
 
     class Meta:
@@ -92,23 +88,21 @@ class MaintenanceRule(models.Model):
         verbose_name_plural = "Правила регламентів"
 
     def __str__(self):
-        models_str = ", ".join([model.name for model in self.applicable_models.all()])
-        if models_str:
-            return f"{self.name} ({self.applicable_transmission}) для {models_str} (кожні {self.interval_km} км)"
-        return f"{self.name} ({self.applicable_transmission}) для всіх моделей (кожні {self.interval_km} км)"
+        return f"{self.name} (кожні {self.interval_km} км)"
 
 class MaintenanceLog(models.Model):
     """
-    Модель для журналу виконаних регламентних робіт.
+    Журнал фіксації виконаних регламентних робіт для конкретної вантажівки.
     """
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
-    rule = models.ForeignKey(MaintenanceRule, on_delete=models.CASCADE, verbose_name="Правило")
+    rule = models.ForeignKey(MaintenanceRule, on_delete=models.CASCADE, verbose_name="Виконане правило")
     completion_date = models.DateField(auto_now_add=True, verbose_name="Дата виконання")
     completion_mileage = models.PositiveIntegerField(verbose_name="Пробіг на момент виконання (км)")
 
     class Meta:
-        verbose_name = "Запис регламенту"
+        verbose_name = "Запис у журналі регламенту"
         verbose_name_plural = "Журнал регламентних робіт"
+        ordering = ['-completion_date']
 
     def __str__(self):
-        return f"Виконано {self.rule.name} на {self.truck.license_plate} ({self.completion_date})"
+        return f"Виконано '{self.rule.name}' для {self.truck.license_plate}"
