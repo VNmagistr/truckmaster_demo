@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .models import ServiceOrder, ServiceWork
-from inventory.models import UsedPart   
+from .models import ServiceOrder, ServiceWork, Employee
+from inventory.models import UsedPart 
 # Додаємо нові серіалізатори
 from .serializers import (
     ServiceOrderListSerializer, 
     ServiceOrderDetailSerializer,
     ServiceWorkSerializer,
-    UsedPartSerializer
+    UsedPartSerializer,
+    EmployeeSerializer 
 )
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
@@ -23,6 +24,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
     serializer_class = ServiceWorkSerializer
+
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
 
 class UsedPartViewSet(viewsets.ModelViewSet):
     queryset = UsedPart.objects.all()
