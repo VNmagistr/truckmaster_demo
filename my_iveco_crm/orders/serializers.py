@@ -4,6 +4,12 @@ from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
+# НОВИЙ СЕРІАЛІЗАТОР
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id', 'name', 'position']
+
 class UsedPartSerializer(serializers.ModelSerializer):
     part = PartSerializer(read_only=True)
 
@@ -12,11 +18,16 @@ class UsedPartSerializer(serializers.ModelSerializer):
         fields = ['id', 'part', 'quantity']
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
-    used_parts = UsedPartSerializer(many=True, read_only=True) # Вкладаємо запчастини
+    used_parts = UsedPartSerializer(many=True, read_only=True)
+    # Додаємо поле employee, щоб воно було в POST/PUT запитах
+    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all())
 
     class Meta:
         model = ServiceWork
-        fields = ['id', 'job_description', 'labor_cost', 'duration_hours', 'used_parts']
+        # 'employee' додано до списку
+        fields = ['id', 'job_description', 'labor_cost', 'duration_hours', 'used_parts', 'employee', 'service_order']
+        # service_order потрібен для створення/оновлення
+        extra_kwargs = {'service_order': {'write_only': True}}
 
 # Серіалізатор для відображення у списку (залишається простим)
 class ServiceOrderListSerializer(serializers.ModelSerializer):
