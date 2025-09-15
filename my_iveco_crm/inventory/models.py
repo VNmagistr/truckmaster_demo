@@ -1,7 +1,7 @@
 # inventory/models.py
 
 from django.db import models
-from orders.models import ServiceWork
+
 
 class Part(models.Model):
     """
@@ -25,7 +25,12 @@ class UsedPart(models.Model):
     Проміжна модель, що фіксує, яка запчастина і в якій кількості
     була використана для конкретної роботи.
     """
-    service_work = models.ForeignKey(ServiceWork, on_delete=models.CASCADE, related_name="used_parts", verbose_name="Робота")
+    service_work = models.ForeignKey(
+        'orders.ServiceWork', # <-- Ось так, у вигляді рядка 'назва_додатку.НазваМоделі'
+        on_delete=models.CASCADE, 
+        related_name="used_parts", 
+        verbose_name="Робота"
+    )
     part = models.ForeignKey(Part, on_delete=models.PROTECT, verbose_name="Запчастина")
     quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
     

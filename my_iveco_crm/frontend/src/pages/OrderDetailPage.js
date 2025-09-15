@@ -20,7 +20,7 @@ export default function OrderDetailPage() {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Стани для довідників
+    // Довідники
     const [employees, setEmployees] = useState([]);
     const [parts, setParts] = useState([]);
 
@@ -34,7 +34,6 @@ export default function OrderDetailPage() {
     const [currentWorkId, setCurrentWorkId] = useState(null);
     const [partFormData, setPartFormData] = useState({});
 
-    // --- ОСНОВНА ФУНКЦІЯ ЗАВАНТАЖЕННЯ ДАНИХ ---
     const fetchPageData = async () => {
         try {
             const [orderRes, employeesRes, partsRes] = await Promise.all([
@@ -60,14 +59,13 @@ export default function OrderDetailPage() {
         fetchPageData();
     }, [orderId]);
 
-
     // --- ФУНКЦІЇ ДЛЯ КЕРУВАННЯ РОБОТАМИ ---
     const handleOpenWorkModal = (work = null) => {
         setEditingWork(work);
         setWorkFormData(work ? { ...work } : {
             job_description: '',
-            labor_cost: 0,
-            duration_hours: 0,
+            labor_cost: '',
+            duration_hours: '',
             employee: ''
         });
         setOpenWorkModal(true);
@@ -99,7 +97,7 @@ export default function OrderDetailPage() {
             });
             if (response.ok) {
                 handleCloseWorkModal();
-                fetchPageData(); // Оновлюємо всю сторінку
+                fetchPageData();
             } else {
                 const errorData = await response.json();
                 alert(`Помилка: ${JSON.stringify(errorData)}`);
@@ -113,7 +111,10 @@ export default function OrderDetailPage() {
                 const response = await fetch(`${API_URL}/service-works/${workId}/`, { method: 'DELETE' });
                 if (response.ok) {
                     fetchPageData();
-                } else { alert('Не вдалося видалити роботу.'); }
+                } else { 
+                    const errorData = await response.text();
+                    alert(`Не вдалося видалити роботу. Відповідь сервера: ${errorData}`);
+                }
             } catch (error) { console.error("Помилка мережі:", error); }
         }
     };
@@ -134,7 +135,8 @@ export default function OrderDetailPage() {
 
     const handlePartFormSubmit = async () => {
         const body = {
-            ...partFormData,
+            part_id: partFormData.part,
+            quantity: partFormData.quantity,
             service_work: currentWorkId,
         };
         try {
@@ -152,7 +154,6 @@ export default function OrderDetailPage() {
             }
         } catch (error) { console.error("Помилка мережі:", error); }
     };
-
 
     // --- ЛОГІКА ВІДОБРАЖЕННЯ ---
     if (loading) {
@@ -173,13 +174,16 @@ export default function OrderDetailPage() {
                     Замовлення-наряд №{order?.id}
                     <Chip label={order?.status} color="primary" sx={{ ml: 2 }} />
                 </Typography>
+                <Typography variant="h5" color="text.secondary" sx={{ mb: 2 }}>
+                    Загальна вартість: {order?.total_cost} грн
+                </Typography>
                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} md={6}>
                         <Typography variant="h6">Клієнт</Typography>
                         <Typography>{order?.client?.name} {order?.client?.surname}</Typography>
                         <Typography color="textSecondary">{order?.client?.phone}</Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={12} md={6}>
                         <Typography variant="h6">Автомобіль</Typography>
                         <Typography>{order?.truck?.specific_model_name} ({order?.truck?.license_plate})</Typography>
                         <Typography color="textSecondary">VIN: {order?.truck?.last_seven_vin}</Typography>
@@ -259,6 +263,9 @@ export default function OrderDetailPage() {
                     <FormControl fullWidth margin="dense" variant="standard">
                         <InputLabel>Запчастина</InputLabel>
                         <Select name="part" value={partFormData.part || ''} onChange={handlePartInputChange}>
+                            <MenuItem value="" disabled>
+                                <em>Виберіть запчастину...</em>
+                            </MenuItem>
                             {parts.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.sku_code})</MenuItem>)}
                         </Select>
                     </FormControl>

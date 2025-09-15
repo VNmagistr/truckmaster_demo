@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Link as RouterLink } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import Navbar from './components/Navbar'; // Наше нове меню
+import Notification from './components/Notification';
 import TrucksPage from './pages/TrucksPage'; // Наша нова сторінка
 import ClientsPage from './pages/ClientsPage';
 import OrdersPage from './pages/OrdersPage';
@@ -38,6 +39,7 @@ function App() {
                     <Route path="/" element={<TrucksPage />} />
                 </Routes>
             </Box>
+            <Notification />
         </Box>
     );
 }

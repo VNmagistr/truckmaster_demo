@@ -1,7 +1,9 @@
 # orders/models.py
 
 from django.db import models
+from django.db.models import Sum, F
 from clients.models import Client, Truck, IvecoBaseModel
+from inventory.models import UsedPart
 
 class Employee(models.Model):
     """
@@ -36,6 +38,22 @@ class ServiceOrder(models.Model):
     start_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата відкриття")
     end_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата закриття")
     total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Загальна вартість")
+
+    def update_total_cost(self):
+        """
+        Обчислює загальну вартість на основі робіт та запчастин.
+        """
+        # Рахуємо суму вартості всіх робіт
+        works_cost = self.works.aggregate(total=Sum('labor_cost'))['total'] or 0
+
+        # Рахуємо суму вартості всіх запчастин 
+        # (кількість * ціна)
+        parts_cost = UsedPart.objects.filter(service_work__service_order=self).aggregate(
+            total=Sum(F('quantity') * F('part__price'), output_field=models.DecimalField())
+        )['total'] or 0
+
+        self.total_cost = works_cost + parts_cost
+        self.save(update_fields=['total_cost']) # Зберігаємо тільки це поле
 
     class Meta:
         verbose_name = "Замовлення-наряд"

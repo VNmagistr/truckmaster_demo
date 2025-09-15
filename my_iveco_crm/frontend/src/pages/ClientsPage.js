@@ -1,3 +1,5 @@
+// frontend/src/pages/ClientsPage.js
+
 import React, { useState, useEffect } from 'react';
 import {
     Container, Typography, Table, TableBody, TableCell, TableContainer,
@@ -6,10 +8,12 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useNotification } from '../context/NotificationContext';
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
 export default function ClientsPage() {
+    const { showNotification } = useNotification();
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
@@ -24,6 +28,7 @@ export default function ClientsPage() {
             setClients(data);
         } catch (error) {
             console.error("Помилка завантаження клієнтів!", error);
+            showNotification("Помилка завантаження клієнтів!", 'error');
         } finally {
             setLoading(false);
         }
@@ -64,12 +69,17 @@ export default function ClientsPage() {
             if (response.ok) {
                 handleCloseModal();
                 fetchClients();
+                showNotification(
+                    editingClient ? 'Дані клієнта оновлено!' : 'Клієнта успішно створено!',
+                    'success'
+                );
             } else {
                 const errorData = await response.json();
-                alert(`Помилка: ${JSON.stringify(errorData)}`);
+                showNotification(`Помилка: ${JSON.stringify(errorData)}`, 'error');
             }
         } catch (error) {
             console.error("Помилка мережі:", error);
+            showNotification('Помилка мережі', 'error');
         }
     };
 
@@ -79,11 +89,14 @@ export default function ClientsPage() {
                 const response = await fetch(`${API_URL}/clients/${id}/`, { method: 'DELETE' });
                 if (response.ok) {
                     fetchClients();
+                    showNotification('Клієнта видалено', 'success');
                 } else {
-                    alert('Не вдалося видалити клієнта.');
+                    const errorData = await response.text();
+                    showNotification(`Не вдалося видалити клієнта: ${errorData}`, 'error');
                 }
             } catch (error) {
                 console.error("Помилка мережі:", error);
+                showNotification('Помилка мережі при спробі видалення', 'error');
             }
         }
     };
