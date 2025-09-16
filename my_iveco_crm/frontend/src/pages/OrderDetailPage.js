@@ -1,3 +1,5 @@
+// frontend/src/pages/OrderDetailPage.js
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -23,15 +25,19 @@ export default function OrderDetailPage() {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // Довідники
     const [employees, setEmployees] = useState([]);
     const [parts, setParts] = useState([]);
 
+    // Стани для модального вікна робіт
     const [openWorkModal, setOpenWorkModal] = useState(false);
     const [editingWork, setEditingWork] = useState(null);
     const [workFormData, setWorkFormData] = useState({});
 
+    // Стани для модального вікна запчастин
     const [openPartModal, setOpenPartModal] = useState(false);
     const [currentWorkId, setCurrentWorkId] = useState(null);
+    const [editingPart, setEditingPart] = useState(null);
     const [partFormData, setPartFormData] = useState({});
 
     const fetchPageData = useCallback(async () => {
@@ -41,7 +47,7 @@ export default function OrderDetailPage() {
                 fetch(`${API_URL}/employees/`),
                 fetch(`${API_URL}/parts/`)
             ]);
-            if (!orderRes.ok) throw new Error('Order not found');
+            if (!orderRes.ok) throw new Error('Замовлення не знайдено');
             const orderData = await orderRes.json();
             const employeesData = await employeesRes.json();
             const partsData = await partsRes.json();
@@ -61,6 +67,7 @@ export default function OrderDetailPage() {
         fetchPageData();
     }, [fetchPageData]);
 
+    // --- ФУНКЦІЇ ДЛЯ КЕРУВАННЯ РОБОТАМИ ---
     const handleOpenWorkModal = (work = null) => {
         setEditingWork(work);
         setWorkFormData(work ? { ...work } : {
@@ -72,7 +79,6 @@ export default function OrderDetailPage() {
     const handleWorkInputChange = (e) => {
         setWorkFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
-
     const handleWorkFormSubmit = async () => {
         const method = editingWork ? 'PUT' : 'POST';
         const url = editingWork ? `${API_URL}/service-works/${editingWork.id}/` : `${API_URL}/service-works/`;
@@ -91,7 +97,6 @@ export default function OrderDetailPage() {
             }
         } catch (error) { showNotification('Помилка мережі', 'error'); }
     };
-
     const handleDeleteWork = (workId, workDescription) => {
         confirm('Підтвердити видалення', `Ви впевнені, що хочете видалити роботу "${workDescription}"?`,
             async () => {
@@ -109,33 +114,57 @@ export default function OrderDetailPage() {
         );
     };
 
-    const handleOpenPartModal = (workId) => {
+    // --- ФУНКЦІЇ ДЛЯ КЕРУВАННЯ ЗАПЧАСТИНАМИ ---
+    const handleOpenPartModal = (workId, usedPart = null) => {
         setCurrentWorkId(workId);
-        setPartFormData({ part: '', quantity: 1 });
+        setEditingPart(usedPart);
+        setPartFormData(usedPart ? { part: usedPart.part.id, quantity: usedPart.quantity } : { part: '', quantity: 1 });
         setOpenPartModal(true);
     };
     const handleClosePartModal = () => setOpenPartModal(false);
     const handlePartInputChange = (e) => {
         setPartFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
-
     const handlePartFormSubmit = async () => {
-        const body = { part_id: partFormData.part, quantity: partFormData.quantity, service_work: currentWorkId };
+        const method = editingPart ? 'PUT' : 'POST';
+        const url = editingPart ? `${API_URL}/used-parts/${editingPart.id}/` : `${API_URL}/used-parts/`;
+        const body = {
+            part_id: partFormData.part,
+            quantity: partFormData.quantity,
+            service_work: currentWorkId,
+        };
         try {
-            const response = await fetch(`${API_URL}/used-parts/`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            const response = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
             });
             if (response.ok) {
                 handleClosePartModal();
                 fetchPageData();
-                showNotification('Запчастину додано до роботи', 'success');
+                showNotification(editingPart ? 'Запчастину оновлено' : 'Запчастину додано', 'success');
             } else {
                 const errorData = await response.json();
                 showNotification(`Помилка: ${errorData.detail || JSON.stringify(errorData)}`, 'error');
             }
         } catch (error) { showNotification('Помилка мережі', 'error'); }
     };
+    const handleDeletePart = (usedPartId, partName) => {
+        confirm('Підтвердити видалення', `Ви впевнені, що хочете видалити запчастину "${partName}" з цієї роботи?`,
+            async () => {
+                try {
+                    const response = await fetch(`${API_URL}/used-parts/${usedPartId}/`, { method: 'DELETE' });
+                    if (response.ok) {
+                        fetchPageData();
+                        showNotification('Запчастину видалено', 'success');
+                    } else {
+                        const errorData = await response.text();
+                        showNotification(`Не вдалося видалити: ${errorData}`, 'error');
+                    }
+                } catch (error) { showNotification('Помилка мережі при видаленні', 'error'); }
+            }
+        );
+    };
 
+    // --- ЛОГІКА ВІДОБРАЖЕННЯ ---
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
     if (!order) return <Typography variant="h5" align="center" sx={{ mt: 4 }}>Замовлення не знайдено</Typography>;
 
@@ -156,17 +185,21 @@ export default function OrderDetailPage() {
                             </ListItem>
                             <List disablePadding sx={{ pl: 4 }}>
                                 {work.used_parts.map(up => (
-                                    <ListItem key={up.id} sx={{ py: 0 }}><ListItemText primary={`${up.part.name} (x${up.quantity})`} secondary={`Ціна: ${up.part.price} грн/шт.`} sx={{ fontStyle: 'italic' }} /></ListItem>
+                                    <ListItem key={up.id} sx={{ py: 0 }} secondaryAction={<><IconButton size="small" edge="end" onClick={() => handleOpenPartModal(work.id, up)}><EditIcon fontSize="small" /></IconButton><IconButton size="small" edge="end" onClick={() => handleDeletePart(up.id, up.part.name)}><DeleteIcon fontSize="small" /></IconButton></>}>
+                                        <ListItemText primary={`${up.part.name} (x${up.quantity})`} secondary={`Ціна: ${up.part.price} грн/шт.`} sx={{ fontStyle: 'italic' }} />
+                                    </ListItem>
                                 ))}
-                                <ListItem><Button size="small" startIcon={<AddIcon />} onClick={() => handleOpenPartModal(work.id)}>Додати запчастину</Button></ListItem>
+                                <ListItem><Button size="small" startIcon={<AddIcon />} onClick={() => handleOpenPartModal(work.id, null)}>Додати запчастину</Button></ListItem>
                             </List>
                             {index < order.works.length - 1 && <Divider component="li" />}
                         </React.Fragment>
                     ))}
                 </List>
             </Paper>
+
             <Dialog open={openWorkModal} onClose={handleCloseWorkModal} fullWidth maxWidth="sm"><DialogTitle>{editingWork ? 'Редагувати роботу' : 'Додати нову роботу'}</DialogTitle><DialogContent><TextField autoFocus margin="dense" name="job_description" label="Опис роботи" type="text" fullWidth variant="standard" value={workFormData.job_description || ''} onChange={handleWorkInputChange} /><TextField margin="dense" name="labor_cost" label="Вартість роботи" type="number" fullWidth variant="standard" value={workFormData.labor_cost || ''} onChange={handleWorkInputChange} /><TextField margin="dense" name="duration_hours" label="Витрачено годин" type="number" fullWidth variant="standard" value={workFormData.duration_hours || ''} onChange={handleWorkInputChange} /><FormControl fullWidth margin="dense" variant="standard"><InputLabel>Виконавець</InputLabel><Select name="employee" value={workFormData.employee || ''} onChange={handleWorkInputChange}>{employees.map(emp => <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>)}</Select></FormControl></DialogContent><DialogActions><Button onClick={handleCloseWorkModal}>Скасувати</Button><Button onClick={handleWorkFormSubmit}>Зберегти</Button></DialogActions></Dialog>
-            <Dialog open={openPartModal} onClose={handleClosePartModal} fullWidth maxWidth="sm"><DialogTitle>Додати запчастину до роботи</DialogTitle><DialogContent><FormControl fullWidth margin="dense" variant="standard"><InputLabel>Запчастина</InputLabel><Select name="part" value={partFormData.part || ''} onChange={handlePartInputChange}><MenuItem value="" disabled><em>Виберіть запчастину...</em></MenuItem>{parts.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.sku_code})</MenuItem>)}</Select></FormControl><TextField margin="dense" name="quantity" label="Кількість" type="number" fullWidth variant="standard" value={partFormData.quantity || 1} onChange={handlePartInputChange} /></DialogContent><DialogActions><Button onClick={handleClosePartModal}>Скасувати</Button><Button onClick={handlePartFormSubmit}>Додати</Button></DialogActions></Dialog>
+        
+            <Dialog open={openPartModal} onClose={handleClosePartModal} fullWidth maxWidth="sm"><DialogTitle>{editingPart ? 'Редагувати запчастину' : 'Додати запчастину до роботи'}</DialogTitle><DialogContent><FormControl fullWidth margin="dense" variant="standard" disabled={!!editingPart}><InputLabel>Запчастина</InputLabel><Select name="part" value={partFormData.part || ''} onChange={handlePartInputChange}><MenuItem value="" disabled><em>Виберіть запчастину...</em></MenuItem>{parts.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.sku_code})</MenuItem>)}</Select></FormControl><TextField margin="dense" name="quantity" label="Кількість" type="number" fullWidth variant="standard" value={partFormData.quantity || 1} onChange={handlePartInputChange} /></DialogContent><DialogActions><Button onClick={handleClosePartModal}>Скасувати</Button><Button onClick={handlePartFormSubmit}>Зберегти</Button></DialogActions></Dialog>
         </Container>
     );
 }

@@ -33,6 +33,28 @@ class UsedPart(models.Model):
     )
     part = models.ForeignKey(Part, on_delete=models.PROTECT, verbose_name="Запчастина")
     quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            if self.pk: # Якщо це оновлення існуючого запису
+                old_self = UsedPart.objects.get(pk=self.pk)
+                quantity_diff = self.quantity - old_self.quantity
+                self.part.current_stock -= quantity_diff
+            else: # Якщо це створення нового запису
+                self.part.current_stock -= self.quantity
+
+            if self.part.current_stock < 0:
+                # Можна додати ValidationError, але поки просто не дамо піти в мінус
+                raise Exception(f"Недостатньо запчастин '{self.part.name}' на складі.")
+
+            self.part.save()
+            super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        with transaction.atomic():
+            self.part.current_stock += self.quantity
+            self.part.save()
+            super().delete(*args, **kwargs)
     
     class Meta:
         verbose_name = "Використана запчастина"
