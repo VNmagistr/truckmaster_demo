@@ -1,46 +1,50 @@
 import React from 'react';
-import { Routes, Route, Link as RouterLink } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box } from '@mui/material';
-import Navbar from './components/Navbar'; // Наше нове меню
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Box, CssBaseline } from '@mui/material';
+import Navbar from './components/Navbar';
 import Notification from './components/Notification';
-import TrucksPage from './pages/TrucksPage'; // Наша нова сторінка
+
+// Імпортуємо всі наші сторінки
+import HomePage from './pages/HomePage';
+import TrucksPage from './pages/TrucksPage';
 import ClientsPage from './pages/ClientsPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 
-// Прості сторінки-заглушки
-// const ClientsPage = () => <Typography variant="h4" sx={{ m: 4 }}>Сторінка клієнтів</Typography>;
-// const OrdersPage = () => <Typography variant="h4" sx={{ m: 4 }}>Сторінка замовлень</Typography>;
-
-function App() {
+// Створюємо компонент для "внутрішнього" інтерфейсу CRM
+function CrmLayout({ children }) {
     return (
         <Box sx={{ display: 'flex' }}>
-            {/* Верхня панель */}
+            <CssBaseline />
             <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
                     <Typography variant="h6" noWrap component="div">
-                        TRUCKMASTER CRM
+                        CRM для СТО Iveco
                     </Typography>
                 </Toolbar>
             </AppBar>
-
-            {/* Бічна панель навігації */}
             <Navbar />
-
-            {/* Основний контент сторінки */}
             <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-                <Toolbar /> {/* Цей Toolbar потрібен, щоб контент не ховався під AppBar */}
-                <Routes>
-                    <Route path="/trucks" element={<TrucksPage />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                    <Route path="/orders" element={<OrdersPage />} />
-                    <Route path="/orders/:orderId" element={<OrderDetailPage />} /> {/* 2. Додаємо */}
-                    {/* Маршрут за замовчуванням */}
-                    <Route path="/" element={<TrucksPage />} />
-                </Routes>
+                <Toolbar />
+                {children}
             </Box>
             <Notification />
         </Box>
+    );
+}
+
+function App() {
+    return (
+        <Routes>
+            {/* Маршрут для головної сторінки */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* Маршрути для внутрішньої частини CRM */}
+            <Route path="/trucks" element={<CrmLayout><TrucksPage /></CrmLayout>} />
+            <Route path="/clients" element={<CrmLayout><ClientsPage /></CrmLayout>} />
+            <Route path="/orders" element={<CrmLayout><OrdersPage /></CrmLayout>} />
+            <Route path="/orders/:orderId" element={<CrmLayout><OrderDetailPage /></CrmLayout>} />
+        </Routes>
     );
 }
 
