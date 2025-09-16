@@ -23,7 +23,7 @@ class Client(models.Model):
     """
     name = models.CharField(max_length=255, verbose_name="Ім'я / Назва компанії")
     surname = models.CharField(max_length=255, blank=True, verbose_name="Прізвище (для фіз. осіб)")
-    phone = models.CharField(max_length=20, unique=True, verbose_name="Основний номер телефону")
+    phone = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name="Основний номер телефону")
     email = models.EmailField(blank=True, verbose_name="Електронна пошта")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата реєстрації")
 
