@@ -17,24 +17,32 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 from rest_framework.routers import DefaultRouter
-# Імпортуємо новий ViewSet
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
-from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet  # 1. Імпортуємо
-from inventory.views import PartViewSet # 1. Імпортуємо PartViewSet
+from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet, WorkGroupViewSet
+from inventory.views import PartViewSet
+from users.views import RegisterView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet)
 router.register(r'trucks', TruckViewSet)
 router.register(r'base-models', IvecoBaseModelViewSet)
 router.register(r'service-orders', ServiceOrderViewSet)
-router.register(r'service-works', ServiceWorkViewSet) # 2. Додаємо
-router.register(r'used-parts', UsedPartViewSet) # 3. Додаємо
+router.register(r'service-works', ServiceWorkViewSet)
+router.register(r'used-parts', UsedPartViewSet)
 router.register(r'employees', EmployeeViewSet)
 router.register(r'parts', PartViewSet)
+router.register(r'work-groups', WorkGroupViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/register/', RegisterView.as_view(), name='register'),
 ]

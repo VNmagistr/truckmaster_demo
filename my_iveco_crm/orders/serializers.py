@@ -1,10 +1,15 @@
 from rest_framework import serializers
-from .models import ServiceOrder, ServiceWork, Employee
+from .models import ServiceOrder, ServiceWork, Employee, WorkGroup
 from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
 # НОВИЙ СЕРІАЛІЗАТОР
+class WorkGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkGroup
+        fields = '__all__'
+
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
@@ -19,14 +24,14 @@ class UsedPartSerializer(serializers.ModelSerializer):
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
     used_parts = UsedPartSerializer(many=True, read_only=True)
-    # Додаємо поле employee, щоб воно було в POST/PUT запитах
-    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all())
+    employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), allow_null=True)
+    # Додаємо поле для групи робіт
+    work_group = serializers.PrimaryKeyRelatedField(queryset=WorkGroup.objects.all())
 
     class Meta:
         model = ServiceWork
-        # 'employee' додано до списку
-        fields = ['id', 'job_description', 'labor_cost', 'duration_hours', 'used_parts', 'employee', 'service_order']
-        # service_order потрібен для створення/оновлення
+        # 'work_group' додано до списку
+        fields = ['id', 'job_description', 'labor_cost', 'duration_hours', 'used_parts', 'employee', 'service_order', 'work_group']
         extra_kwargs = {'service_order': {'write_only': True}}
 
 # Серіалізатор для відображення у списку (залишається простим)

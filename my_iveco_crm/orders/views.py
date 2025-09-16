@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from .models import ServiceOrder, ServiceWork, Employee
+from .models import ServiceOrder, ServiceWork, Employee, WorkGroup 
 from inventory.models import UsedPart 
 # Додаємо нові серіалізатори
 from .serializers import (
@@ -8,7 +8,8 @@ from .serializers import (
     ServiceOrderDetailSerializer,
     ServiceWorkSerializer,
     UsedPartSerializer,
-    EmployeeSerializer 
+    EmployeeSerializer,
+    WorkGroupSerializer
 )
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
@@ -32,3 +33,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 class UsedPartViewSet(viewsets.ModelViewSet):
     queryset = UsedPart.objects.all()
     serializer_class = UsedPartSerializer
+
+class WorkGroupViewSet(viewsets.ModelViewSet):
+    queryset = WorkGroup.objects.all()
+    serializer_class = WorkGroupSerializer

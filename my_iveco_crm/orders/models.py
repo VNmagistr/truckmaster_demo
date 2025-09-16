@@ -5,6 +5,21 @@ from django.db.models import Sum, F
 from clients.models import Client, Truck, IvecoBaseModel
 from inventory.models import UsedPart
 
+class WorkGroup(models.Model):
+    """
+    Група робіт з власною вартістю нормогодини.
+    Наприклад: 'Електрика', 'Ремонт ходової'.
+    """
+    name = models.CharField(max_length=255, unique=True, verbose_name="Назва групи робіт")
+    price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Вартість нормогодини (грн)")
+
+    class Meta:
+        verbose_name = "Група робіт"
+        verbose_name_plural = "Групи робіт"
+
+    def __str__(self):
+        return f"{self.name} ({self.price_per_hour} грн/год)"
+
 class Employee(models.Model):
     """
     Працівник СТО (майстер, менеджер).
@@ -69,9 +84,25 @@ class ServiceWork(models.Model):
     """
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
+
+    # ДОДАЄМО: Зв'язок з групою робіт
+    work_group = models.ForeignKey(WorkGroup, on_delete=models.PROTECT, verbose_name="Група робіт", null=True)
+
     job_description = models.CharField(max_length=255, verbose_name="Опис роботи")
-    labor_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Вартість роботи")
+
+    # ЗМІНЮЄМО: Це поле тепер буде розраховуватись автоматично, але може бути змінене вручну
+    labor_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, verbose_name="Вартість роботи",
+        help_text="Розраховується автоматично, але може бути змінена вручну."
+    )
+
     duration_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
+
+    def save(self, *args, **kwargs):
+        # Автоматично розраховуємо вартість, якщо група робіт вказана
+        if self.work_group and self.duration_hours > 0:
+            self.labor_cost = self.work_group.price_per_hour * self.duration_hours
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Виконана робота"

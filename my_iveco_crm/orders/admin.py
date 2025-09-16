@@ -1,6 +1,12 @@
 from django.contrib import admin
-from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog
+from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog, WorkGroup
 
+
+@admin.register(WorkGroup)
+class WorkGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price_per_hour')
+    search_fields = ('name',)
+    
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'position', 'phone')
