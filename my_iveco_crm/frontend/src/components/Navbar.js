@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Drawer, List, ListItem, ListItemText, Toolbar, Box, Button, Typography } from '@mui/material';''
+import { Drawer, List, ListItem, ListItemText, Toolbar, Box, Button, Typography } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
 const drawerWidth = 240;

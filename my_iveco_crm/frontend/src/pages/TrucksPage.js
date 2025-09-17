@@ -27,25 +27,49 @@ export default function TrucksPage() {
     const [baseModels, setBaseModels] = useState([]);
 
     const fetchData = useCallback(async () => {
-        try {
-            const [trucksRes, clientsRes, modelsRes] = await Promise.all([
-                fetch(`${API_URL}/trucks/`),
-                fetch(`${API_URL}/clients/`),
-                fetch(`${API_URL}/base-models/`)
-            ]);
-            const trucksData = await trucksRes.json();
-            const clientsData = await clientsRes.json();
-            const modelsData = await modelsRes.json();
+    try {
+        const [trucksRes, clientsRes, modelsRes] = await Promise.all([
+            fetch(`${API_URL}/trucks/`),
+            fetch(`${API_URL}/clients/`),
+            fetch(`${API_URL}/base-models/`)
+        ]);
+
+        const trucksData = await trucksRes.json();
+        const clientsData = await clientsRes.json();
+        const modelsData = await modelsRes.json();
+
+        // --- НОВА НАДІЙНА ЛОГІКА ---
+        // Перевіряємо, чи є поле .results і чи це масив (для пагінації)
+        if (trucksData && Array.isArray(trucksData.results)) {
+            setTrucks(trucksData.results);
+        } 
+        // Інакше перевіряємо, чи це просто масив
+        else if (Array.isArray(trucksData)) {
             setTrucks(trucksData);
-            setClients(clientsData);
-            setBaseModels(modelsData);
-        } catch (error) {
-            console.error("Помилка завантаження даних!", error);
-            showNotification("Помилка завантаження даних!", 'error');
-        } finally {
-            setLoading(false);
         }
-    }, [showNotification]);
+
+        // Повторюємо ту ж логіку для клієнтів
+        if (clientsData && Array.isArray(clientsData.results)) {
+            setClients(clientsData.results);
+        } else if (Array.isArray(clientsData)) {
+            setClients(clientsData);
+        }
+
+        // І для моделей
+        if (modelsData && Array.isArray(modelsData.results)) {
+            setBaseModels(modelsData.results);
+        } else if (Array.isArray(modelsData)) {
+            setBaseModels(modelsData);
+        }
+        // --- КІНЕЦЬ НОВОЇ ЛОГІКИ ---
+
+    } catch (error) {
+        console.error("Помилка завантаження даних!", error);
+        showNotification("Помилка завантаження даних!", 'error');
+    } finally {
+        setLoading(false);
+    }
+}, [showNotification]);
 
     useEffect(() => {
         setLoading(true);
