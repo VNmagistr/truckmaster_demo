@@ -5,6 +5,20 @@ from django.db.models import Sum, F
 from clients.models import Client, Truck, IvecoBaseModel
 from inventory.models import UsedPart
 
+def get_repair_photo_path(instance, filename):
+    """ Функція для генерації динамічного шляху збереження фото ремонту """
+    return f'order_photos/repair/order_{instance.service_order.id}/{filename}'
+
+class RepairPhoto(models.Model):
+    """ Модель для зберігання фотографій процесу ремонту (2-й вид) """
+    service_order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name="repair_photos")
+    image = models.ImageField(upload_to=get_repair_photo_path, verbose_name="Фото ремонту")
+    caption = models.CharField(max_length=255, blank=True, verbose_name="Короткий опис")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Фото для замовлення №{self.service_order.id}"
+
 class WorkGroup(models.Model):
     """
     Група робіт з власною вартістю нормогодини.
@@ -41,6 +55,14 @@ class ServiceOrder(models.Model):
     """
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Автомобіль")
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
+    car_photo = models.ImageField(
+        upload_to='order_photos/cars/', null=True, blank=True, 
+        verbose_name="Фото авто з держномером"
+    )
+    odometer_photo = models.ImageField(
+        upload_to='order_photos/odometers/', null=True, blank=True, 
+        verbose_name="Фото щитка приладів"
+    )
     
     class StatusChoices(models.TextChoices):
         NEW = 'new', 'Нове'

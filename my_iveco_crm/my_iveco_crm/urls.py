@@ -21,10 +21,12 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
-from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet, WorkGroupViewSet
+from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet, WorkGroupViewSet, RepairPhotoViewSet
 from inventory.views import PartViewSet
 from users.views import RegisterView
 
@@ -38,6 +40,7 @@ router.register(r'used-parts', UsedPartViewSet)
 router.register(r'employees', EmployeeViewSet)
 router.register(r'parts', PartViewSet)
 router.register(r'work-groups', WorkGroupViewSet)
+router.register(r'repair-photos', RepairPhotoViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -46,3 +49,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', RegisterView.as_view(), name='register'),
 ]
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

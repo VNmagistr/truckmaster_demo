@@ -1,10 +1,14 @@
 from rest_framework import serializers
-from .models import ServiceOrder, ServiceWork, Employee, WorkGroup
+from .models import ServiceOrder, ServiceWork, Employee, WorkGroup, RepairPhoto
 from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
-# НОВИЙ СЕРІАЛІЗАТОР
+class RepairPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RepairPhoto
+        fields = '__all__'
+
 class WorkGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkGroup
@@ -49,8 +53,10 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     truck = TruckListSerializer(read_only=True)
     status = serializers.CharField(source='get_status_display')
-    works = ServiceWorkSerializer(many=True, read_only=True) # Вкладаємо роботи
+    works = ServiceWorkSerializer(many=True, read_only=True)
+    repair_photos = RepairPhotoSerializer(many=True, read_only=True) # Показуємо список фото ремонту
 
     class Meta:
         model = ServiceOrder
-        fields = '__all__'
+        # Додаємо нові поля
+        fields = list(f.name for f in ServiceOrder._meta.fields) + ['client', 'truck', 'works', 'repair_photos']
