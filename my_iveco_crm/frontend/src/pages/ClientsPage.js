@@ -8,8 +8,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNotification } from '../context/NotificationContext';
 import { useConfirmation } from '../context/ConfirmationContext';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import axiosInstance from '../api/axiosInstance';
 
 export default function ClientsPage() {
     const { showNotification } = useNotification();
@@ -22,9 +21,13 @@ export default function ClientsPage() {
 
     const fetchClients = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/clients/`);
-            const data = await response.json();
-            setClients(data);
+            const response = await axiosInstance.get('/clients/');
+            const data = response.data;
+            if (data && Array.isArray(data.results)) {
+                setClients(data.results);
+            } else if (Array.isArray(data)) {
+                setClients(data);
+            }
         } catch (error) {
             console.error("Помилка завантаження клієнтів!", error);
             showNotification("Помилка завантаження клієнтів!", 'error');
@@ -40,66 +43,37 @@ export default function ClientsPage() {
 
     const handleOpenModal = (client = null) => {
         setEditingClient(client);
-        setFormData(client ? { ...client } : {
-            name: '',
-            surname: '',
-            phone: '',
-            email: ''
-        });
+        setFormData(client ? { ...client } : { name: '', surname: '', phone: '', email: '' });
         setOpen(true);
     };
-
     const handleCloseModal = () => setOpen(false);
-
     const handleInputChange = (event) => {
-        const { name, value } = event.target;
-        setFormData(prevState => ({ ...prevState, [name]: value }));
+        setFormData(prevState => ({ ...prevState, [event.target.name]: event.target.value }));
     };
 
     const handleFormSubmit = async () => {
-        const method = editingClient ? 'PUT' : 'POST';
-        const url = editingClient ? `${API_URL}/clients/${editingClient.id}/` : `${API_URL}/clients/`;
-
+        const method = editingClient ? 'put' : 'post';
+        const url = editingClient ? `/clients/${editingClient.id}/` : '/clients/';
         try {
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            });
-            if (response.ok) {
-                handleCloseModal();
-                fetchClients();
-                showNotification(
-                    editingClient ? 'Дані клієнта оновлено!' : 'Клієнта успішно створено!',
-                    'success'
-                );
-            } else {
-                const errorData = await response.json();
-                showNotification(`Помилка: ${JSON.stringify(errorData)}`, 'error');
-            }
+            await axiosInstance[method](url, formData);
+            handleCloseModal();
+            fetchClients();
+            showNotification(editingClient ? 'Дані клієнта оновлено!' : 'Клієнта успішно створено!', 'success');
         } catch (error) {
-            console.error("Помилка мережі:", error);
-            showNotification('Помилка мережі', 'error');
+            console.error("Помилка форми:", error);
+            showNotification(`Помилка: ${JSON.stringify(error.response.data)}`, 'error');
         }
     };
 
     const handleDelete = (id, clientName) => {
-        confirm(
-            'Підтвердити видалення',
-            `Ви впевнені, що хочете видалити клієнта "${clientName}"? Цю дію неможливо буде скасувати.`,
+        confirm('Підтвердити видалення', `Ви впевнені, що хочете видалити клієнта "${clientName}"?`,
             async () => {
                 try {
-                    const response = await fetch(`${API_URL}/clients/${id}/`, { method: 'DELETE' });
-                    if (response.ok) {
-                        fetchClients();
-                        showNotification('Клієнта видалено', 'success');
-                    } else {
-                        const errorData = await response.text();
-                        showNotification(`Не вдалося видалити клієнта: ${errorData}`, 'error');
-                    }
+                    await axiosInstance.delete(`/clients/${id}/`);
+                    fetchClients();
+                    showNotification('Клієнта видалено', 'success');
                 } catch (error) {
-                    console.error("Помилка мережі:", error);
-                    showNotification('Помилка мережі при спробі видалення', 'error');
+                    showNotification('Не вдалося видалити клієнта.', 'error');
                 }
             }
         );
@@ -109,12 +83,9 @@ export default function ClientsPage() {
         <Container style={{ marginTop: '2rem' }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h4">Клієнти</Typography>
-                <Button variant="contained" color="primary" onClick={() => handleOpenModal(null)}>
-                    Додати клієнта
-                </Button>
+                <Button variant="contained" color="primary" onClick={() => handleOpenModal(null)}>Додати клієнта</Button>
             </Box>
-
-            {loading ? ( <CircularProgress /> ) : (
+            {loading ? <CircularProgress /> : (
                 <TableContainer component={Paper}>
                     <Table>
                         <TableHead>
@@ -134,12 +105,8 @@ export default function ClientsPage() {
                                     <TableCell>{client.phone}</TableCell>
                                     <TableCell>{client.email}</TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpenModal(client)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDelete(client.id, `${client.name} ${client.surname}`.trim())}>
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <IconButton onClick={() => handleOpenModal(client)}><EditIcon /></IconButton>
+                                        <IconButton onClick={() => handleDelete(client.id, `${client.name} ${client.surname}`.trim())}><DeleteIcon /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -147,7 +114,6 @@ export default function ClientsPage() {
                     </Table>
                 </TableContainer>
             )}
-
             <Dialog open={open} onClose={handleCloseModal} fullWidth maxWidth="sm">
                 <DialogTitle>{editingClient ? 'Редагувати дані клієнта' : 'Додати нового клієнта'}</DialogTitle>
                 <DialogContent>

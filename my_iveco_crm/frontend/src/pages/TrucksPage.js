@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    Container, Typography, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Paper, Button, Box, Dialog, DialogTitle, 
-    DialogContent, DialogActions, TextField, Select, MenuItem, 
-    FormControl, InputLabel, IconButton, CircularProgress
-} from '@mui/material';
+import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, IconButton, CircularProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNotification } from '../context/NotificationContext';
 import { useConfirmation } from '../context/ConfirmationContext';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import axiosInstance from '../api/axiosInstance';
 
 export default function TrucksPage() {
     const { showNotification } = useNotification();
@@ -22,54 +16,33 @@ export default function TrucksPage() {
     const [editingTruck, setEditingTruck] = useState(null);
     const [formData, setFormData] = useState({});
     
-    // Довідники для форми
     const [clients, setClients] = useState([]);
     const [baseModels, setBaseModels] = useState([]);
 
     const fetchData = useCallback(async () => {
-    try {
-        const [trucksRes, clientsRes, modelsRes] = await Promise.all([
-            fetch(`${API_URL}/trucks/`),
-            fetch(`${API_URL}/clients/`),
-            fetch(`${API_URL}/base-models/`)
-        ]);
+        try {
+            const [trucksRes, clientsRes, modelsRes] = await Promise.all([
+                axiosInstance.get('/trucks/'),
+                axiosInstance.get('/clients/'),
+                axiosInstance.get('/base-models/')
+            ]);
+            const trucksData = trucksRes.data;
+            const clientsData = clientsRes.data;
+            const modelsData = modelsRes.data;
 
-        const trucksData = await trucksRes.json();
-        const clientsData = await clientsRes.json();
-        const modelsData = await modelsRes.json();
-
-        // --- НОВА НАДІЙНА ЛОГІКА ---
-        // Перевіряємо, чи є поле .results і чи це масив (для пагінації)
-        if (trucksData && Array.isArray(trucksData.results)) {
-            setTrucks(trucksData.results);
-        } 
-        // Інакше перевіряємо, чи це просто масив
-        else if (Array.isArray(trucksData)) {
-            setTrucks(trucksData);
+            if (trucksData && Array.isArray(trucksData.results)) { setTrucks(trucksData.results); } 
+            else if (Array.isArray(trucksData)) { setTrucks(trucksData); }
+            if (clientsData && Array.isArray(clientsData.results)) { setClients(clientsData.results); } 
+            else if (Array.isArray(clientsData)) { setClients(clientsData); }
+            if (modelsData && Array.isArray(modelsData.results)) { setBaseModels(modelsData.results); } 
+            else if (Array.isArray(modelsData)) { setBaseModels(modelsData); }
+        } catch (error) {
+            console.error("Помилка завантаження даних!", error);
+            showNotification("Помилка завантаження даних! Можливо, ви не авторизовані.", 'error');
+        } finally {
+            setLoading(false);
         }
-
-        // Повторюємо ту ж логіку для клієнтів
-        if (clientsData && Array.isArray(clientsData.results)) {
-            setClients(clientsData.results);
-        } else if (Array.isArray(clientsData)) {
-            setClients(clientsData);
-        }
-
-        // І для моделей
-        if (modelsData && Array.isArray(modelsData.results)) {
-            setBaseModels(modelsData.results);
-        } else if (Array.isArray(modelsData)) {
-            setBaseModels(modelsData);
-        }
-        // --- КІНЕЦЬ НОВОЇ ЛОГІКИ ---
-
-    } catch (error) {
-        console.error("Помилка завантаження даних!", error);
-        showNotification("Помилка завантаження даних!", 'error');
-    } finally {
-        setLoading(false);
-    }
-}, [showNotification]);
+    }, [showNotification]);
 
     useEffect(() => {
         setLoading(true);
@@ -80,9 +53,8 @@ export default function TrucksPage() {
         setEditingTruck(truck);
         if (truck) {
             try {
-                const response = await fetch(`${API_URL}/trucks/${truck.id}/`);
-                const truckDetails = await response.json();
-                setFormData(truckDetails);
+                const response = await axiosInstance.get(`/trucks/${truck.id}/`);
+                setFormData(response.data);
             } catch (error) {
                 showNotification("Помилка завантаження деталей вантажівки!", 'error');
             }
@@ -95,102 +67,46 @@ export default function TrucksPage() {
         }
         setOpen(true);
     };
-
     const handleCloseModal = () => setOpen(false);
-
     const handleInputChange = (event) => {
-        const { name, value } = event.target;
-        setFormData(prevState => ({ ...prevState, [name]: value }));
+        setFormData(prevState => ({ ...prevState, [event.target.name]: event.target.value }));
     };
-
     const handleFormSubmit = async () => {
-        const method = editingTruck ? 'PUT' : 'POST';
-        const url = editingTruck ? `${API_URL}/trucks/${editingTruck.id}/` : `${API_URL}/trucks/`;
+        const method = editingTruck ? 'put' : 'post';
+        const url = editingTruck ? `/trucks/${editingTruck.id}/` : '/trucks/';
         try {
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json', },
-                body: JSON.stringify(formData),
-            });
-            if (response.ok) {
-                handleCloseModal();
-                fetchData();
-                showNotification(editingTruck ? 'Вантажівку оновлено!' : 'Вантажівку створено!', 'success');
-            } else {
-                const errorData = await response.json();
-                showNotification(`Помилка: ${JSON.stringify(errorData)}`, 'error');
-            }
+            await axiosInstance[method](url, formData);
+            handleCloseModal();
+            fetchData();
+            showNotification(editingTruck ? 'Вантажівку оновлено!' : 'Вантажівку створено!', 'success');
         } catch (error) {
-            console.error("Помилка мережі:", error);
-            showNotification('Помилка мережі', 'error');
+            showNotification(`Помилка: ${JSON.stringify(error.response.data)}`, 'error');
         }
     };
-
     const handleDelete = (id, truckName) => {
-        confirm(
-            'Підтвердити видалення',
-            `Ви впевнені, що хочете видалити вантажівку "${truckName}"?`,
+        confirm('Підтвердити видалення', `Ви впевнені, що хочете видалити вантажівку "${truckName}"?`,
             async () => {
                 try {
-                    const response = await fetch(`${API_URL}/trucks/${id}/`, { method: 'DELETE' });
-                    if (response.ok) {
-                        fetchData();
-                        showNotification('Вантажівку видалено', 'success');
-                    } else {
-                        const errorData = await response.text();
-                        showNotification(`Не вдалося видалити: ${errorData}`, 'error');
-                    }
+                    await axiosInstance.delete(`/trucks/${id}/`);
+                    fetchData();
+                    showNotification('Вантажівку видалено', 'success');
                 } catch (error) {
-                    console.error("Помилка мережі:", error);
-                    showNotification('Помилка мережі при видаленні', 'error');
+                    showNotification('Не вдалося видалити вантажівку.', 'error');
                 }
             }
         );
     };
-
     return (
         <Container style={{ marginTop: '2rem' }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h4">Вантажівки</Typography>
-                <Button variant="contained" color="primary" onClick={() => handleOpenModal(null)}>
-                    Додати вантажівку
-                </Button>
+                <Button variant="contained" color="primary" onClick={() => handleOpenModal(null)}>Додати вантажівку</Button>
             </Box>
-
             {loading ? <CircularProgress /> : (
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><b>Модель</b></TableCell>
-                                <TableCell><b>Держ. номер</b></TableCell>
-                                <TableCell><b>Власник</b></TableCell>
-                                <TableCell><b>Пробіг (км)</b></TableCell>
-                                <TableCell align="right"><b>Дії</b></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {trucks.map((truck) => (
-                                <TableRow key={truck.id}>
-                                    <TableCell>{truck.specific_model_name}</TableCell>
-                                    <TableCell>{truck.license_plate}</TableCell>
-                                    <TableCell>{truck.client}</TableCell>
-                                    <TableCell>{truck.current_mileage}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton onClick={() => handleOpenModal(truck)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDelete(truck.id, `${truck.specific_model_name} (${truck.license_plate})`)}>
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                <TableContainer component={Paper}><Table><TableHead><TableRow><TableCell><b>Модель</b></TableCell><TableCell><b>Держ. номер</b></TableCell><TableCell><b>Власник</b></TableCell><TableCell><b>Пробіг (км)</b></TableCell><TableCell align="right"><b>Дії</b></TableCell></TableRow></TableHead><TableBody>
+                    {trucks.map((truck) => (<TableRow key={truck.id}><TableCell>{truck.specific_model_name}</TableCell><TableCell>{truck.license_plate}</TableCell><TableCell>{truck.client}</TableCell><TableCell>{truck.current_mileage}</TableCell><TableCell align="right"><IconButton onClick={() => handleOpenModal(truck)}><EditIcon /></IconButton><IconButton onClick={() => handleDelete(truck.id, `${truck.specific_model_name} (${truck.license_plate})`)}><DeleteIcon /></IconButton></TableCell></TableRow>))}
+                </TableBody></Table></TableContainer>
             )}
-
             <Dialog open={open} onClose={handleCloseModal} fullWidth maxWidth="sm">
                 <DialogTitle>{editingTruck ? 'Редагувати вантажівку' : 'Додати нову вантажівку'}</DialogTitle>
                 <DialogContent>
@@ -204,10 +120,7 @@ export default function TrucksPage() {
                     <FormControl fullWidth margin="dense" variant="standard"><InputLabel>Тип КПП</InputLabel><Select name="transmission_type" value={formData.transmission_type || 'manual'} onChange={handleInputChange}><MenuItem value="manual">Механічна</MenuItem><MenuItem value="automatic">Автоматична</MenuItem><MenuItem value="robot">Робот</MenuItem></Select></FormControl>
                     <FormControl fullWidth margin="dense" variant="standard"><InputLabel>Стандарт викидів</InputLabel><Select name="emission_standard" value={formData.emission_standard || 'unknown'} onChange={handleInputChange}><MenuItem value="unknown">Не вказано</MenuItem><MenuItem value="euro3">Євро-3</MenuItem><MenuItem value="euro4">Євро-4</MenuItem><MenuItem value="euro5">Євро-5</MenuItem><MenuItem value="euro6">Євро-6</MenuItem></Select></FormControl>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseModal}>Скасувати</Button>
-                    <Button onClick={handleFormSubmit}>Зберегти</Button>
-                </DialogActions>
+                <DialogActions><Button onClick={handleCloseModal}>Скасувати</Button><Button onClick={handleFormSubmit}>Зберегти</Button></DialogActions>
             </Dialog>
         </Container>
     );
