@@ -30,7 +30,7 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
     used_parts = UsedPartSerializer(many=True, read_only=True)
     employee = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), allow_null=True)
     # Додаємо поле для групи робіт
-    work_group = serializers.PrimaryKeyRelatedField(queryset=WorkGroup.objects.all())
+    work_group = serializers.PrimaryKeyRelatedField(queryset=WorkGroup.objects.all(), allow_null=True)
 
     class Meta:
         model = ServiceWork
