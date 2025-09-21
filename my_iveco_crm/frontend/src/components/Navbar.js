@@ -13,12 +13,14 @@ export default function Navbar() {
             <Toolbar />
             <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <List sx={{ flexGrow: 1 }}>
-                    <ListItem button component={RouterLink} to="/trucks"><ListItemText primary="Вантажівки" /></ListItem>
-                    <ListItem button component={RouterLink} to="/clients"><ListItemText primary="Клієнти" /></ListItem>
-                    <ListItem button component={RouterLink} to="/orders"><ListItemText primary="Замовлення" /></ListItem>
+                    <ListItem button component={RouterLink} to="/trucks"><ListItemText primary=<strong>"Вантажівки"</strong> /></ListItem>
+                    <ListItem button component={RouterLink} to="/clients"><ListItemText primary=<strong>"Клієнти"</strong> /></ListItem>
+                    <ListItem button component={RouterLink} to="/orders"><ListItemText primary=<strong>"Замовлення"</strong> /></ListItem>
                 </List>
                 <Box sx={{ p: 2 }}>
-                    <Typography variant="body2">Увійшли як: {user?.username}</Typography>
+                    <Typography variant="body2">
+                        <strong>Увійшли як:</strong> {user?.username}
+                    </Typography>
                     <Button variant="contained" fullWidth onClick={logoutUser} sx={{ mt: 1 }}>
                         Вийти
                     </Button>
