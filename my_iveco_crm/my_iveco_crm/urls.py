@@ -28,7 +28,8 @@ from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
 from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet, WorkGroupViewSet, RepairPhotoViewSet
 from inventory.views import PartViewSet
-from users.views import RegisterView
+from accounts.views import RegisterView, MyTokenObtainPairView # <-- Змінюємо 'users' на 'accounts'
+from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet)
@@ -45,7 +46,7 @@ router.register(r'repair-photos', RepairPhotoViewSet)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', RegisterView.as_view(), name='register'),
 ]
