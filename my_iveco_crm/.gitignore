@@ -1,0 +1,24 @@
+# Віртуальне середовище
+venv/
+env/
+
+# Секретні дані
+.env
+
+# Файли кешу Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Локальна база даних SQLite (якщо використовуєте для розробки)
+db.sqlite3
+*.sqlite3
+
+# Папки, що генеруються Django
+staticfiles/
+mediafiles/
+
+# Файли IDE
+.vscode/
+.idea/
