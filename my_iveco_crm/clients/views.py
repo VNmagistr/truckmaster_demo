@@ -1,7 +1,7 @@
 from rest_framework import viewsets
-from .models import Client, Truck, IvecoBaseModel # Додаємо IvecoBaseModel
-# Імпортуємо всі нові серіалізатори
+from .models import Client, Truck, IvecoBaseModel
 from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSerializer, IvecoBaseModelSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
@@ -14,6 +14,8 @@ class IvecoBaseModelViewSet(viewsets.ModelViewSet):
 
 class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['client']
 
     # Ця функція дозволяє нам вибирати серіалізатор в залежності від дії
     def get_serializer_class(self):
