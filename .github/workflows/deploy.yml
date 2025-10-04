@@ -3,7 +3,7 @@ name: Deploy Backend to EC2
 on:
   push:
     branches:
-      - main # Або 'master', залежно від назви вашої головної гілки
+      - main
 
 jobs:
   deploy:
@@ -26,24 +26,11 @@ jobs:
     - name: Deploy to Server
       run: |
         ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-          # Переходимо в правильну папку проєкту
           cd /home/ubuntu/truckmaster/my_iveco_crm
-
-          # Завантажуємо останні зміни з гілки main
           git pull origin main
-
-          # Активуємо віртуальне середовище
           source /home/ubuntu/venv/bin/activate
-
-          # Встановлюємо/оновлюємо залежності
           pip install -r requirements.txt
-
-          # Застосовуємо міграції бази даних
           python manage.py migrate
-
-          # Збираємо статичні файли
           python manage.py collectstatic --noinput
-
-          # Перезапускаємо Gunicorn, щоб застосувати зміни
           sudo systemctl restart gunicorn
         EOF
