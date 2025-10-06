@@ -60,3 +60,25 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
         model = ServiceOrder
         # Додаємо нові поля
         fields = list(f.name for f in ServiceOrder._meta.fields) + ['client', 'truck', 'works', 'repair_photos']
+
+
+# СЕРІАЛІЗАТОР СПЕЦІАЛЬНО ДЛЯ СТВОРЕННЯ/ОНОВЛЕННЯ ЗАМОВЛЕННЯ
+class ServiceOrderWriteSerializer(serializers.ModelSerializer):
+    # Вказуємо, що поле 'works' буде приймати список об'єктів ServiceWork.
+    # Цього разу БЕЗ read_only=True.
+    works = ServiceWorkSerializer(many=True)
+
+    class Meta:
+        model = ServiceOrder
+        # Вказуємо поля, які фронтенд буде надсилати при створенні
+        fields = ['id', 'client', 'truck', 'status', 'start_date', 'works']
+
+    def create(self, validated_data):
+        # Витягуємо дані про роботи
+        works_data = validated_data.pop('works')
+        # Створюємо основний об'єкт замовлення
+        order = ServiceOrder.objects.create(**validated_data)
+        # У циклі створюємо всі пов'язані з ним роботи
+        for work_data in works_data:
+            ServiceWork.objects.create(service_order=order, **work_data)
+        return order
