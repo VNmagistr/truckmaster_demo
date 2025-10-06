@@ -1,30 +1,36 @@
 from django.contrib import admin
-from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog, WorkGroup
+from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog, WorkCategory, Work
 
-
-@admin.register(WorkGroup)
-class WorkGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price_per_hour')
+# --- НОВІ МОДЕЛІ ---
+@admin.register(WorkCategory)
+class WorkCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name',)
     search_fields = ('name',)
-    
+
+@admin.register(Work)
+class WorkAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'price')
+    list_filter = ('category',)
+    search_fields = ('name',)
+
+# --- ІСНУЮЧІ МОДЕЛІ (без значних змін) ---
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'position', 'phone')
     search_fields = ('name', 'position')
-
+    
 @admin.register(ServiceOrder)
 class ServiceOrderAdmin(admin.ModelAdmin):
-    # Видалили 'id' з list_display
-    list_display = ('client', 'truck', 'status', 'start_date', 'end_date', 'total_cost') 
+    list_display = ('id', 'client', 'truck', 'status', 'start_date', 'total_cost') 
     list_filter = ('status', 'start_date')
-    search_fields = ('client__name', 'truck__license_plate', 'description')
+    search_fields = ('client__name', 'truck__license_plate')
     date_hierarchy = 'start_date'
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('job_description', 'service_order', 'employee', 'labor_cost', 'duration_hours')
-    list_filter = ('employee',)
-    search_fields = ('job_description', 'service_order__id')
+    list_display = ('work', 'service_order', 'employee', 'cost')
+    list_filter = ('employee', 'work__category')
+    search_fields = ('work__name', 'custom_description', 'service_order__id')
 
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):

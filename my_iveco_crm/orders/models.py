@@ -19,20 +19,37 @@ class RepairPhoto(models.Model):
     def __str__(self):
         return f"Фото для замовлення №{self.service_order.id}"
 
-class WorkGroup(models.Model):
+# --- ЗМІНЕНО: WorkGroup перейменовано на WorkCategory і спрощено ---
+class WorkCategory(models.Model):
     """
-    Група робіт з власною вартістю нормогодини.
-    Наприклад: 'Електрика', 'Ремонт ходової'.
+    Категорія або група робіт, наприклад "Обслуговування автомобіля", "Ремонт ходової".
     """
-    name = models.CharField(max_length=255, unique=True, verbose_name="Назва групи робіт")
-    price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Вартість нормогодини (грн)")
+    name = models.CharField(max_length=255, unique=True, verbose_name="Назва категорії робіт")
 
     class Meta:
-        verbose_name = "Група робіт"
-        verbose_name_plural = "Групи робіт"
+        verbose_name = "Категорія робіт"
+        verbose_name_plural = "Категорії робіт"
 
     def __str__(self):
-        return f"{self.name} ({self.price_per_hour} грн/год)"
+        return self.name
+
+# --- НОВА МОДЕЛЬ: Конкретна робота з прайс-листа ---
+class Work(models.Model):
+    """
+    Конкретна робота з прайс-листа з фіксованою ціною.
+    """
+    category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="works", verbose_name="Категорія")
+    name = models.CharField(max_length=255, verbose_name="Назва роботи")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Вартість роботи (грн)")
+
+    class Meta:
+        verbose_name = "Робота з прайсу"
+        verbose_name_plural = "Роботи з прайсу"
+        unique_together = ('category', 'name')
+
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
 
 class Employee(models.Model):
     """
@@ -71,7 +88,7 @@ class ServiceOrder(models.Model):
         CANCELED = 'canceled', 'Скасовано'
 
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NEW, verbose_name="Статус")
-    description = models.TextField(verbose_name="Причина звернення / Скарги клієнта")
+    # --- ВИДАЛЕНО: поле 'description', оскільки тепер роботи вносяться окремо ---
     start_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата відкриття")
     end_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата закриття")
     total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Загальна вартість")
@@ -80,17 +97,15 @@ class ServiceOrder(models.Model):
         """
         Обчислює загальну вартість на основі робіт та запчастин.
         """
-        # Рахуємо суму вартості всіх робіт
-        works_cost = self.works.aggregate(total=Sum('labor_cost'))['total'] or 0
+        # --- ЗМІНЕНО: Рахуємо суму по полю 'cost' з моделі ServiceWork ---
+        works_cost = self.works.aggregate(total=Sum('cost'))['total'] or 0
 
-        # Рахуємо суму вартості всіх запчастин 
-        # (кількість * ціна)
         parts_cost = UsedPart.objects.filter(service_work__service_order=self).aggregate(
             total=Sum(F('quantity') * F('part__price'), output_field=models.DecimalField())
         )['total'] or 0
 
         self.total_cost = works_cost + parts_cost
-        self.save(update_fields=['total_cost']) # Зберігаємо тільки це поле
+        self.save(update_fields=['total_cost'])
 
     class Meta:
         verbose_name = "Замовлення-наряд"
@@ -100,30 +115,27 @@ class ServiceOrder(models.Model):
     def __str__(self):
         return f"Замовлення №{self.id} для {self.truck.license_plate}"
 
+# --- ЗМІНЕНО: Модель ServiceWork тепер використовує нову логіку ---
 class ServiceWork(models.Model):
     """
-    Конкретна робота, виконана в рамках замовлення-наряду.
+    Робота, фактично виконана в рамках замовлення-наряду.
     """
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
 
-    # ДОДАЄМО: Зв'язок з групою робіт
-    work_group = models.ForeignKey(WorkGroup, on_delete=models.PROTECT, verbose_name="Група робіт", null=True)
-
-    job_description = models.CharField(max_length=255, verbose_name="Опис роботи")
-
-    # ЗМІНЮЄМО: Це поле тепер буде розраховуватись автоматично, але може бути змінене вручну
-    labor_cost = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="Вартість роботи",
-        help_text="Розраховується автоматично, але може бути змінена вручну."
-    )
-
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
+    # Посилаємось на конкретну роботу з прайс-листа
+    work = models.ForeignKey(Work, on_delete=models.PROTECT, verbose_name="Виконана робота")
+    
+    # Опис зі слів водія або уточнення майстра
+    custom_description = models.CharField(max_length=255, blank=True, verbose_name="Опис/уточнення")
+    
+    # Фактична вартість (може бути змінена вручну, відрізняючись від прайсу)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Фактична вартість")
 
     def save(self, *args, **kwargs):
-        # Автоматично розраховуємо вартість, якщо група робіт вказана
-        if self.work_group and self.duration_hours > 0:
-            self.labor_cost = self.work_group.price_per_hour * self.duration_hours
+        # Якщо вартість не вказана вручну при створенні, беремо її з прайсу
+        if not self.id and not self.cost and self.work:
+             self.cost = self.work.price
         super().save(*args, **kwargs)
 
     class Meta:
@@ -131,7 +143,8 @@ class ServiceWork(models.Model):
         verbose_name_plural = "Виконані роботи"
 
     def __str__(self):
-        return self.job_description
+        return f"{self.work.name} для замовлення №{self.service_order.id}"
+
 
 class MaintenanceRule(models.Model):
     """
