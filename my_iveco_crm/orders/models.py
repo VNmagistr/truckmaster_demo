@@ -130,7 +130,7 @@ class ServiceWork(models.Model):
     custom_description = models.CharField(max_length=255, blank=True, verbose_name="Опис/уточнення")
     
     # Фактична вартість (може бути змінена вручну, відрізняючись від прайсу)
-    cost = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Фактична вартість")
+    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Фактична вартість")
 
     def save(self, *args, **kwargs):
         # Якщо вартість не вказана вручну при створенні, беремо її з прайсу
