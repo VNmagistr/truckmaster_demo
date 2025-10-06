@@ -124,7 +124,7 @@ class ServiceWork(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
 
     # Посилаємось на конкретну роботу з прайс-листа
-    work = models.ForeignKey(Work, on_delete=models.PROTECT, verbose_name="Виконана робота")
+    work = models.ForeignKey(Work, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконана робота")
     
     # Опис зі слів водія або уточнення майстра
     custom_description = models.CharField(max_length=255, blank=True, verbose_name="Опис/уточнення")
