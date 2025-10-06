@@ -1,18 +1,6 @@
 """
 URL configuration for my_iveco_crm project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+...
 """
 
 from django.contrib import admin
@@ -25,22 +13,23 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
-from clients.views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
+# Виправлено дублювання імпорту
 from orders.views import ServiceOrderViewSet, ServiceWorkViewSet, UsedPartViewSet, EmployeeViewSet, WorkGroupViewSet, RepairPhotoViewSet
 from inventory.views import PartViewSet
-from accounts.views import RegisterView, MyTokenObtainPairView # <-- Змінюємо 'users' на 'accounts'
+from accounts.views import RegisterView, MyTokenObtainPairView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet)
 router.register(r'trucks', TruckViewSet)
 router.register(r'base-models', IvecoBaseModelViewSet)
-router.register(r'service-orders', ServiceOrderViewSet)
+# У ServiceOrderViewSet ми використовуємо 'service-orders', а не 'orders', як на фронтенді. Давайте виправимо і це для консистентності.
+router.register(r'orders', ServiceOrderViewSet, basename='serviceorder') # <-- ЗМІНЕНО
 router.register(r'service-works', ServiceWorkViewSet)
 router.register(r'used-parts', UsedPartViewSet)
 router.register(r'employees', EmployeeViewSet)
 router.register(r'parts', PartViewSet)
-router.register(r'work-groups', WorkGroupViewSet)
+router.register(r'workgroups', WorkGroupViewSet) # <-- ОСНОВНЕ ВИПРАВЛЕННЯ
 router.register(r'repair-photos', RepairPhotoViewSet)
 
 urlpatterns = [
