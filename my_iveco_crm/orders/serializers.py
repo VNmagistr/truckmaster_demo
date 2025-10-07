@@ -1,5 +1,3 @@
-# orders/serializers.py
-
 from rest_framework import serializers
 from .models import ServiceOrder, ServiceWork, Employee, Work, WorkCategory, RepairPhoto
 from inventory.models import UsedPart
@@ -36,22 +34,24 @@ class WorkCategorySerializer(serializers.ModelSerializer):
         model = WorkCategory
         fields = ['id', 'name', 'works']
 
-# --- ОСНОВНИЙ ServiceWorkSerializer, ЯКИЙ ВИКОРИСТОВУЄТЬСЯ ДЛЯ ЗАПИСУ ---
-class ServiceWorkSerializer(serializers.ModelSerializer):
+class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceWork
-        # 'cost' розраховується на бекенді, тому його немає в полях для запису
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
 # --- Тепер визначаємо основні ("композитні") серіалізатори ---
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
-    # Використовуємо наш основний ServiceWorkSerializer
-    works = ServiceWorkSerializer(many=True)
+    works = ServiceWorkWriteSerializer(many=True)
 
     class Meta:
         model = ServiceOrder
-        fields = ['id', 'client', 'truck', 'status', 'start_date', 'works']
+        # Додано 'order_number'
+        fields = ['id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number']
+        # Робимо 'order_number' необов'язковим, оскільки він може генеруватися автоматично
+        extra_kwargs = {
+            'order_number': {'required': False, 'allow_blank': True, 'allow_null': True}
+        }
 
     def create(self, validated_data):
         works_data = validated_data.pop('works')
@@ -60,7 +60,6 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             ServiceWork.objects.create(service_order=order, **work_data)
         return order
 
-# Серіалізатор для ЧИТАННЯ (список замовлень)
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
@@ -68,9 +67,9 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceOrder
-        fields = ['id', 'truck', 'client', 'status', 'start_date', 'total_cost']
+        # Додано 'order_number'
+        fields = ['id', 'order_number', 'truck', 'client', 'status', 'start_date', 'total_cost']
 
-# Окремий детальний серіалізатор для вкладених робіт (для ЧИТАННЯ)
 class ServiceWorkDetailSerializer(serializers.ModelSerializer):
     work = WorkSerializer(read_only=True)
     employee = serializers.StringRelatedField(read_only=True)
@@ -79,7 +78,6 @@ class ServiceWorkDetailSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'cost', 'employee']
 
-# Серіалізатор для ЧИТАННЯ (детальна сторінка замовлення)
 class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     truck = TruckListSerializer(read_only=True)
@@ -89,7 +87,8 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceOrder
+        # Додано 'order_number'
         fields = [
-            'id', 'client', 'truck', 'status', 'start_date', 'end_date', 
+            'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date', 
             'total_cost', 'works', 'repair_photos', 'car_photo', 'odometer_photo'
         ]
