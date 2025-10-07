@@ -3,9 +3,10 @@ from .models import ServiceOrder, ServiceWork, Employee, Work, WorkCategory, Rep
 from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
+import transaction # Імпортуємо транзакції для безпечного оновлення
 
 # --- Спочатку визначаємо всі "прості" та допоміжні серіалізатори ---
-
+# ... (RepairPhotoSerializer, EmployeeSerializer, etc. - без змін) ...
 class RepairPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RepairPhoto
@@ -29,7 +30,6 @@ class WorkSerializer(serializers.ModelSerializer):
 
 class WorkCategorySerializer(serializers.ModelSerializer):
     works = WorkSerializer(many=True, read_only=True)
-
     class Meta:
         model = WorkCategory
         fields = ['id', 'name', 'works']
@@ -38,6 +38,7 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
+
 
 # --- Тепер визначаємо основні ("композитні") серіалізатори ---
 
@@ -57,7 +58,27 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
         return order
+        
+    # --- ДОДАЄМО МЕТОД UPDATE ---
+    def update(self, instance, validated_data):
+        # Використовуємо транзакцію, щоб гарантувати цілісність даних
+        with transaction.atomic():
+            # Видаляємо старі роботи, пов'язані з цим замовленням
+            instance.works.all().delete()
+            
+            # Створюємо нові роботи зі свіжих даних
+            if 'works' in validated_data:
+                works_data = validated_data.pop('works')
+                for work_data in works_data:
+                    ServiceWork.objects.create(service_order=instance, **work_data)
 
+            # Оновлюємо решту полів самого замовлення
+            instance = super().update(instance, validated_data)
+            instance.save()
+            return instance
+
+
+# ... (решта серіалізаторів: ServiceOrderListSerializer, ServiceOrderDetailSerializer і т.д. без змін) ...
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
@@ -75,12 +96,9 @@ class ServiceWorkDetailSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'cost', 'employee']
 
-# Серіалізатор для ЧИТАННЯ (детальна сторінка замовлення)
 class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     truck = TruckListSerializer(read_only=True)
-    # --- ОСЬ ВИПРАВЛЕННЯ: прибираємо source='get_status_display' ---
-    # Тепер це поле буде повертати 'new' замість 'Нове', що нам і потрібно для форми редагування
     status = serializers.CharField()
     works = ServiceWorkDetailSerializer(many=True, read_only=True)
     repair_photos = RepairPhotoSerializer(many=True, read_only=True)
