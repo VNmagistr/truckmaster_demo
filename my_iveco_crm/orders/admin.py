@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog, WorkCategory, Work
 
-# --- НОВІ МОДЕЛІ ---
 @admin.register(WorkCategory)
 class WorkCategoryAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -9,11 +8,11 @@ class WorkCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Work)
 class WorkAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price')
+    # --- ОСЬ ВИПРАВЛЕННЯ ---
+    list_display = ('name', 'category', 'price_per_hour')
     list_filter = ('category',)
     search_fields = ('name',)
 
-# --- ІСНУЮЧІ МОДЕЛІ (без значних змін) ---
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'position', 'phone')
@@ -28,7 +27,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('work', 'service_order', 'employee', 'cost')
+    list_display = ('work', 'service_order', 'employee', 'cost', 'duration_hours')
     list_filter = ('employee', 'work__category')
     search_fields = ('work__name', 'custom_description', 'service_order__id')
 
