@@ -6,7 +6,7 @@ from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
-# --- 1. СПОЧАТКУ ВИЗНАЧАЄМО ВСІ "ПРОСТІ" ТА ДОПОМІЖНІ СЕРІАЛІЗАТОРИ ---
+# --- Спочатку визначаємо всі "прості" та допоміжні серіалізатори ---
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,13 +24,11 @@ class UsedPartSerializer(serializers.ModelSerializer):
         model = UsedPart
         fields = ['id', 'part', 'quantity']
 
-# Серіалізатор для однієї роботи з прайс-листа
 class WorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Work
-        fields = ['id', 'name', 'price_per_hour'] # Використовуємо 'price_per_hour'
+        fields = ['id', 'name', 'price_per_hour']
 
-# Серіалізатор для Категорії робіт (включає вкладений список робіт)
 class WorkCategorySerializer(serializers.ModelSerializer):
     works = WorkSerializer(many=True, read_only=True)
 
@@ -38,18 +36,18 @@ class WorkCategorySerializer(serializers.ModelSerializer):
         model = WorkCategory
         fields = ['id', 'name', 'works']
 
-# Серіалізатор для ОДНІЄЇ виконаної роботи (для ЗАПИСУ в замовлення)
-class ServiceWorkWriteSerializer(serializers.ModelSerializer):
+# --- ОСНОВНИЙ ServiceWorkSerializer, ЯКИЙ ВИКОРИСТОВУЄТЬСЯ ДЛЯ ЗАПИСУ ---
+class ServiceWorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceWork
-        # Фронтенд надсилає ID роботи, опис і кількість годин
+        # 'cost' розраховується на бекенді, тому його немає в полях для запису
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
-# --- 2. ТЕПЕР ВИЗНАЧАЄМО ОСНОВНІ ("КОМПОЗИТНІ") СЕРІАЛІЗАТОРИ ---
+# --- Тепер визначаємо основні ("композитні") серіалізатори ---
 
-# Серіалізатор для ЗАПИСУ (створення/оновлення) замовлення
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
-    works = ServiceWorkWriteSerializer(many=True)
+    # Використовуємо наш основний ServiceWorkSerializer
+    works = ServiceWorkSerializer(many=True)
 
     class Meta:
         model = ServiceOrder
@@ -60,15 +58,7 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
         order = ServiceOrder.objects.create(**validated_data)
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
-        # Можна додати виклик update_total_cost після створення, якщо потрібно
-        # order.update_total_cost() 
         return order
-        
-    def update(self, instance, validated_data):
-        # Логіка для оновлення замовлення та його робіт (за потреби)
-        # ...
-        return super().update(instance, validated_data)
-
 
 # Серіалізатор для ЧИТАННЯ (список замовлень)
 class ServiceOrderListSerializer(serializers.ModelSerializer):

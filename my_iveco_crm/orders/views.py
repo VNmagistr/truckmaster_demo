@@ -2,26 +2,23 @@
 
 from django.shortcuts import render
 from rest_framework import viewsets
-# 1. Оновлюємо імпорти моделей: WorkGroup -> WorkCategory, Work
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
 
-# 2. Оновлюємо імпорти серіалізаторів
 from .serializers import (
     RepairPhotoSerializer,
     ServiceOrderListSerializer, 
     ServiceOrderDetailSerializer,
     ServiceOrderWriteSerializer,
-    ServiceWorkSerializer,
+    ServiceWorkSerializer,      # <-- Тепер цей імпорт спрацює
     UsedPartSerializer,
     EmployeeSerializer,
-    WorkCategorySerializer # <-- Замість WorkGroupSerializer
+    WorkCategorySerializer
 )
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.select_related('client', 'truck').all()
 
-    # Ця логіка залишається правильною
     def get_serializer_class(self):
         if self.action == 'list':
             return ServiceOrderListSerializer
@@ -31,17 +28,11 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         
         return ServiceOrderDetailSerializer
 
-# --- 3. Замінюємо WorkGroupViewSet на WorkCategoryViewSet ---
 class WorkCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Віддає список категорій робіт, включаючи вкладений список самих робіт.
-    """
     queryset = WorkCategory.objects.prefetch_related('works').all()
     serializer_class = WorkCategorySerializer
 
-
-# --- Інші ViewSet'и залишаються без змін ---
-
+# --- Цей ViewSet тепер буде працювати коректно ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
     serializer_class = ServiceWorkSerializer
