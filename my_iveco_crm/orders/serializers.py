@@ -46,9 +46,7 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceOrder
-        # Додано 'order_number'
         fields = ['id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number']
-        # Робимо 'order_number' необов'язковим, оскільки він може генеруватися автоматично
         extra_kwargs = {
             'order_number': {'required': False, 'allow_blank': True, 'allow_null': True}
         }
@@ -67,7 +65,6 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceOrder
-        # Додано 'order_number'
         fields = ['id', 'order_number', 'truck', 'client', 'status', 'start_date', 'total_cost']
 
 class ServiceWorkDetailSerializer(serializers.ModelSerializer):
@@ -78,16 +75,18 @@ class ServiceWorkDetailSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'cost', 'employee']
 
+# Серіалізатор для ЧИТАННЯ (детальна сторінка замовлення)
 class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     truck = TruckListSerializer(read_only=True)
-    status = serializers.CharField(source='get_status_display')
+    # --- ОСЬ ВИПРАВЛЕННЯ: прибираємо source='get_status_display' ---
+    # Тепер це поле буде повертати 'new' замість 'Нове', що нам і потрібно для форми редагування
+    status = serializers.CharField()
     works = ServiceWorkDetailSerializer(many=True, read_only=True)
     repair_photos = RepairPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = ServiceOrder
-        # Додано 'order_number'
         fields = [
             'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date', 
             'total_cost', 'works', 'repair_photos', 'car_photo', 'odometer_photo'
