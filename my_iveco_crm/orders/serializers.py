@@ -31,7 +31,7 @@ class WorkCategorySerializer(serializers.ModelSerializer):
     works = WorkSerializer(many=True, read_only=True)
     class Meta:
         model = WorkCategory
-        fields = ['id', 'name', , 'price_per_hour', 'works']
+        fields = ['id', 'name', 'price_per_hour', 'works']
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     class Meta:
