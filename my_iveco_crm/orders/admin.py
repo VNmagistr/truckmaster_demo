@@ -3,13 +3,14 @@ from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, Mainte
 
 @admin.register(WorkCategory)
 class WorkCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    # Додаємо ціну за годину сюди
+    list_display = ('name', 'price_per_hour')
     search_fields = ('name',)
 
 @admin.register(Work)
 class WorkAdmin(admin.ModelAdmin):
-    # --- ОСЬ ВИПРАВЛЕННЯ ---
-    list_display = ('name', 'category', 'price_per_hour')
+    # --- ОСЬ ВИПРАВЛЕННЯ: прибираємо 'price_per_hour' ---
+    list_display = ('name', 'category')
     list_filter = ('category',)
     search_fields = ('name',)
 
