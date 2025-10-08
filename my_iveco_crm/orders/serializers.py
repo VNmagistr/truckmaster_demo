@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from django.db import transaction # <-- ОСЬ ВИПРАВЛЕННЯ
+from django.db import transaction
 from .models import ServiceOrder, ServiceWork, Employee, Work, WorkCategory, RepairPhoto
 from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
-# --- Спочатку визначаємо всі "прості" та допоміжні серіалізатори ---
+
 class RepairPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RepairPhoto
@@ -25,20 +25,19 @@ class UsedPartSerializer(serializers.ModelSerializer):
 class WorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Work
-        fields = ['id', 'name', 'price_per_hour']
+        fields = ['id', 'name']
 
 class WorkCategorySerializer(serializers.ModelSerializer):
     works = WorkSerializer(many=True, read_only=True)
     class Meta:
         model = WorkCategory
-        fields = ['id', 'name', 'works']
+        fields = ['id', 'name', , 'price_per_hour', 'works']
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
-# --- Тепер визначаємо основні ("композитні") серіалізатори ---
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     works = ServiceWorkWriteSerializer(many=True)
 
@@ -69,7 +68,6 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
 
-# ... (решта серіалізаторів: ServiceOrderListSerializer, ServiceOrderDetailSerializer і т.д. без змін) ...
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
