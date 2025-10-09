@@ -1,5 +1,3 @@
-# orders/views.py
-
 from django.shortcuts import render
 from rest_framework import viewsets
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
@@ -10,7 +8,7 @@ from .serializers import (
     ServiceOrderListSerializer, 
     ServiceOrderDetailSerializer,
     ServiceOrderWriteSerializer,
-    ServiceWorkSerializer,      # <-- Тепер цей імпорт спрацює
+    ServiceWorkWriteSerializer,
     UsedPartSerializer,
     EmployeeSerializer,
     WorkCategorySerializer
@@ -18,24 +16,22 @@ from .serializers import (
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.select_related('client', 'truck').all()
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     def get_serializer_class(self):
         if self.action == 'list':
             return ServiceOrderListSerializer
-        
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
-        
         return ServiceOrderDetailSerializer
 
 class WorkCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkCategory.objects.prefetch_related('works').all()
     serializer_class = WorkCategorySerializer
 
-# --- Цей ViewSet тепер буде працювати коректно ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
-    serializer_class = ServiceWorkSerializer
+    serializer_class = ServiceWorkWriteSerializer
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
