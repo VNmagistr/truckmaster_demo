@@ -5,7 +5,6 @@ from inventory.models import UsedPart
 from clients.serializers import ClientSerializer, TruckListSerializer
 from inventory.serializers import PartSerializer
 
-
 class RepairPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RepairPhoto
@@ -40,7 +39,6 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     works = ServiceWorkWriteSerializer(many=True)
-
     class Meta:
         model = ServiceOrder
         fields = ['id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number']
@@ -54,16 +52,14 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
         return order
-        
+
     def update(self, instance, validated_data):
         with transaction.atomic():
             instance.works.all().delete()
-            
             if 'works' in validated_data:
                 works_data = validated_data.pop('works')
                 for work_data in works_data:
                     ServiceWork.objects.create(service_order=instance, **work_data)
-
             instance = super().update(instance, validated_data)
             instance.save()
             return instance
@@ -72,7 +68,6 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
     status = serializers.CharField(source='get_status_display')
-
     class Meta:
         model = ServiceOrder
         fields = ['id', 'order_number', 'truck', 'client', 'status', 'start_date', 'total_cost']
@@ -80,7 +75,6 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
 class ServiceWorkDetailSerializer(serializers.ModelSerializer):
     work = WorkSerializer(read_only=True)
     employee = serializers.StringRelatedField(read_only=True)
-
     class Meta:
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'cost', 'employee']
@@ -91,10 +85,9 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     status = serializers.CharField()
     works = ServiceWorkDetailSerializer(many=True, read_only=True)
     repair_photos = RepairPhotoSerializer(many=True, read_only=True)
-
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date', 
+            'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date',
             'total_cost', 'works', 'repair_photos', 'car_photo', 'odometer_photo'
         ]
