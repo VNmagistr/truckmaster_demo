@@ -21,9 +21,20 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return ServiceOrderListSerializer
+        
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
+        
         return ServiceOrderDetailSerializer
+
+# --- НОВИЙ VIEWSET ДЛЯ ДАШБОРДУ ---
+class RecentOrdersViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Повертає 5 останніх наряд-замовлень для відображення на дашборді.
+    """
+    queryset = ServiceOrder.objects.order_by('-start_date')[:5]
+    serializer_class = ServiceOrderListSerializer
+
 
 class WorkCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkCategory.objects.prefetch_related('works').all()
