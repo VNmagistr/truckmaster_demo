@@ -18,7 +18,6 @@ from .serializers import (
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.select_related('client', 'truck').all()
     http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
-    # Додаємо парсери для обробки файлів
     parser_classes = (MultiPartParser, FormParser)
 
     def get_serializer_class(self):
@@ -31,9 +30,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         return ServiceOrderDetailSerializer
 
 class RecentOrdersViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Повертає 5 останніх наряд-замовлень для відображення на дашборді.
-    """
     queryset = ServiceOrder.objects.order_by('-start_date')[:5]
     serializer_class = ServiceOrderListSerializer
 

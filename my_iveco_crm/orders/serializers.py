@@ -37,19 +37,20 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
+class RepairPhotoWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RepairPhoto
+        fields = ['image', 'caption']
+
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     works = ServiceWorkWriteSerializer(many=True, required=False)
-    repair_photos_upload = serializers.ListField(
-        child=serializers.ImageField(allow_empty_file=False, use_url=False),
-        write_only=True,
-        required=False
-    )
+    repair_photos = RepairPhotoWriteSerializer(many=True, required=False)
 
     class Meta:
         model = ServiceOrder
         fields = [
             'id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number',
-            'car_photo', 'odometer_photo', 'dashboard_photo', 'repair_photos_upload'
+            'car_photo', 'odometer_photo', 'dashboard_photo', 'repair_photos'
         ]
         extra_kwargs = {
             'order_number': {'required': False, 'allow_blank': True, 'allow_null': True},
@@ -60,15 +61,15 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         works_data = validated_data.pop('works', [])
-        photos_data = validated_data.pop('repair_photos_upload', [])
+        photos_data = validated_data.pop('repair_photos', [])
         
         order = ServiceOrder.objects.create(**validated_data)
         
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
             
-        for photo_file in photos_data:
-            RepairPhoto.objects.create(service_order=order, image=photo_file)
+        for photo_data in photos_data:
+            RepairPhoto.objects.create(service_order=order, **photo_data)
             
         return order
 
@@ -80,10 +81,10 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
                 for work_data in works_data:
                     ServiceWork.objects.create(service_order=instance, **work_data)
             
-            if 'repair_photos_upload' in validated_data:
-                photos_data = validated_data.pop('repair_photos_upload')
-                for photo_file in photos_data:
-                    RepairPhoto.objects.create(service_order=instance, image=photo_file)
+            if 'repair_photos' in validated_data:
+                photos_data = validated_data.pop('repair_photos')
+                for photo_data in photos_data:
+                    RepairPhoto.objects.create(service_order=instance, **photo_data)
 
             instance = super().update(instance, validated_data)
             instance.save()
