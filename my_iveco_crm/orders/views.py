@@ -1,5 +1,10 @@
+# orders/views.py
+
 from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.views import APIView # <-- Додайте імпорт
+from rest_framework.response import Response # <-- Додайте імпорт
+from django.db.models import Count # <-- Додайте імпорт
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
@@ -14,6 +19,24 @@ from .serializers import (
     EmployeeSerializer,
     WorkCategorySerializer
 )
+
+# --- НОВИЙ VIEW ДЛЯ СТАТИСТИКИ ---
+class OrderStatsByStatusView(APIView):
+    """
+    Повертає кількість замовлень, згрупованих за статусом.
+    """
+    def get(self, request, format=None):
+        # Агрегуємо дані: групуємо за полем 'status' і рахуємо кількість в кожній групі
+        stats = ServiceOrder.objects.values('status').annotate(count=Count('status'))
+        
+        # Перетворюємо статуси з 'new' на 'Нове' для зручності на фронтенді
+        status_map = dict(ServiceOrder.StatusChoices.choices)
+        data_for_chart = [
+            {'status': status_map.get(item['status'], item['status']), 'count': item['count']}
+            for item in stats
+        ]
+        return Response(data_for_chart)
+
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.select_related('client', 'truck').all()
