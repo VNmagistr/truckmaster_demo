@@ -1,3 +1,5 @@
+# orders/serializers.py
+
 from rest_framework import serializers
 from django.db import transaction
 from .models import ServiceOrder, ServiceWork, Employee, Work, WorkCategory, RepairPhoto
@@ -8,7 +10,7 @@ from inventory.serializers import PartSerializer
 class RepairPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = RepairPhoto
-        fields = '__all__'
+        fields = ['id', 'image', 'caption', 'uploaded_at']
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,33 +39,66 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
+# --- ЗМІНЕНО: Додано обробку фото ---
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     works = ServiceWorkWriteSerializer(many=True)
+    # Поле для завантаження фотографій поломок (тільки для запису)
+    repair_photos_upload = serializers.ListField(
+        child=serializers.ImageField(allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False # Робимо необов'язковим
+    )
+
     class Meta:
         model = ServiceOrder
-        fields = ['id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number']
+        fields = [
+            'id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number',
+            'car_photo', 'odometer_photo', 'repair_photos_upload' # Додаємо нові поля
+        ]
         extra_kwargs = {
-            'order_number': {'required': False, 'allow_blank': True, 'allow_null': True}
+            'order_number': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'car_photo': {'required': False, 'allow_null': True},
+            'odometer_photo': {'required': False, 'allow_null': True},
         }
 
     def create(self, validated_data):
-        works_data = validated_data.pop('works')
+        # Витягуємо дані про роботи та фото
+        works_data = validated_data.pop('works', [])
+        photos_data = validated_data.pop('repair_photos_upload', [])
+        
+        # Створюємо основний об'єкт замовлення
         order = ServiceOrder.objects.create(**validated_data)
+        
+        # Створюємо пов'язані роботи
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
+            
+        # Створюємо фотографії ремонту
+        for photo_file in photos_data:
+            RepairPhoto.objects.create(service_order=order, image=photo_file)
+            
         return order
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            instance.works.all().delete()
+            # ... (логіка оновлення робіт залишається без змін)
             if 'works' in validated_data:
+                instance.works.all().delete()
                 works_data = validated_data.pop('works')
                 for work_data in works_data:
                     ServiceWork.objects.create(service_order=instance, **work_data)
+            
+            # Додаємо нові фотографії ремонту при оновленні
+            if 'repair_photos_upload' in validated_data:
+                photos_data = validated_data.pop('repair_photos_upload')
+                for photo_file in photos_data:
+                    RepairPhoto.objects.create(service_order=instance, image=photo_file)
+
             instance = super().update(instance, validated_data)
             instance.save()
             return instance
 
+# --- Серіалізатори для читання (без значних змін) ---
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
@@ -82,7 +117,7 @@ class ServiceWorkDetailSerializer(serializers.ModelSerializer):
 class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     truck = TruckListSerializer(read_only=True)
-    status = serializers.CharField()
+    status = serializers.CharField(source='get_status_display')
     works = ServiceWorkDetailSerializer(many=True, read_only=True)
     repair_photos = RepairPhotoSerializer(many=True, read_only=True)
     class Meta:
