@@ -1,5 +1,3 @@
-# orders/serializers.py
-
 from rest_framework import serializers
 from django.db import transaction
 from .models import ServiceOrder, ServiceWork, Employee, Work, WorkCategory, RepairPhoto
@@ -39,41 +37,36 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
         model = ServiceWork
         fields = ['id', 'work', 'custom_description', 'duration_hours', 'employee']
 
-# --- ЗМІНЕНО: Додано обробку фото ---
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
-    works = ServiceWorkWriteSerializer(many=True)
-    # Поле для завантаження фотографій поломок (тільки для запису)
+    works = ServiceWorkWriteSerializer(many=True, required=False)
     repair_photos_upload = serializers.ListField(
         child=serializers.ImageField(allow_empty_file=False, use_url=False),
         write_only=True,
-        required=False # Робимо необов'язковим
+        required=False
     )
 
     class Meta:
         model = ServiceOrder
         fields = [
             'id', 'client', 'truck', 'status', 'start_date', 'works', 'order_number',
-            'car_photo', 'odometer_photo', 'repair_photos_upload' # Додаємо нові поля
+            'car_photo', 'odometer_photo', 'dashboard_photo', 'repair_photos_upload'
         ]
         extra_kwargs = {
             'order_number': {'required': False, 'allow_blank': True, 'allow_null': True},
             'car_photo': {'required': False, 'allow_null': True},
             'odometer_photo': {'required': False, 'allow_null': True},
+            'dashboard_photo': {'required': False, 'allow_null': True},
         }
 
     def create(self, validated_data):
-        # Витягуємо дані про роботи та фото
         works_data = validated_data.pop('works', [])
         photos_data = validated_data.pop('repair_photos_upload', [])
         
-        # Створюємо основний об'єкт замовлення
         order = ServiceOrder.objects.create(**validated_data)
         
-        # Створюємо пов'язані роботи
         for work_data in works_data:
             ServiceWork.objects.create(service_order=order, **work_data)
             
-        # Створюємо фотографії ремонту
         for photo_file in photos_data:
             RepairPhoto.objects.create(service_order=order, image=photo_file)
             
@@ -81,14 +74,12 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         with transaction.atomic():
-            # ... (логіка оновлення робіт залишається без змін)
             if 'works' in validated_data:
                 instance.works.all().delete()
                 works_data = validated_data.pop('works')
                 for work_data in works_data:
                     ServiceWork.objects.create(service_order=instance, **work_data)
             
-            # Додаємо нові фотографії ремонту при оновленні
             if 'repair_photos_upload' in validated_data:
                 photos_data = validated_data.pop('repair_photos_upload')
                 for photo_file in photos_data:
@@ -98,7 +89,6 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             instance.save()
             return instance
 
-# --- Серіалізатори для читання (без значних змін) ---
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField(read_only=True)
     truck = serializers.StringRelatedField(read_only=True)
@@ -123,6 +113,6 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date',
-            'total_cost', 'works', 'repair_photos', 'car_photo', 'odometer_photo'
+            'id', 'order_number', 'client', 'truck', 'status', 'start_date', 'end_date', 
+            'total_cost', 'works', 'repair_photos', 'car_photo', 'odometer_photo', 'dashboard_photo'
         ]
