@@ -1,3 +1,5 @@
+# orders/models.py
+
 from django.db import models
 from django.db.models import Sum, F, Max
 from clients.models import Client, Truck, IvecoBaseModel
@@ -14,22 +16,18 @@ class RepairPhoto(models.Model):
     def __str__(self):
         return f"Фото для замовлення №{self.service_order.id}"
 
-# --- ЗМІНЕНО: Додано поле price_per_hour ---
 class WorkCategory(models.Model):
     name = models.CharField(max_length=255, unique=True, verbose_name="Назва категорії робіт")
     price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Вартість нормогодини (грн)")
-
     class Meta:
         verbose_name = "Категорія робіт"
         verbose_name_plural = "Категорії робіт"
     def __str__(self):
         return self.name
 
-# --- ЗМІНЕНО: Видалено поле price_per_hour ---
 class Work(models.Model):
     category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="works", verbose_name="Категорія")
     name = models.CharField(max_length=255, verbose_name="Назва роботи")
-
     class Meta:
         verbose_name = "Робота з прайсу"
         verbose_name_plural = "Роботи з прайсу"
@@ -53,6 +51,13 @@ class ServiceOrder(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
     car_photo = models.ImageField(upload_to='order_photos/cars/', null=True, blank=True, verbose_name="Фото авто з держномером")
     odometer_photo = models.ImageField(upload_to='order_photos/odometers/', null=True, blank=True, verbose_name="Фото щитка приладів")
+    
+    # --- НОВЕ ПОЛЕ ---
+    dashboard_photo = models.ImageField(
+        upload_to='order_photos/dashboards/', null=True, blank=True, 
+        verbose_name="Фото панелі приладів"
+    )
+    
     class StatusChoices(models.TextChoices):
         NEW = 'new', 'Нове'
         IN_PROGRESS = 'in_progress', 'В роботі'
@@ -86,7 +91,6 @@ class ServiceOrder(models.Model):
     def __str__(self):
         return f"Замовлення №{self.order_number or self.id} для {self.truck.license_plate}"
 
-# --- ЗМІНЕНО: Оновлено логіку розрахунку в методі save ---
 class ServiceWork(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
@@ -96,7 +100,6 @@ class ServiceWork(models.Model):
     duration_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
     
     def save(self, *args, **kwargs):
-        # Розраховуємо вартість на основі ціни КАТЕГОРІЇ, до якої належить робота
         if self.work and self.duration_hours > 0:
              self.cost = self.work.category.price_per_hour * self.duration_hours
         super().save(*args, **kwargs)
@@ -105,7 +108,6 @@ class ServiceWork(models.Model):
         verbose_name = "Виконана робота"
         verbose_name_plural = "Виконані роботи"
     def __str__(self):
-        # Перевіряємо, чи існує self.work, щоб уникнути помилок
         if self.work:
             return f"{self.work.name} для замовлення №{self.service_order.id}"
         return f"Робота для замовлення №{self.service_order.id}"
