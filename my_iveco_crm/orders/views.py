@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
 
@@ -17,6 +18,8 @@ from .serializers import (
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.select_related('client', 'truck').all()
     http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
+    # Додаємо парсери для обробки файлів
+    parser_classes = (MultiPartParser, FormParser)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -27,14 +30,12 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         
         return ServiceOrderDetailSerializer
 
-# --- НОВИЙ VIEWSET ДЛЯ ДАШБОРДУ ---
 class RecentOrdersViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Повертає 5 останніх наряд-замовлень для відображення на дашборді.
     """
     queryset = ServiceOrder.objects.order_by('-start_date')[:5]
     serializer_class = ServiceOrderListSerializer
-
 
 class WorkCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkCategory.objects.prefetch_related('works').all()
