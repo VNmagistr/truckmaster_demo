@@ -7,7 +7,8 @@ from .views import (
     UsedPartViewSet,
     EmployeeViewSet,
     WorkCategoryViewSet,
-    RepairPhotoViewSet
+    RepairPhotoViewSet,
+    RecentOrdersViewSet
 )
 
 router = DefaultRouter()
@@ -17,5 +18,6 @@ router.register(r'used-parts', UsedPartViewSet)
 router.register(r'employees', EmployeeViewSet)
 router.register(r'work-categories', WorkCategoryViewSet)
 router.register(r'repair-photos', RepairPhotoViewSet)
+router.register(r'recent-orders', RecentOrdersViewSet, basename='recent-orders')
 
 urlpatterns = router.urls
