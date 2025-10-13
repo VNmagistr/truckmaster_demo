@@ -1,6 +1,6 @@
 # orders/urls.py
 
-from django.urls import path # <-- Додайте імпорт path
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 from .views import (
     ServiceOrderViewSet,
@@ -9,7 +9,8 @@ from .views import (
     EmployeeViewSet,
     WorkCategoryViewSet,
     RepairPhotoViewSet,
-    OrderStatsByStatusView # <-- Імпортуємо новий view
+    RecentOrdersViewSet,
+    DashboardOrderStatsView,
 )
 
 router = DefaultRouter()
@@ -19,8 +20,8 @@ router.register(r'used-parts', UsedPartViewSet)
 router.register(r'employees', EmployeeViewSet)
 router.register(r'work-categories', WorkCategoryViewSet)
 router.register(r'repair-photos', RepairPhotoViewSet)
+router.register(r'recent-orders', RecentOrdersViewSet, basename='recent-orders')
 
-# Додаємо маршрут для статистики окремо від роутера
 urlpatterns = router.urls + [
-    path('order-stats-by-status/', OrderStatsByStatusView.as_view(), name='order-stats-by-status'),
+    path('dashboard-order-stats/', DashboardOrderStatsView.as_view(), name='dashboard-order-stats'),
 ]
