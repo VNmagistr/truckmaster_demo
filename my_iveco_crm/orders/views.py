@@ -1,10 +1,10 @@
-# orders/views.py
-
 from django.shortcuts import render
 from rest_framework import viewsets
-from rest_framework.views import APIView # <-- Додайте імпорт
-from rest_framework.response import Response # <-- Додайте імпорт
-from django.db.models import Count # <-- Додайте імпорт
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Count
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
@@ -20,22 +20,41 @@ from .serializers import (
     WorkCategorySerializer
 )
 
-# --- НОВИЙ VIEW ДЛЯ СТАТИСТИКИ ---
-class OrderStatsByStatusView(APIView):
+# --- НОВИЙ VIEW ДЛЯ СТАТИСТИКИ ДАШБОРДУ ---
+class DashboardOrderStatsView(APIView):
     """
-    Повертає кількість замовлень, згрупованих за статусом.
+    Повертає статистику по замовленнях за різні періоди з порівнянням.
     """
     def get(self, request, format=None):
-        # Агрегуємо дані: групуємо за полем 'status' і рахуємо кількість в кожній групі
-        stats = ServiceOrder.objects.values('status').annotate(count=Count('status'))
+        now = timezone.now()
         
-        # Перетворюємо статуси з 'new' на 'Нове' для зручності на фронтенді
-        status_map = dict(ServiceOrder.StatusChoices.choices)
-        data_for_chart = [
-            {'status': status_map.get(item['status'], item['status']), 'count': item['count']}
-            for item in stats
-        ]
-        return Response(data_for_chart)
+        # --- Поточні періоди ---
+        # Тиждень (з понеділка)
+        start_of_week = now.date() - timedelta(days=now.weekday())
+        # Місяць
+        start_of_month = now.date().replace(day=1)
+        # Рік
+        start_of_year = now.date().replace(month=1, day=1)
+
+        # --- Аналогічні періоди минулого року ---
+        last_year_now = now.replace(year=now.year - 1)
+        start_of_week_ly = last_year_now.date() - timedelta(days=last_year_now.weekday())
+        end_of_week_ly = start_of_week_ly + timedelta(days=6)
+        start_of_month_ly = last_year_now.date().replace(day=1)
+        end_of_month_ly = (start_of_month_ly + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+        start_of_year_ly = last_year_now.date().replace(month=1, day=1)
+        end_of_year_ly = last_year_now.date().replace(month=12, day=31)
+
+        # --- Розрахунки ---
+        stats = {
+            'this_week': ServiceOrder.objects.filter(start_date__gte=start_of_week).count(),
+            'this_month': ServiceOrder.objects.filter(start_date__gte=start_of_month).count(),
+            'this_year': ServiceOrder.objects.filter(start_date__gte=start_of_year).count(),
+            'compare_week': ServiceOrder.objects.filter(start_date__range=(start_of_week_ly, end_of_week_ly)).count(),
+            'compare_month': ServiceOrder.objects.filter(start_date__range=(start_of_month_ly, end_of_month_ly)).count(),
+            'compare_year': ServiceOrder.objects.filter(start_date__range=(start_of_year_ly, end_of_year_ly)).count(),
+        }
+        return Response(stats)
 
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
