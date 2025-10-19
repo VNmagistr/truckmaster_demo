@@ -11,7 +11,8 @@ from inventory.models import UsedPart
 from django.conf import settings
 from rest_framework.permissions import BasePermission
 from rest_framework import exceptions
-import logging # Додаємо логування
+import logging
+from django.core.exceptions import ValidationError # <-- Додаємо імпорт
 
 # Отримуємо логгер
 logger = logging.getLogger(__name__)
@@ -46,19 +47,25 @@ class BotOrderStatusView(APIView):
 
     def get(self, request, order_number, format=None):
         try:
+            # Додаємо перевірку, що це дійсно цифри
+            if not order_number.isdigit():
+                 raise ValidationError("Номер має складатися лише з цифр.")
+                 
             order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
             serializer = ServiceOrderListSerializer(order)
             return Response(serializer.data)
         
         except ServiceOrder.DoesNotExist:
-            # Це очікувана помилка, якщо номер не знайдено
             return Response({'detail': 'Not Found'}, status=404)
         
+        except ValidationError as e:
+            logger.warning(f"Bot API Validation Error: {e}")
+            return Response({'detail': str(e)}, status=400)
+        
         except Exception as e:
-            # --- ДОДАНО: Обробляємо всі інші помилки ---
-            # Наприклад, якщо `order_number` буде "привіт" і викличе 'ValidationError'
+            # Будь-яка інша помилка - це помилка сервера 500
             logger.error(f"Bot API Error: Не вдалося обробити запит на номер {order_number}. Помилка: {e}")
-            return Response({'detail': 'Bad Request'}, status=400)
+            return Response({'detail': 'Internal Server Error'}, status=500)
 
 
 class DashboardOrderStatsView(APIView):
