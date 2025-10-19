@@ -1,3 +1,5 @@
+# orders/views.py
+
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.views import APIView
@@ -8,6 +10,10 @@ from datetime import timedelta
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
+from django.conf import settings # <-- Додайте імпорт settings
+from rest_framework.permissions import BasePermission # <-- Додайте імпорт BasePermission
+from rest_framework import exceptions # <-- Додайте імпорт exceptions
+
 
 from .serializers import (
     RepairPhotoSerializer,
@@ -20,7 +26,34 @@ from .serializers import (
     WorkCategorySerializer
 )
 
-# --- НОВИЙ VIEW ДЛЯ СТАТИСТИКИ ДАШБОРДУ ---
+# --- НОВИЙ КЛАС ДОСТУПУ ДЛЯ БОТА ---
+class IsBotAuthenticated(BasePermission):
+    """
+    Дозволяє доступ, тільки якщо в заголовку є правильний секретний ключ.
+    """
+    def has_permission(self, request, view):
+        secret = request.headers.get('X-Bot-Api-Secret')
+        if not secret or secret != settings.BOT_API_SECRET_KEY:
+            raise exceptions.AuthenticationFailed('Неправильний токен бота')
+        return True
+
+
+# --- НОВИЙ VIEW ДЛЯ БОТА ---
+class BotOrderStatusView(APIView):
+    """
+    Безпечний ендпоінт для бота, щоб отримати статус замовлення.
+    """
+    permission_classes = [IsBotAuthenticated] # Використовуємо наш ключ доступу
+
+    def get(self, request, order_number, format=None):
+        try:
+            order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
+            serializer = ServiceOrderListSerializer(order)
+            return Response(serializer.data)
+        except ServiceOrder.DoesNotExist:
+            return Response({'detail': 'Not Found'}, status=404)
+
+
 class DashboardOrderStatsView(APIView):
     """
     Повертає статистику по замовленнях за різні періоди з порівнянням.
@@ -29,11 +62,8 @@ class DashboardOrderStatsView(APIView):
         now = timezone.now()
         
         # --- Поточні періоди ---
-        # Тиждень (з понеділка)
         start_of_week = now.date() - timedelta(days=now.weekday())
-        # Місяць
         start_of_month = now.date().replace(day=1)
-        # Рік
         start_of_year = now.date().replace(month=1, day=1)
 
         # --- Аналогічні періоди минулого року ---
