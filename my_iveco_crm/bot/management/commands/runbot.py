@@ -2,13 +2,14 @@ import os
 import requests
 import logging
 import asyncio
+import re # <-- Додаємо імпорт регулярних виразів
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from orders.models import ServiceOrder
 from orders.serializers import ServiceOrderListSerializer
 
-# Налаштовуємо логування, щоб бачити помилки
+# Налаштовуємо логування
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -32,15 +33,16 @@ async def start(update, context):
 async def check_order_status(update, context):
     """Перевіряє статус замовлення за його номером."""
     
-    # --- ОСЬ ВИПРАВЛЕННЯ: Очищуємо вхідні дані ---
-    order_number = update.message.text.strip()
+    # --- ОСЬ ВИПРАВЛЕННЯ: Видаляємо ВСІ символи, окрім цифр ---
+    original_text = update.message.text
+    order_number = re.sub(r'\D', '', original_text)
     
     headers = {'X-BOT-API-SECRET': API_SECRET_KEY}
     
     try:
-        # Тепер перевіряємо очищені дані
-        if not order_number.isdigit():
-            await update.message.reply_text(f"'{order_number}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами).")
+        # Перевіряємо, чи залишились цифри після очищення
+        if not order_number:
+            await update.message.reply_text(f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами).")
             return
 
         response = requests.get(
