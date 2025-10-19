@@ -1,5 +1,3 @@
-# bot/management/commands/runbot.py
-
 import os
 import requests
 import logging
@@ -10,7 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from orders.models import ServiceOrder
 from orders.serializers import ServiceOrderListSerializer
 
-# Налаштовуємо логування
+# Налаштовуємо логування, щоб бачити помилки
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -22,7 +20,7 @@ BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 API_SECRET_KEY = os.environ.get('BOT_API_SECRET_KEY') 
 CRM_API_URL = "http://127.0.0.1/api"
 
-# --- Обробники ---
+# --- Обробник команди /start ---
 async def start(update, context):
     """Надсилає вітальне повідомлення при команді /start."""
     await update.message.reply_text(
@@ -30,13 +28,17 @@ async def start(update, context):
         'Щоб перевірити статус вашого наряд-замовлення, просто надішліть мені його номер.'
     )
 
+# --- Обробник текстових повідомлень (для перевірки статусу) ---
 async def check_order_status(update, context):
     """Перевіряє статус замовлення за його номером."""
-    order_number = update.message.text
+    
+    # --- ОСЬ ВИПРАВЛЕННЯ: Очищуємо вхідні дані ---
+    order_number = update.message.text.strip()
+    
     headers = {'X-BOT-API-SECRET': API_SECRET_KEY}
     
     try:
-        # Перевіряємо, чи введено взагалі номер
+        # Тепер перевіряємо очищені дані
         if not order_number.isdigit():
             await update.message.reply_text(f"'{order_number}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами).")
             return
