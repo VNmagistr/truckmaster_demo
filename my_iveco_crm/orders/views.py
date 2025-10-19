@@ -1,5 +1,3 @@
-# orders/views.py
-
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.views import APIView
@@ -10,10 +8,13 @@ from datetime import timedelta
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
-from django.conf import settings # <-- Додайте імпорт settings
-from rest_framework.permissions import BasePermission # <-- Додайте імпорт BasePermission
-from rest_framework import exceptions # <-- Додайте імпорт exceptions
+from django.conf import settings
+from rest_framework.permissions import BasePermission
+from rest_framework import exceptions
+import logging # Додаємо логування
 
+# Отримуємо логгер
+logger = logging.getLogger(__name__)
 
 from .serializers import (
     RepairPhotoSerializer,
@@ -26,7 +27,6 @@ from .serializers import (
     WorkCategorySerializer
 )
 
-# --- НОВИЙ КЛАС ДОСТУПУ ДЛЯ БОТА ---
 class IsBotAuthenticated(BasePermission):
     """
     Дозволяє доступ, тільки якщо в заголовку є правильний секретний ключ.
@@ -38,20 +38,27 @@ class IsBotAuthenticated(BasePermission):
         return True
 
 
-# --- НОВИЙ VIEW ДЛЯ БОТА ---
 class BotOrderStatusView(APIView):
     """
     Безпечний ендпоінт для бота, щоб отримати статус замовлення.
     """
-    permission_classes = [IsBotAuthenticated] # Використовуємо наш ключ доступу
+    permission_classes = [IsBotAuthenticated]
 
     def get(self, request, order_number, format=None):
         try:
             order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
             serializer = ServiceOrderListSerializer(order)
             return Response(serializer.data)
+        
         except ServiceOrder.DoesNotExist:
+            # Це очікувана помилка, якщо номер не знайдено
             return Response({'detail': 'Not Found'}, status=404)
+        
+        except Exception as e:
+            # --- ДОДАНО: Обробляємо всі інші помилки ---
+            # Наприклад, якщо `order_number` буде "привіт" і викличе 'ValidationError'
+            logger.error(f"Bot API Error: Не вдалося обробити запит на номер {order_number}. Помилка: {e}")
+            return Response({'detail': 'Bad Request'}, status=400)
 
 
 class DashboardOrderStatsView(APIView):
@@ -61,12 +68,10 @@ class DashboardOrderStatsView(APIView):
     def get(self, request, format=None):
         now = timezone.now()
         
-        # --- Поточні періоди ---
         start_of_week = now.date() - timedelta(days=now.weekday())
         start_of_month = now.date().replace(day=1)
         start_of_year = now.date().replace(month=1, day=1)
 
-        # --- Аналогічні періоди минулого року ---
         last_year_now = now.replace(year=now.year - 1)
         start_of_week_ly = last_year_now.date() - timedelta(days=last_year_now.weekday())
         end_of_week_ly = start_of_week_ly + timedelta(days=6)
@@ -75,7 +80,6 @@ class DashboardOrderStatsView(APIView):
         start_of_year_ly = last_year_now.date().replace(month=1, day=1)
         end_of_year_ly = last_year_now.date().replace(month=12, day=31)
 
-        # --- Розрахунки ---
         stats = {
             'this_week': ServiceOrder.objects.filter(start_date__gte=start_of_week).count(),
             'this_month': ServiceOrder.objects.filter(start_date__gte=start_of_month).count(),
