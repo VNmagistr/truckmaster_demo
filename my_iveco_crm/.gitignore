@@ -21,4 +21,5 @@ mediafiles/
 
 # Файли IDE
 .vscode/
-.idea/
+.idea/*.save
+/media/
