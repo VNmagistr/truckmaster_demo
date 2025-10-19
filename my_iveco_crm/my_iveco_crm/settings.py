@@ -91,7 +91,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'ВАШ_ПАРОЛЬ_ВІД_БАЗИ_ДАНИХ', # ВАЖЛИВО: Вставте ваш пароль
+        'PASSWORD': 'Italtruck',
         'HOST': 'iveco-crm-database.ctm2sws6sb0k.eu-central-1.rds.amazonaws.com',
         'PORT': '5432',
     }
