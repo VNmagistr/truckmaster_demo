@@ -28,7 +28,7 @@ SECRET_KEY = "django-insecure-2m^&axa-o84=ukjtq6fxz1n7m7!l&x41mj*weg^)-l*c898=$#
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '3.121.188.223',
+    '157.230.114.19',
     'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
 ]
 
