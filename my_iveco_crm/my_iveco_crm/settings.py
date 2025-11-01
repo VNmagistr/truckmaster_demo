@@ -17,6 +17,7 @@ import os # <-- Цей рядок потрібен для MEDIA_ROOT
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -90,10 +91,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'Italtruck',
-        'HOST': 'iveco-crm-database.ctm2sws6sb0k.eu-central-1.rds.amazonaws.com',
-        'PORT': '5432',
+        'USER': 'doadmin',
+        'PASSWORD': '***REDACTED_DB_PASSWORD***',
+        'HOST': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
+        'PORT': '25060',
     }
 }
 
