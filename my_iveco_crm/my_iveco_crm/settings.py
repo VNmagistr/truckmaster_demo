@@ -90,7 +90,7 @@ WSGI_APPLICATION = "my_iveco_crm.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
+        'NAME': 'defaultdb',
         'USER': 'doadmin',
         'PASSWORD': 'AVNS_0nTi9zC-E28PdOnl4z0',
         'HOST': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
