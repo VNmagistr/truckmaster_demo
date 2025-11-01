@@ -1,3 +1,5 @@
+# orders/views.py
+
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.views import APIView
@@ -9,10 +11,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
 from inventory.models import UsedPart 
 from django.conf import settings
-from rest_framework.permissions import BasePermission
-from rest_framework import exceptions
 import logging
-from django.core.exceptions import ValidationError # <-- Додаємо імпорт
 
 # Отримуємо логгер
 logger = logging.getLogger(__name__)
@@ -28,45 +27,7 @@ from .serializers import (
     WorkCategorySerializer
 )
 
-class IsBotAuthenticated(BasePermission):
-    """
-    Дозволяє доступ, тільки якщо в заголовку є правильний секретний ключ.
-    """
-    def has_permission(self, request, view):
-        secret = request.headers.get('X-Bot-Api-Secret')
-        if not secret or secret != settings.BOT_API_SECRET_KEY:
-            raise exceptions.AuthenticationFailed('Неправильний токен бота')
-        return True
-
-
-class BotOrderStatusView(APIView):
-    """
-    Безпечний ендпоінт для бота, щоб отримати статус замовлення.
-    """
-    permission_classes = [IsBotAuthenticated]
-
-    def get(self, request, order_number, format=None):
-        try:
-            # Додаємо перевірку, що це дійсно цифри
-            if not order_number.isdigit():
-                 raise ValidationError("Номер має складатися лише з цифр.")
-                 
-            order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
-            serializer = ServiceOrderListSerializer(order)
-            return Response(serializer.data)
-        
-        except ServiceOrder.DoesNotExist:
-            return Response({'detail': 'Not Found'}, status=404)
-        
-        except ValidationError as e:
-            logger.warning(f"Bot API Validation Error: {e}")
-            return Response({'detail': str(e)}, status=400)
-        
-        except Exception as e:
-            # Будь-яка інша помилка - це помилка сервера 500
-            logger.error(f"Bot API Error: Не вдалося обробити запит на номер {order_number}. Помилка: {e}")
-            return Response({'detail': 'Internal Server Error'}, status=500)
-
+# Ми видалили класи 'IsBotAuthenticated' та 'BotOrderStatusView'
 
 class DashboardOrderStatsView(APIView):
     """

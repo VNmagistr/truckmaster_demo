@@ -10,8 +10,7 @@ from .views import (
     WorkCategoryViewSet,
     RepairPhotoViewSet,
     RecentOrdersViewSet,
-    DashboardOrderStatsView,
-    BotOrderStatusView # <-- Імпортуємо новий view
+    DashboardOrderStatsView
 )
 
 router = DefaultRouter()
@@ -23,9 +22,7 @@ router.register(r'work-categories', WorkCategoryViewSet)
 router.register(r'repair-photos', RepairPhotoViewSet)
 router.register(r'recent-orders', RecentOrdersViewSet, basename='recent-orders')
 
-# Додаємо маршрути для статистики та бота
+# Видаляємо маршрут для бота
 urlpatterns = router.urls + [
     path('dashboard-order-stats/', DashboardOrderStatsView.as_view(), name='dashboard-order-stats'),
-    # --- НОВИЙ МАРШРУТ ДЛЯ БОТА ---
-    path('bot/order-status/<str:order_number>/', BotOrderStatusView.as_view(), name='bot-order-status'),
 ]
