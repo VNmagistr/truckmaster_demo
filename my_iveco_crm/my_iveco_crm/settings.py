@@ -28,7 +28,7 @@ SECRET_KEY = "***REDACTED_SECRET_KEY***"
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '3.121.188.223',
+    '157.230.114.19',
     'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
 ]
 
