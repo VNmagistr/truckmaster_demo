@@ -28,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     '3.121.188.223',
-    'ec2-3-121-188-223.eu-central-1.compute.amazonaws.com',
+    'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
 ]
 
 
@@ -159,6 +159,3 @@ REST_FRAMEWORK = {
 # Налаштування для медіафайлів (завантажених користувачами)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
-BOT_API_SECRET_KEY = "***REDACTED_BOT_SECRET***"
