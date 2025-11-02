@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from orders.models import ServiceOrder
+from bot.models import BotMessageLog  # 1. Імпортуємо нашу нову модель
 from asgiref.sync import sync_to_async
 
 # Налаштовуємо логування
@@ -18,32 +19,63 @@ logger = logging.getLogger(__name__)
 # --- Налаштування ---
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 
+# --- Нова функція для запису в БД ---
+@sync_to_async
+def log_message(chat_id, user_name, message_text, bot_response):
+    """
+    Асинхронно зберігає повідомлення та відповідь бота у базу даних.
+    """
+    try:
+        BotMessageLog.objects.create(
+            chat_id=chat_id,
+            user_name=user_name,
+            message_text=message_text,
+            bot_response=bot_response
+        )
+        logger.info(f"Лог збережено для {chat_id}")
+    except Exception as e:
+        logger.error(f"Не вдалося зберегти лог для {chat_id}: {e}")
+
 # --- Обробники ---
 async def start(update, context):
     """Надсилає персоналізоване вітальне повідомлення при команді /start."""
-    
-    # Отримуємо ім'я користувача з об'єкта update
-    user_name = update.message.from_user.first_name
-    
-    # Створюємо персоналізоване повідомлення
-    welcome_message = (
+    user = update.message.from_user
+    user_name = user.first_name
+    chat_id = user.id
+    message_text = update.message.text
+
+    reply_text = (
         f'Вітаю, {user_name}!\n\n'
         'Ласкаво просимо до сервісу TruckMaster!\n\n'
+        'Наразі бот знаходиться на стадії розробки, слідкуйте за оновленнями.\n\n'
     )
-    
-    await update.message.reply_text(welcome_message)
+
+    await update.message.reply_text(reply_text)
+
+    # 2. Викликаємо логування
+    await log_message(chat_id, user_name, message_text, reply_text)
 
 async def check_order_status(update, context):
     """Обробляє текстове повідомлення та викликає синхронну функцію БД."""
+    user = update.message.from_user
+    user_name = user.first_name
+    chat_id = user.id
     original_text = update.message.text
+
     order_number = re.sub(r'\D', '', original_text)
-    
+
     if not order_number:
-        await update.message.reply_text(f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами).")
+        reply_message = f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами)."
+        await update.message.reply_text(reply_message)
+        # 3. Викликаємо логування (навіть для помилок)
+        await log_message(chat_id, user_name, original_text, reply_message)
         return
 
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
+
+    # 4. Викликаємо логування
+    await log_message(chat_id, user_name, original_text, reply_message)
 
 @sync_to_async
 def get_order_from_db(order_number):
@@ -52,7 +84,7 @@ def get_order_from_db(order_number):
     """
     try:
         order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
-        
+
         reply = (
             f"Замовлення №{order.order_number}\n"
             f"Статус: {order.get_status_display()}\n"
