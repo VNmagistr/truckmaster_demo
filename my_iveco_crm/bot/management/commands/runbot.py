@@ -65,7 +65,7 @@ async def check_order_status(update, context):
     order_number = re.sub(r'\D', '', original_text)
 
     if not order_number:
-        reply_message = f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами)."
+        reply_message = f"'{original_text}' - це наразі невідома мені команда. Будь ласка, спробуйте ще раз."
         await update.message.reply_text(reply_message)
         # 3. Викликаємо логування (навіть для помилок)
         await log_message(chat_id, user_name, original_text, reply_message)
