@@ -20,11 +20,18 @@ BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 
 # --- Обробники ---
 async def start(update, context):
-    """Надсилає вітальне повідомлення при команді /start."""
-    await update.message.reply_text(
+    """Надсилає персоналізоване вітальне повідомлення при команді /start."""
+    
+    # Отримуємо ім'я користувача з об'єкта update
+    user_name = update.message.from_user.first_name
+    
+    # Створюємо персоналізоване повідомлення
+    welcome_message = (
+        f'Вітаю, {user_name}!\n\n'
         'Ласкаво просимо до сервісу TruckMaster!\n\n'
-        'Щоб перевірити статус вашого наряд-замовлення, просто надішліть мені його номер.'
     )
+    
+    await update.message.reply_text(welcome_message)
 
 async def check_order_status(update, context):
     """Обробляє текстове повідомлення та викликає синхронну функцію БД."""
