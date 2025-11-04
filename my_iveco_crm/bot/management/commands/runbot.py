@@ -4,7 +4,8 @@ import asyncio
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+# Імпортуємо ReplyKeyboardMarkup, KeyboardButton та ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from orders.models import ServiceOrder
 from bot.models import BotMessageLog
@@ -20,21 +21,30 @@ logger = logging.getLogger(__name__)
 # --- Налаштування ---
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 
-# --- Функція збереження в БД ---
+# --- Функції роботи з БД ---
+
+@sync_to_async
+def get_user_phone_from_db(chat_id):
+    """
+    Асинхронно перевіряє, чи є в базі номер телефону для цього chat_id.
+    """
+    log_entry = BotMessageLog.objects.filter(chat_id=chat_id, phone_number__isnull=False).order_by('-created_at').first()
+    if log_entry:
+        return log_entry.phone_number
+    return None
+
 @sync_to_async
 def log_message(chat_id, user_name, message_text, bot_response, phone_number=None):
     """
     Асинхронно зберігає повідомлення та відповідь бота у базу даних.
-    ЦЯ ФУНКЦІЯ Є СИНХРОННОЮ, але викликається асинхронно.
     """
     try:
-        # Спочатку шукаємо останній лог, щоб отримати номер телефону, якщо він вже є
+        # Якщо номер не передали, шукаємо його в історії
         if not phone_number:
-            # 👇 ОСЬ ТУТ БУЛА ПОМИЛКА: 'await' ПРИБРАНО 👇
-            last_log = BotMessageLog.objects.filter(chat_id=chat_id).order_by('-created_at').first()
-            if last_log and last_log.phone_number:
+            last_log = BotMessageLog.objects.filter(chat_id=chat_id, phone_number__isnull=False).order_by('-created_at').first()
+            if last_log: 
                 phone_number = last_log.phone_number
-
+        
         BotMessageLog.objects.create(
             chat_id=chat_id,
             user_name=user_name,
@@ -47,24 +57,42 @@ def log_message(chat_id, user_name, message_text, bot_response, phone_number=Non
         logger.error(f"Не вдалося зберегти лог для {chat_id}: {e}")
 
 # --- Обробники ---
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Надсилає вітальне повідомлення та запитує номер телефону."""
+    """
+    Вітає користувача. Перевіряє, чи є його номер в базі. 
+    Якщо ні - запитує номер.
+    """
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
     message_text = update.message.text
+    
+    # 1. Перевіряємо, чи є вже номер телефону
+    existing_phone = await get_user_phone_from_db(chat_id)
 
-    contact_keyboard = KeyboardButton(text="Надати номер телефону", request_contact=True)
-    custom_keyboard = [[contact_keyboard]]
-    reply_markup = ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True, one_time_keyboard=True)
+    if existing_phone:
+        # 2. Якщо номер є, просто вітаємось
+        reply_text = (
+            f'Вітаю знову, {user_name}!\n\n'
+            'Надішліть мені номер вашого замовлення-наряду, щоб перевірити його статус.'
+        )
+        await update.message.reply_text(reply_text)
+    
+    else:
+        # 3. Якщо номера немає, просимо його
+        contact_keyboard = KeyboardButton(text="Надати номер телефону", request_contact=True)
+        custom_keyboard = [[contact_keyboard]]
+        reply_markup = ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True, one_time_keyboard=True)
 
-    reply_text = (
-        f'Вітаю, {user_name}!\n\n'
-        'Для кращої ідентифікації у системі, будь ласка, поділіться вашим номером телефону, натиснувши кнопку нижче.\n\n'
-    )
-
-    await update.message.reply_text(reply_text, reply_markup=reply_markup)
-
+        reply_text = (
+            f'Вітаю, {user_name}!\n\n'
+            'Для кращої ідентифікації у системі, будь ласка, поділіться вашим номером телефону, натиснувши кнопку нижче.\n\n'
+            'Або просто надішліть мені номер вашого замовлення-наряду.'
+        )
+        await update.message.reply_text(reply_text, reply_markup=reply_markup)
+    
+    # 4. Логуємо в будь-якому випадку
     await log_message(chat_id, user_name, message_text, reply_text)
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,12 +101,14 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = user.id
     user_name = user.first_name
     phone_number = update.message.contact.phone_number
-
-    reply_text = f"Дякую, {user_name}! Ваш номер {phone_number} збережено. Тепер можете надсилати мені повідомлення."
-
-    await update.message.reply_text(reply_text, reply_markup=None) 
-
-    await log_message(chat_id, user_name, f"[Надано контакт: {phone_number}]", reply_text, phone_number)
+    
+    reply_text = f"Дякую, {user_name}! Ваш номер {phone_number} збережено. Тепер можете надіслати номер замовлення."
+    
+    # Відправляємо відповідь і прибираємо клавіатуру
+    await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove()) 
+    
+    # Явно передаємо номер телефону в лог
+    await log_message(chat_id, user_name, f"[Надано контакт: {phone_number}]", reply_text, phone_number=phone_number)
 
 async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє текстове повідомлення та викликає синхронну функцію БД."""
@@ -86,18 +116,18 @@ async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_name = user.first_name
     chat_id = user.id
     original_text = update.message.text
-
+    
     order_number = re.sub(r'\D', '', original_text)
-
+    
     if not order_number:
-        reply_message = f"'{original_text}' - це некоректна команда. Вона мені невідома наразі. Спробуйте, будь ласка, пізніше."
+        reply_message = f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами)."
         await update.message.reply_text(reply_message)
         await log_message(chat_id, user_name, original_text, reply_message)
         return
 
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
-
+    
     await log_message(chat_id, user_name, original_text, reply_message)
 
 @sync_to_async
@@ -107,7 +137,7 @@ def get_order_from_db(order_number):
     """
     try:
         order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
-
+        
         reply = (
             f"Замовлення №{order.order_number}\n"
             f"Статус: {order.get_status_display()}\n"
