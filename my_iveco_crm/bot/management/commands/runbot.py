@@ -4,34 +4,62 @@ import asyncio
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand
-# Імпортуємо ReplyKeyboardMarkup, KeyboardButton та ReplyKeyboardRemove
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from orders.models import ServiceOrder
+from clients.models import Client # <-- Імпортуємо Client
 from bot.models import BotMessageLog
 from asgiref.sync import sync_to_async
 
-# Налаштовуємо логування
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-# --- Налаштування ---
+# ... (код логування та BOT_TOKEN) ...
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+logger = logging.getLogger(__name__)
 
 # --- Функції роботи з БД ---
 
 @sync_to_async
-def get_user_phone_from_db(chat_id):
+def check_if_user_is_linked(chat_id):
     """
-    Асинхронно перевіряє, чи є в базі номер телефону для цього chat_id.
+    Перевіряє, чи цей chat_id вже прив'язаний до якогось клієнта.
     """
-    log_entry = BotMessageLog.objects.filter(chat_id=chat_id, phone_number__isnull=False).order_by('-created_at').first()
-    if log_entry:
-        return log_entry.phone_number
-    return None
+    return Client.objects.filter(telegram_chat_id=chat_id).exists()
+
+@sync_to_async
+def link_client_by_phone(chat_id, user_name, phone_number):
+    """
+    Знаходить клієнта за номером телефону та прив'язує до нього chat_id.
+    """
+    try:
+        # Очищуємо номер телефону (прибираємо +)
+        clean_phone = phone_number.replace('+', '')
+
+        # Шукаємо клієнта, який містить цей номер
+        client = Client.objects.get(phone__contains=clean_phone)
+
+        # Знайшли! Прив'язуємо chat_id
+        client.telegram_chat_id = chat_id
+        # Можемо також оновити ім'я клієнта, якщо воно не заповнене
+        if not client.name:
+            client.name = user_name
+        client.save()
+
+        return (
+            f"Дякую, {user_name}! Я знайшов вас у базі.\n"
+            f"Ваш профіль клієнта '{client.name}' успішно прив'язано до цього чату."
+        )
+    except Client.DoesNotExist:
+        return (
+            f"Дякую, {user_name}! На жаль, я не знайшов клієнта з номером {phone_number} у нашій базі. "
+            "Зверніться до менеджера для реєстрації."
+        )
+    except Client.MultipleObjectsReturned:
+        return (
+            f"Виникла помилка: з номером {phone_number} знайдено декілька клієнтів. "
+            "Будь ласка, зверніться до менеджера для вирішення."
+        )
+    except Exception as e:
+        logger.error(f"Помилка прив'язки клієнта: {e}")
+        return "Виникла невідома помилка. Будь ласка, спробуйте пізніше."
 
 @sync_to_async
 def log_message(chat_id, user_name, message_text, bot_response, phone_number=None):
@@ -39,12 +67,11 @@ def log_message(chat_id, user_name, message_text, bot_response, phone_number=Non
     Асинхронно зберігає повідомлення та відповідь бота у базу даних.
     """
     try:
-        # Якщо номер не передали, шукаємо його в історії
         if not phone_number:
-            last_log = BotMessageLog.objects.filter(chat_id=chat_id, phone_number__isnull=False).order_by('-created_at').first()
-            if last_log: 
-                phone_number = last_log.phone_number
-        
+            client = Client.objects.filter(telegram_chat_id=chat_id).first()
+            if client and client.phone:
+                phone_number = client.phone
+
         BotMessageLog.objects.create(
             chat_id=chat_id,
             user_name=user_name,
@@ -60,82 +87,81 @@ def log_message(chat_id, user_name, message_text, bot_response, phone_number=Non
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Вітає користувача. Перевіряє, чи є його номер в базі. 
-    Якщо ні - запитує номер.
+    Вітає користувача. Перевіряє, чи він вже прив'язаний до CRM.
     """
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
     message_text = update.message.text
-    
-    # 1. Перевіряємо, чи є вже номер телефону
-    existing_phone = await get_user_phone_from_db(chat_id)
 
-    if existing_phone:
-        # 2. Якщо номер є, просто вітаємось
+    # 1. Перевіряємо, чи користувач вже прив'язаний
+    is_linked = await check_if_user_is_linked(chat_id)
+
+    if is_linked:
+        # 2. Якщо так, просто вітаємось
         reply_text = (
             f'Вітаю знову, {user_name}!\n\n'
+            'Як Ваші справи?'
         )
-        await update.message.reply_text(reply_text)
-    
+        await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
+
     else:
-        # 3. Якщо номера немає, просимо його
+        # 3. Якщо ні, просимо номер
         contact_keyboard = KeyboardButton(text="Надати номер телефону", request_contact=True)
         custom_keyboard = [[contact_keyboard]]
         reply_markup = ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True, one_time_keyboard=True)
 
         reply_text = (
             f'Вітаю, {user_name}!\n\n'
-            'Для кращої ідентифікації у системі, будь ласка, поділіться вашим номером телефону, натиснувши кнопку нижче.\n\n'
+            'Я не впізнав вас. Для прив\'язки до вашої картки клієнта, будь ласка, поділіться номером телефону, натиснувши кнопку нижче.\n\n'
+            
         )
         await update.message.reply_text(reply_text, reply_markup=reply_markup)
-    
-    # 4. Логуємо в будь-якому випадку
+
     await log_message(chat_id, user_name, message_text, reply_text)
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє отриманий контакт (номер телефону)."""
+    """Обробляє отриманий контакт (номер телефону) і прив'язує клієнта."""
     user = update.message.from_user
     chat_id = user.id
     user_name = user.first_name
     phone_number = update.message.contact.phone_number
-    
-    reply_text = f"Дякую, {user_name}! Ваш номер {phone_number} збережено. Тепер можете використовувати функціонал бота."
-    
+
+    # Викликаємо нову функцію прив'язки
+    reply_text = await link_client_by_phone(chat_id, user_name, phone_number)
+
     # Відправляємо відповідь і прибираємо клавіатуру
     await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove()) 
-    
-    # Явно передаємо номер телефону в лог
+
     await log_message(chat_id, user_name, f"[Надано контакт: {phone_number}]", reply_text, phone_number=phone_number)
 
 async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє текстове повідомлення та викликає синхронну функцію БД."""
+    
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
     original_text = update.message.text
-    
+
     order_number = re.sub(r'\D', '', original_text)
-    
+
     if not order_number:
-        reply_message = f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами)."
+        reply_message = f"'{original_text}' - це некоректний номер."
         await update.message.reply_text(reply_message)
         await log_message(chat_id, user_name, original_text, reply_message)
         return
 
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
-    
+
     await log_message(chat_id, user_name, original_text, reply_message)
 
 @sync_to_async
 def get_order_from_db(order_number):
-    """
-    Виконує синхронний запит до бази даних Django.
-    """
+    # ... (ця функція залишається БЕЗ ЗМІН) ...
     try:
         order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
-        
+
         reply = (
             f"Замовлення №{order.order_number}\n"
             f"Статус: {order.get_status_display()}\n"
@@ -152,6 +178,7 @@ def get_order_from_db(order_number):
 
 # --- Клас команди Django ---
 class Command(BaseCommand):
+    # ... (ця функція залишається БЕЗ ЗМІН) ...
     help = 'Запускає Telegram бота'
 
     def handle(self, *args, **options):
