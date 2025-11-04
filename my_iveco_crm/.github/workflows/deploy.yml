@@ -1,0 +1,55 @@
+name: Deploy Backend to DigitalOcean
+
+on:
+  # Цей процес буде запускатися при кожному push у гілку 'main'
+  push:
+    branches:
+      - main 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Крок 1: Завантажуємо код з репозиторію
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Крок 2: Встановлюємо sshpass (потрібен для входу за паролем)
+    - name: Install sshpass
+      run: sudo apt-get install -y sshpass
+
+    # Крок 3: Підключаємось до сервера і виконуємо команди
+    - name: Deploy to Server
+      env:
+        # Передаємо пароль у змінну оточення
+        SSHPASS: ${{ secrets.DO_PASSWORD }}
+      run: |
+        # Команда sshpass використовує пароль для підключення
+        # -o StrictHostKeyChecking=no - автоматично приймати ключ сервера
+        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+
+          # 1. Переходимо в папку проєкту
+          cd /home/ubuntu/truckmaster/my_iveco_crm
+
+          # 2. Завантажуємо останні зміни з GitHub
+          git pull origin main
+
+          # 3. Активуємо віртуальне середовище (venv)
+          source /home/ubuntu/venv/bin/activate
+
+          # 4. Встановлюємо/оновлюємо бібліотеки
+          pip install -r requirements.txt
+
+          # 5. Застосовуємо міграції бази даних
+          python manage.py migrate
+
+          # 6. Збираємо статичні файли (для адмінки)
+          python manage.py collectstatic --noinput
+
+          # 7. Перезапускаємо Gunicorn (ваш сайт)
+          sudo systemctl restart gunicorn
+
+          # 8. Перезапускаємо Telegram-бота
+          sudo systemctl restart telegram_bot
+        EOF
