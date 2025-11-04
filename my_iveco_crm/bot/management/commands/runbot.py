@@ -75,7 +75,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 2. Якщо номер є, просто вітаємось
         reply_text = (
             f'Вітаю знову, {user_name}!\n\n'
-            'Надішліть мені номер вашого замовлення-наряду, щоб перевірити його статус.'
         )
         await update.message.reply_text(reply_text)
     
@@ -88,7 +87,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_text = (
             f'Вітаю, {user_name}!\n\n'
             'Для кращої ідентифікації у системі, будь ласка, поділіться вашим номером телефону, натиснувши кнопку нижче.\n\n'
-            'Або просто надішліть мені номер вашого замовлення-наряду.'
         )
         await update.message.reply_text(reply_text, reply_markup=reply_markup)
     
@@ -102,7 +100,7 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = user.first_name
     phone_number = update.message.contact.phone_number
     
-    reply_text = f"Дякую, {user_name}! Ваш номер {phone_number} збережено. Тепер можете надіслати номер замовлення."
+    reply_text = f"Дякую, {user_name}! Ваш номер {phone_number} збережено. Тепер можете використовувати функціонал бота."
     
     # Відправляємо відповідь і прибираємо клавіатуру
     await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove()) 
