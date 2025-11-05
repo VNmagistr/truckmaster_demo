@@ -16,6 +16,13 @@ BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 logger = logging.getLogger(__name__)
 
 # --- Функції роботи з БД ---
+@sync_to_async
+def check_if_user_is_linked(chat_id):
+    """
+    Перевіряє, чи цей chat_id вже прив'язаний до якогось клієнта.
+    """
+    return Client.objects.filter(telegram_chat_id=chat_id).exists()
+
 
 @sync_to_async
 def get_user_phone_from_db(chat_id):
