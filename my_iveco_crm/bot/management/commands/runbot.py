@@ -88,12 +88,11 @@ def get_my_cars(chat_id):
         if not trucks.exists():
             return f"За вами ({client.name}) не закріплено жодного автомобіля. Якщо ви вважаєте, що це помилка, зверніться до менеджера."
 
-        reply = "Ваші автомобілі в нашій системі:\n\n"
+        reply = "Перелік автомобілів в нашій системі:\n\n"
         for truck in trucks:
-            # 👇 ВИПРАВЛЕНО ІМЕНА ПОЛІВ 👇
-            reply += f"🚚 {truck.specific_model_name}\n" 
-            reply += f"   • Номер: {truck.license_plate}\n"
-            reply += f"   • VIN: {truck.last_seven_vin}\n\n"
+            reply += f"• Номер: {truck.license_plate}\n"
+            reply += f"• Модель: {truck.specific_model_name}\n"
+            reply += f"• VIN: {truck.last_seven_vin}\n\n"
         
         return reply
 
@@ -118,7 +117,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_linked:
         reply_text = (
             f'Вітаю знову, {user_name}!\n\n'
-            'Надішліть мені номер вашого замовлення-наряду, щоб перевірити його статус, або використайте команду /mycars, щоб побачити ваші автомобілі.'
+            'Використайте команду /mycars, щоб побачити ваші автомобілі.'
         )
         await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
     else:
@@ -128,7 +127,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_text = (
             f'Вітаю, {user_name}!\n\n'
             'Я не впізнав вас. Для прив\'язки до вашої картки клієнта, будь ласка, поділіться номером телефону, натиснувши кнопку нижче.\n\n'
-            'Або просто надішліть мені номер вашого замовлення-наряду.'
         )
         await update.message.reply_text(reply_text, reply_markup=reply_markup)
     
@@ -154,7 +152,7 @@ async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE)
     order_number = re.sub(r'\D', '', original_text)
     
     if not order_number:
-        reply_message = f"'{original_text}' - це некоректний номер. Будь ласка, надішліть лише номер замовлення (цифрами)."
+        reply_message = f"'{original_text}' Мені поки що невідома ця команда. Спробуйте, будь ласка, пізніше."
         await update.message.reply_text(reply_message)
         await log_message(chat_id, user_name, original_text, reply_message)
         return
