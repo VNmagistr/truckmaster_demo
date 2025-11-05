@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from orders.models import ServiceOrder
-from clients.models import Client, Truck  # <-- 1. Імпортуємо модель Truck
+from clients.models import Client, Truck
 from bot.models import BotMessageLog
 from asgiref.sync import sync_to_async
 
@@ -16,23 +16,13 @@ BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 logger = logging.getLogger(__name__)
 
 # --- Функції роботи з БД ---
+
 @sync_to_async
 def check_if_user_is_linked(chat_id):
     """
     Перевіряє, чи цей chat_id вже прив'язаний до якогось клієнта.
     """
     return Client.objects.filter(telegram_chat_id=chat_id).exists()
-
-
-@sync_to_async
-def get_user_phone_from_db(chat_id):
-    """
-    Асинхронно перевіряє, чи є в базі номер телефону для цього chat_id.
-    """
-    client = Client.objects.filter(telegram_chat_id=chat_id).first()
-    if client and client.phone:
-        return client.phone
-    return None
 
 @sync_to_async
 def link_client_by_phone(chat_id, user_name, phone_number):
@@ -86,42 +76,38 @@ def log_message(chat_id, user_name, message_text, bot_response, phone_number=Non
     except Exception as e:
         logger.error(f"Не вдалося зберегти лог для {chat_id}: {e}")
 
-# --- НОВА ФУНКЦІЯ ДЛЯ ОТРИМАННЯ АВТОМОБІЛІВ ---
 @sync_to_async
 def get_my_cars(chat_id):
     """
     Знаходить клієнта за chat_id та повертає список його вантажівок.
     """
     try:
-        # 1. Знаходимо клієнта, прив'язаного до цього чату
         client = Client.objects.get(telegram_chat_id=chat_id)
-        
-        # 2. Знаходимо всі вантажівки, які належать цьому клієнту
         trucks = Truck.objects.filter(client=client)
         
         if not trucks.exists():
             return f"За вами ({client.name}) не закріплено жодного автомобіля. Якщо ви вважаєте, що це помилка, зверніться до менеджера."
 
-        # 3. Формуємо відповідь
         reply = "Ваші автомобілі в нашій системі:\n\n"
         for truck in trucks:
-            reply += f"🚚 {truck.model}\n"
+            # 👇 ВИПРАВЛЕНО ІМЕНА ПОЛІВ 👇
+            reply += f"🚚 {truck.specific_model_name}\n" 
             reply += f"   • Номер: {truck.license_plate}\n"
-            reply += f"   • VIN: {truck.vin_code}\n\n"
+            reply += f"   • VIN: {truck.last_seven_vin}\n\n"
         
         return reply
 
     except Client.DoesNotExist:
-        # 4. Якщо клієнт не знайдений
         return "Я не можу знайти ваш профіль. Будь ласка, спочатку використайте команду /start та надайте свій номер телефону для прив'язки до вашої картки."
     except Exception as e:
         logger.error(f"Помилка під час get_my_cars: {e}")
-        return "Виникла помилка на сервері при пошуку ваших автомобілів."
+        # Повертаємо текст помилки з логу, щоб побачити її в Telegram (тимчасово)
+        return f"Виникла помилка на сервері при пошуку ваших автомобілів. {e}"
+
 
 # --- Обробники ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... (ця функція залишається без змін)
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
@@ -135,7 +121,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'Надішліть мені номер вашого замовлення-наряду, щоб перевірити його статус, або використайте команду /mycars, щоб побачити ваші автомобілі.'
         )
         await update.message.reply_text(reply_text, reply_markup=ReplyKeyboardRemove())
-    
     else:
         contact_keyboard = KeyboardButton(text="Надати номер телефону", request_contact=True)
         custom_keyboard = [[contact_keyboard]]
@@ -151,7 +136,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... (ця функція залишається без змін)
     user = update.message.from_user
     chat_id = user.id
     user_name = user.first_name
@@ -162,7 +146,6 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ... (ця функція залишається без змін)
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
@@ -180,12 +163,7 @@ async def check_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(reply_message)
     await log_message(chat_id, user_name, original_text, reply_message)
 
-
-# --- НОВИЙ ОБРОБНИК КОМАНДИ ---
 async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обробляє команду /mycars та викликає функцію get_my_cars.
-    """
     user = update.message.from_user
     user_name = user.first_name
     chat_id = user.id
@@ -194,13 +172,10 @@ async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text = await get_my_cars(chat_id)
     
     await update.message.reply_text(reply_text)
-    
     await log_message(chat_id, user_name, message_text, reply_text)
-
 
 @sync_to_async
 def get_order_from_db(order_number):
-    # ... (ця функція залишається без змін)
     try:
         order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
         reply = (
@@ -221,7 +196,6 @@ class Command(BaseCommand):
     help = 'Запускає Telegram бота'
 
     def handle(self, *args, **options):
-        # ... (код перевірки токена без змін)
         if not BOT_TOKEN:
             logger.error("ПОМИЛКА: Змінна оточення TELEGRAM_BOT_TOKEN не встановлена!")
             return
@@ -230,14 +204,17 @@ class Command(BaseCommand):
 
         application = Application.builder().token(BOT_TOKEN).build()
 
-        # 2. Додаємо новий обробник для /mycars
         application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("mycars", my_cars)) # <-- ДОДАНО
+        application.add_handler(CommandHandler("mycars", my_cars))
         application.add_handler(MessageHandler(filters.CONTACT, handle_contact))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_order_status))
 
-        # ... (код запуску без змін)
+        # 👇 ВИПРАВЛЕНО СПОСІБ ЗАПУСКУ 👇
+        # Ми прибираємо asyncio.run(), оскільки run_polling - це синхронна функція
         try:
-            asyncio.run(application.run_polling())
+            application.run_polling()
         except KeyboardInterrupt:
             self.stdout.write(self.style.SUCCESS('Бот зупинено.'))
+        except Exception as e:
+            logger.error(f"Бот впав з помилкою: {e}")
+            raise e
