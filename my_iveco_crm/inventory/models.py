@@ -1,6 +1,6 @@
 from django.db import models
 
-# 1. Модель Категорій (з ієрархією)
+# 1. Модель Категорій (без змін)
 class PartCategory(models.Model):
     parent = models.ForeignKey(
         'self',  # Вказує на цю ж модель (саму на себе)
@@ -24,7 +24,7 @@ class PartCategory(models.Model):
             return f"{self.parent.name} -> {self.name}"
         return self.name
 
-# 2. Модель Запчастин (ПОВНА ВЕРСІЯ)
+# 2. Модель Запчастин (ОНОВЛЕНО)
 class Part(models.Model):
     category = models.ForeignKey(
         PartCategory, 
@@ -40,6 +40,14 @@ class Part(models.Model):
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна продажу")
     current_stock = models.PositiveIntegerField(default=0, verbose_name="Залишок на складі")
 
+    # 👇 ДОДАЙТЕ ЦЕ ПОЛЕ 👇
+    substitutes = models.ManyToManyField(
+        'self',  # Зв'язок "багато-до-багатьох" з цією ж моделлю
+        blank=True, 
+        symmetrical=False, # Важливо! Якщо А - замінник Б, це не означає, що Б - замінник А
+        verbose_name="Замінники (аналоги)"
+    )
+
     class Meta:
         verbose_name = "Запчастина"
         verbose_name_plural = "Запчастини"
@@ -48,7 +56,7 @@ class Part(models.Model):
     def __str__(self):
         return f"{self.name} ({self.sku_code})"
 
-# 3. Модель Використаних Запчастин (ПОВНА ВЕРСІЯ)
+# 3. Модель Використаних Запчастин (без змін)
 class UsedPart(models.Model):
     service_work = models.ForeignKey(
         'orders.ServiceWork', 
@@ -58,7 +66,7 @@ class UsedPart(models.Model):
     )
     part = models.ForeignKey(
         Part, 
-        on_delete=models.PROTECT, # Захищаємо від видалення, якщо запчастина вже використана
+        on_delete=models.PROTECT, 
         verbose_name="Запчастина"
     )
     quantity = models.PositiveIntegerField(verbose_name="Кількість")
@@ -66,7 +74,6 @@ class UsedPart(models.Model):
     class Meta:
         verbose_name = "Використана запчастина"
         verbose_name_plural = "Використані запчастини"
-        # Гарантуємо, що не можна додати ту саму запчастину до тієї самої роботи двічі
         unique_together = ('service_work', 'part') 
 
     def __str__(self):
