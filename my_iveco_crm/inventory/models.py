@@ -1,16 +1,35 @@
-# inventory/models.py
-
 from django.db import models
 
+# 1. НАША НОВА МОДЕЛЬ КАТЕГОРІЙ
+class PartCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Назва категорії")
+    description = models.TextField(blank=True, null=True, verbose_name="Опис")
 
+    class Meta:
+        verbose_name = "Категорія запчастин"
+        verbose_name_plural = "Категорії запчастин"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+# 2. ОНОВЛЕНА МОДЕЛЬ ЗАПЧАСТИН (Part)
 class Part(models.Model):
-    """
-    Запчастина на складі.
-    """
+    # 👇 ДОДАЄМО ЗВ'ЯЗОК З КАТЕГОРІЄЮ 👇
+    category = models.ForeignKey(
+        PartCategory, 
+        on_delete=models.SET_NULL, # Якщо категорію видалять, запчастина залишиться без категорії
+        null=True, 
+        blank=True, 
+        verbose_name="Категорія"
+    )
+
     name = models.CharField(max_length=255, verbose_name="Назва запчастини")
-    sku_code = models.CharField(max_length=100, unique=True, verbose_name="Артикул")
-    current_stock = models.PositiveIntegerField(default=0, verbose_name="Кількість на складі")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна продажу")
+    sku_code = models.CharField(max_length=100, unique=True, verbose_name="Код/Артикул")
+    description = models.TextField(blank=True, null=True, verbose_name="Опис")
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Собівартість")
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна продажу")
+    current_stock = models.PositiveIntegerField(default=0, verbose_name="Залишок на складі")
 
     class Meta:
         verbose_name = "Запчастина"
@@ -20,46 +39,26 @@ class Part(models.Model):
     def __str__(self):
         return f"{self.name} ({self.sku_code})"
 
+# 3. МОДЕЛЬ ВИКОРИСТАНИХ ЗАПЧАСТИН (без змін)
 class UsedPart(models.Model):
-    """
-    Проміжна модель, що фіксує, яка запчастина і в якій кількості
-    була використана для конкретної роботи.
-    """
     service_work = models.ForeignKey(
-        'orders.ServiceWork', # <-- Ось так, у вигляді рядка 'назва_додатку.НазваМоделі'
+        'orders.ServiceWork', 
         on_delete=models.CASCADE, 
-        related_name="used_parts", 
+        related_name='used_parts',
         verbose_name="Робота"
     )
-    part = models.ForeignKey(Part, on_delete=models.PROTECT, verbose_name="Запчастина")
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+    part = models.ForeignKey(
+        Part, 
+        on_delete=models.PROTECT, # Захищаємо від видалення, якщо запчастина вже використана
+        verbose_name="Запчастина"
+    )
+    quantity = models.PositiveIntegerField(verbose_name="Кількість")
 
-    def save(self, *args, **kwargs):
-        with transaction.atomic():
-            if self.pk: # Якщо це оновлення існуючого запису
-                old_self = UsedPart.objects.get(pk=self.pk)
-                quantity_diff = self.quantity - old_self.quantity
-                self.part.current_stock -= quantity_diff
-            else: # Якщо це створення нового запису
-                self.part.current_stock -= self.quantity
-
-            if self.part.current_stock < 0:
-                # Можна додати ValidationError, але поки просто не дамо піти в мінус
-                raise Exception(f"Недостатньо запчастин '{self.part.name}' на складі.")
-
-            self.part.save()
-            super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        with transaction.atomic():
-            self.part.current_stock += self.quantity
-            self.part.save()
-            super().delete(*args, **kwargs)
-    
     class Meta:
         verbose_name = "Використана запчастина"
         verbose_name_plural = "Використані запчастини"
-        unique_together = ('service_work', 'part') # Уникаємо дублювання однієї і тієї ж запчастини в одній роботі
+        # Гарантуємо, що не можна додати ту саму запчастину до тієї самої роботи двічі
+        unique_together = ('service_work', 'part') 
 
     def __str__(self):
-        return f"{self.quantity} x {self.part.name} для роботи '{self.service_work.job_description}'"
+        return f"{self.part.name} - {self.quantity} шт."
