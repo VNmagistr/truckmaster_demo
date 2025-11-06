@@ -1,23 +1,28 @@
 from django.contrib import admin
 from .models import PartCategory, Part, UsedPart
 
-# 1. Реєструємо нову модель Категорій
 @admin.register(PartCategory)
 class PartCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
+    # Додаємо 'parent' у список
+    list_display = ('name', 'parent', 'description')
+    list_filter = ('parent',) # Додаємо фільтр за батьківською категорією
     search_fields = ('name',)
+    # Дозволяє легкий пошук батьківської категорії
+    autocomplete_fields = ['parent'] 
 
-# 2. Оновлюємо адмінку для Запчастин
 @admin.register(Part)
 class PartAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'sku_code', 'selling_price', 'current_stock')
     search_fields = ('name', 'sku_code')
-    # 👇 Додаємо фільтр за категорією збоку 👇
-    list_filter = ('category',)
+    # Оновлюємо фільтр, щоб можна було фільтрувати і за батьком
+    list_filter = ('category__parent', 'category') 
     list_editable = ('selling_price', 'current_stock')
+    # Дозволяє легкий пошук категорії
+    autocomplete_fields = ['category'] 
 
-# 3. Адмінка для Використаних запчастин (без змін)
 @admin.register(UsedPart)
 class UsedPartAdmin(admin.ModelAdmin):
     list_display = ('service_work', 'part', 'quantity')
+    # autocomplete_fields потрібні для зручного пошуку
+    # у зв'язаних моделях (особливо коли їх багато)
     autocomplete_fields = ['service_work', 'part']
