@@ -1,98 +1,79 @@
-# orders/views.py
-
-from django.shortcuts import render
-from rest_framework import viewsets
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.db.models import Count
-from django.utils import timezone
-from datetime import timedelta
-from rest_framework.parsers import MultiPartParser, FormParser
-from .models import ServiceOrder, ServiceWork, Employee, WorkCategory, Work, RepairPhoto
-from inventory.models import UsedPart 
-from django.conf import settings
-import logging
-
-# Отримуємо логгер
-logger = logging.getLogger(__name__)
-
+from rest_framework import viewsets, permissions
+from .models import (
+    ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
+    RepairPhoto, MaintenanceRule, MaintenanceLog
+)
 from .serializers import (
-    RepairPhotoSerializer,
-    ServiceOrderListSerializer, 
+    ServiceOrderListSerializer,
     ServiceOrderDetailSerializer,
     ServiceOrderWriteSerializer,
+    ServiceWorkSerializer,
     ServiceWorkWriteSerializer,
-    UsedPartSerializer,
     EmployeeSerializer,
-    WorkCategorySerializer
+    WorkGroupSerializer,
+    WorkPriceSerializer,
+    RepairPhotoSerializer,
+    MaintenanceRuleSerializer,
+    MaintenanceLogSerializer
 )
 
-# Ми видалили класи 'IsBotAuthenticated' та 'BotOrderStatusView'
+# Визначаємо права доступу (наприклад, тільки для адмінів або залогінених)
+# Для простоти поки що - тільки для залогінених
+class IsAuthenticated(permissions.IsAuthenticated):
+    pass
 
-class DashboardOrderStatsView(APIView):
-    """
-    Повертає статистику по замовленнях за різні періоди з порівнянням.
-    """
-    def get(self, request, format=None):
-        now = timezone.now()
-        
-        start_of_week = now.date() - timedelta(days=now.weekday())
-        start_of_month = now.date().replace(day=1)
-        start_of_year = now.date().replace(month=1, day=1)
-
-        last_year_now = now.replace(year=now.year - 1)
-        start_of_week_ly = last_year_now.date() - timedelta(days=last_year_now.weekday())
-        end_of_week_ly = start_of_week_ly + timedelta(days=6)
-        start_of_month_ly = last_year_now.date().replace(day=1)
-        end_of_month_ly = (start_of_month_ly + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-        start_of_year_ly = last_year_now.date().replace(month=1, day=1)
-        end_of_year_ly = last_year_now.date().replace(month=12, day=31)
-
-        stats = {
-            'this_week': ServiceOrder.objects.filter(start_date__gte=start_of_week).count(),
-            'this_month': ServiceOrder.objects.filter(start_date__gte=start_of_month).count(),
-            'this_year': ServiceOrder.objects.filter(start_date__gte=start_of_year).count(),
-            'compare_week': ServiceOrder.objects.filter(start_date__range=(start_of_week_ly, end_of_week_ly)).count(),
-            'compare_month': ServiceOrder.objects.filter(start_date__range=(start_of_month_ly, end_of_month_ly)).count(),
-            'compare_year': ServiceOrder.objects.filter(start_date__range=(start_of_year_ly, end_of_year_ly)).count(),
-        }
-        return Response(stats)
-
-
+# --- ViewSet для Замовлень-Нарядів ---
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    queryset = ServiceOrder.objects.select_related('client', 'truck').all()
-    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
-    parser_classes = (MultiPartParser, FormParser)
-
+    queryset = ServiceOrder.objects.all().order_by('-created_at')
+    permission_classes = [IsAuthenticated]
+    
     def get_serializer_class(self):
+        # Для списку - простий серіалізатор
         if self.action == 'list':
             return ServiceOrderListSerializer
-        
+        # Для створення/оновлення - серіалізатор для запису
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
-        
+        # Для перегляду одного об'єкта - повний серіалізатор
         return ServiceOrderDetailSerializer
 
-class RecentOrdersViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = ServiceOrder.objects.order_by('-start_date')[:5]
-    serializer_class = ServiceOrderListSerializer
-
-class WorkCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = WorkCategory.objects.prefetch_related('works').all()
-    serializer_class = WorkCategorySerializer
-
+# --- ViewSet для Виконаних Робіт ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
-    serializer_class = ServiceWorkWriteSerializer
+    permission_classes = [IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ServiceWorkWriteSerializer
+        return ServiceWorkSerializer
+
+# --- Інші ViewSets ---
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
+    permission_classes = [IsAuthenticated]
 
-class UsedPartViewSet(viewsets.ModelViewSet):
-    queryset = UsedPart.objects.all()
-    serializer_class = UsedPartSerializer
+class WorkGroupViewSet(viewsets.ModelViewSet):
+    queryset = WorkGroup.objects.all()
+    serializer_class = WorkGroupSerializer
+    permission_classes = [IsAuthenticated]
+
+class WorkPriceViewSet(viewsets.ModelViewSet):
+    queryset = WorkPrice.objects.all()
+    serializer_class = WorkPriceSerializer
+    permission_classes = [IsAuthenticated]
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
     queryset = RepairPhoto.objects.all()
     serializer_class = RepairPhotoSerializer
+    permission_classes = [IsAuthenticated]
+
+class MaintenanceRuleViewSet(viewsets.ModelViewSet):
+    queryset = MaintenanceRule.objects.all()
+    serializer_class = MaintenanceRuleSerializer
+    permission_classes = [IsAuthenticated]
+
+class MaintenanceLogViewSet(viewsets.ModelViewSet):
+    queryset = MaintenanceLog.objects.all()
+    serializer_class = MaintenanceLogSerializer
+    permission_classes = [IsAuthenticated]

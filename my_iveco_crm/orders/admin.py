@@ -1,47 +1,79 @@
 from django.contrib import admin
-from .models import Employee, ServiceOrder, ServiceWork, MaintenanceRule, MaintenanceLog, WorkCategory, Work
+from .models import (
+    Employee, WorkGroup, ServiceOrder, ServiceWork, 
+    RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice
+)
+from inventory.models import UsedPart # UsedPart знаходиться в inventory
 
-@admin.register(WorkCategory)
-class WorkCategoryAdmin(admin.ModelAdmin):
-    # Додаємо ціну за годину сюди
-    list_display = ('name', 'price_per_hour')
-    search_fields = ('name',)
+# Вбудовані адмінки для зручного редагування
+class UsedPartInline(admin.TabularInline):
+    model = UsedPart
+    autocomplete_fields = ['part']
+    extra = 1
 
-@admin.register(Work)
-class WorkAdmin(admin.ModelAdmin):
-    # --- ОСЬ ВИПРАВЛЕННЯ: прибираємо 'price_per_hour' ---
-    list_display = ('name', 'category')
-    list_filter = ('category',)
-    search_fields = ('name',)
+class ServiceWorkInline(admin.TabularInline):
+    model = ServiceWork
+    autocomplete_fields = ['work_group', 'employee']
+    extra = 1
+    inlines = [UsedPartInline] # Дозволяє додавати запчастини прямо до робіт
 
-@admin.register(Employee)
-class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'position', 'phone')
-    search_fields = ('name', 'position')
-    
+class RepairPhotoInline(admin.TabularInline):
+    model = RepairPhoto
+    extra = 1
+
+# Головна адмінка для Замовлення-наряду
 @admin.register(ServiceOrder)
 class ServiceOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client', 'truck', 'status', 'start_date', 'total_cost') 
-    list_filter = ('status', 'start_date')
-    search_fields = ('client__name', 'truck__license_plate')
-    date_hierarchy = 'start_date'
+    list_display = ('order_number', 'client', 'truck', 'status', 'created_at')
+    list_filter = ('status', 'created_at', 'client')
+    search_fields = ('order_number', 'client__name', 'truck__license_plate')
+    autocomplete_fields = ('client', 'truck')
 
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('order_number', 'client', 'truck', 'status')
+        }),
+        ('Опис проблеми (від клієнта)', {
+            'classes': ('collapse',), 
+            'fields': ('problem_description',)
+        }),
+    )
+
+    inlines = [ServiceWorkInline, RepairPhotoInline]
+
+# Решта адмін-панелей
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'position')
+    search_fields = ('name',)
+
+@admin.register(WorkGroup)
+class WorkGroupAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
+
+# 👇 ОСЬ ТУТ ВИПРАВЛЕННЯ 👇
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('work', 'service_order', 'employee', 'cost', 'duration_hours')
-    list_filter = ('employee', 'work__category')
-    search_fields = ('work__name', 'custom_description', 'service_order__id')
+    list_display = ('service_order', 'work_group', 'employee', 'hours_spent')
+    autocomplete_fields = ('service_order', 'work_group', 'employee')
+    inlines = [UsedPartInline]
+
+    # ДОДАНО ЦЕЙ РЯДОК, ЩОБ ВИПРАВИТИ ПОМИЛКУ AUTOCOMPLETE
+    search_fields = ['description', 'service_order__order_number']
 
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'interval_km', 'applicable_transmission')
-    list_filter = ('applicable_transmission',)
-    filter_horizontal = ('applicable_models',)
+    list_display = ('name',)
     search_fields = ('name',)
+    filter_horizontal = ('applicable_models',)
 
 @admin.register(MaintenanceLog)
 class MaintenanceLogAdmin(admin.ModelAdmin):
-    list_display = ('truck', 'rule', 'completion_date', 'completion_mileage')
-    list_filter = ('rule', 'completion_date')
-    search_fields = ('truck__license_plate', 'rule__name')
-    date_hierarchy = 'completion_date'
+    list_display = ('truck', 'rule', 'date_performed')
+    autocomplete_fields = ('truck', 'rule')
+
+@admin.register(WorkPrice)
+class WorkPriceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'work_group', 'price')
+    list_filter = ('work_group',)
+    search_fields = ('name',)
