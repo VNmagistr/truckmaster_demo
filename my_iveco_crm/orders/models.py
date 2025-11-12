@@ -1,141 +1,125 @@
-# orders/models.py
-
 from django.db import models
-from django.db.models import Sum, F, Max
-from clients.models import Client, Truck, IvecoBaseModel
-from inventory.models import UsedPart
+from clients.models import Client, Truck, IvecoBaseModel # Імпортуємо моделі з clients
+from inventory.models import Part # Імпортуємо Part з inventory
 
+# 👇 ВІДСУТНЯ ФУНКЦІЯ, ЯКУ ПОТРІБНО ПОВЕРНУТИ 👇
+# Ця функція потрібна для старих файлів міграцій
 def get_repair_photo_path(instance, filename):
-    return f'order_photos/repair/order_{instance.service_order.id}/{filename}'
+    # Ця логіка імітує те, що у нас вказано в upload_to
+    # Головне, щоб функція просто існувала
+    return f'repair_photos/{instance.service_order.id}/{filename}'
 
-class RepairPhoto(models.Model):
-    service_order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name="repair_photos")
-    image = models.ImageField(upload_to=get_repair_photo_path, verbose_name="Фото ремонту")
-    caption = models.CharField(max_length=255, blank=True, verbose_name="Короткий опис")
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    def __str__(self):
-        return f"Фото для замовлення №{self.service_order.id}"
-
-class WorkCategory(models.Model):
-    name = models.CharField(max_length=255, unique=True, verbose_name="Назва категорії робіт")
-    price_per_hour = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Вартість нормогодини (грн)")
-    class Meta:
-        verbose_name = "Категорія робіт"
-        verbose_name_plural = "Категорії робіт"
-    def __str__(self):
-        return self.name
-
-class Work(models.Model):
-    category = models.ForeignKey(WorkCategory, on_delete=models.CASCADE, related_name="works", verbose_name="Категорія")
-    name = models.CharField(max_length=255, verbose_name="Назва роботи")
-    class Meta:
-        verbose_name = "Робота з прайсу"
-        verbose_name_plural = "Роботи з прайсу"
-        unique_together = ('category', 'name')
-    def __str__(self):
-        return f"{self.category.name} - {self.name}"
+# --- Моделі ---
 
 class Employee(models.Model):
-    name = models.CharField(max_length=255, verbose_name="Ім'я та прізвище")
+    name = models.CharField(max_length=100, verbose_name="Ім'я")
     position = models.CharField(max_length=100, verbose_name="Посада")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Номер телефону")
+    
     class Meta:
         verbose_name = "Працівник"
         verbose_name_plural = "Працівники"
+    
+    def __str__(self):
+        return f"{self.name} ({self.position})"
+
+class WorkGroup(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Назва категорії робіт")
+    
+    class Meta:
+        verbose_name = "Категорія робіт"
+        verbose_name_plural = "Категорії робіт"
+    
     def __str__(self):
         return self.name
 
 class ServiceOrder(models.Model):
-    order_number = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name="Номер наряду-замовлення")
-    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Автомобіль")
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, verbose_name="Клієнт")
-    car_photo = models.ImageField(upload_to='order_photos/cars/', null=True, blank=True, verbose_name="Фото авто з держномером")
-    odometer_photo = models.ImageField(upload_to='order_photos/odometers/', null=True, blank=True, verbose_name="Фото щитка приладів")
+    class StatusChoices(models.TextChoices):
+        OPEN = 'OPEN', 'Відкрито'
+        IN_PROGRESS = 'IN_PROGRESS', 'В роботі'
+        CLOSED = 'CLOSED', 'Закрито'
+        CANCELED = 'CANCELED', 'Скасовано'
+
+    order_number = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Номер замовлення-наряду")
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт")
+    truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка")
     
-    # --- НОВЕ ПОЛЕ ---
-    dashboard_photo = models.ImageField(
-        upload_to='order_photos/dashboards/', null=True, blank=True, 
-        verbose_name="Фото панелі приладів"
+    problem_description = models.TextField(
+        blank=True, 
+        null=True, 
+        verbose_name="Опис проблеми (зі слів клієнта)"
     )
     
-    class StatusChoices(models.TextChoices):
-        NEW = 'new', 'Нове'
-        IN_PROGRESS = 'in_progress', 'В роботі'
-        COMPLETED = 'completed', 'Завершено'
-        CANCELED = 'canceled', 'Скасовано'
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NEW, verbose_name="Статус")
-    start_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата відкриття")
-    end_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата закриття")
-    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Загальна вартість")
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.OPEN,
+        verbose_name="Статус"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата створення")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата оновлення")
     
-    def save(self, *args, **kwargs):
-        if not self.order_number:
-            max_number = ServiceOrder.objects.aggregate(max_num=Max('order_number'))['max_num']
-            if max_number and max_number.isdigit():
-                next_number = int(max_number) + 1
-            else:
-                next_number = 1001
-            self.order_number = str(next_number)
-        super().save(*args, **kwargs)
-
-    def update_total_cost(self):
-        works_cost = self.works.aggregate(total=Sum('cost'))['total'] or 0
-        parts_cost = UsedPart.objects.filter(service_work__service_order=self).aggregate(total=Sum(F('quantity') * F('part__price'), output_field=models.DecimalField()))['total'] or 0
-        self.total_cost = works_cost + parts_cost
-        self.save(update_fields=['total_cost'])
-
     class Meta:
         verbose_name = "Замовлення-наряд"
         verbose_name_plural = "Замовлення-наряди"
-        ordering = ['-start_date']
+        ordering = ['-created_at']
+    
     def __str__(self):
-        return f"Замовлення №{self.order_number or self.id} для {self.truck.license_plate}"
+        return f"Замовлення №{self.order_number} ({self.client.name})"
 
 class ServiceWork(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
-    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Виконавець")
-    work = models.ForeignKey(Work, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Виконана робота")
-    custom_description = models.CharField(max_length=255, blank=True, verbose_name="Опис/уточнення")
-    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Фактична вартість")
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
+    work_group = models.ForeignKey(WorkGroup, on_delete=models.SET_NULL, null=True, verbose_name="Категорія робіт")
+    description = models.TextField(verbose_name="Опис виконаних робіт")
+    employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, verbose_name="Виконавець")
+    hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
     
-    def save(self, *args, **kwargs):
-        if self.work and self.duration_hours > 0:
-             self.cost = self.work.category.price_per_hour * self.duration_hours
-        super().save(*args, **kwargs)
-
     class Meta:
         verbose_name = "Виконана робота"
         verbose_name_plural = "Виконані роботи"
+    
     def __str__(self):
-        if self.work:
-            return f"{self.work.name} для замовлення №{self.service_order.id}"
-        return f"Робота для замовлення №{self.service_order.id}"
+        return f"{self.work_group.name} (Замовлення №{self.service_order.order_number})"
+
+class RepairPhoto(models.Model):
+    service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
+    # Ми залишаємо тут простий шлях, але функція get_repair_photo_path тепер існує
+    image = models.ImageField(upload_to='repair_photos/', verbose_name="Зображення")
+    description = models.CharField(max_length=255, blank=True, verbose_name="Опис")
+    
+    class Meta:
+        verbose_name = "Фото ремонту"
+        verbose_name_plural = "Фото ремонту"
 
 class MaintenanceRule(models.Model):
-    name = models.CharField(max_length=255, verbose_name="Назва регламентної роботи")
-    interval_km = models.PositiveIntegerField(verbose_name="Інтервал пробігу (км)")
-    applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до базових моделей")
-    class TransmissionChoices(models.TextChoices):
-        ANY = 'any', 'Будь-яка'
-        MANUAL = 'manual', 'Механічна'
-        AUTOMATIC = 'automatic', 'Автоматична'
-        ROBOT = 'robot', 'Робот'
-    applicable_transmission = models.CharField(max_length=10, choices=TransmissionChoices.choices, default=TransmissionChoices.ANY, verbose_name="Застосовується до типу КПП")
+    name = models.CharField(max_length=255, verbose_name="Назва правила")
+    description = models.TextField(verbose_name="Опис")
+    applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до моделей")
+
     class Meta:
         verbose_name = "Правило регламенту"
         verbose_name_plural = "Правила регламентів"
+
     def __str__(self):
-        return f"{self.name} (кожні {self.interval_km} км)"
+        return self.name
 
 class MaintenanceLog(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
-    rule = models.ForeignKey(MaintenanceRule, on_delete=models.CASCADE, verbose_name="Виконане правило")
-    completion_date = models.DateField(auto_now_add=True, verbose_name="Дата виконання")
-    completion_mileage = models.PositiveIntegerField(verbose_name="Пробіг на момент виконання (км)")
+    rule = models.ForeignKey(MaintenanceRule, on_delete=models.CASCADE, verbose_name="Правило регламенту")
+    date_performed = models.DateField(verbose_name="Дата виконання")
+    notes = models.TextField(blank=True, verbose_name="Примітки")
+
     class Meta:
-        verbose_name = "Запис у журналі регламенту"
+        verbose_name = "Журнал регламентних робіт"
         verbose_name_plural = "Журнал регламентних робіт"
-        ordering = ['-completion_date']
+
+class WorkPrice(models.Model):
+    work_group = models.ForeignKey(WorkGroup, on_delete=models.CASCADE, verbose_name="Категорія робіт")
+    name = models.CharField(max_length=255, verbose_name="Назва роботи")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна")
+
+    class Meta:
+        verbose_name = "Робота з прайсу"
+        verbose_name_plural = "Роботи з прайсу"
+
     def __str__(self):
-        return f"Виконано '{self.rule.name}' для {self.truck.license_plate}"
+        return self.name
