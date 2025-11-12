@@ -3,11 +3,11 @@ from django.db import models
 # 1. Модель Категорій (без змін)
 class PartCategory(models.Model):
     parent = models.ForeignKey(
-        'self',  # Вказує на цю ж модель (саму на себе)
-        on_delete=models.CASCADE, # При видаленні батька - видалити всіх нащадків
+        'self',
+        on_delete=models.CASCADE,
         null=True, 
         blank=True, 
-        related_name='subcategories', # Дозволяє легко знаходити підрозділи
+        related_name='subcategories',
         verbose_name="Батьківська категорія"
     )
     name = models.CharField(max_length=100, unique=True, verbose_name="Назва категорії")
@@ -16,10 +16,9 @@ class PartCategory(models.Model):
     class Meta:
         verbose_name = "Категорія запчастин"
         verbose_name_plural = "Категорії запчастин"
-        ordering = ['parent__name', 'name'] # Сортуємо спочатку за батьком, потім за назвою
+        ordering = ['parent__name', 'name']
 
     def __str__(self):
-        # Робимо назву в адмінці більш зрозумілою, показуючи ієрархію
         if self.parent:
             return f"{self.parent.name} -> {self.name}"
         return self.name
@@ -39,13 +38,25 @@ class Part(models.Model):
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Собівартість")
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна продажу")
     current_stock = models.PositiveIntegerField(default=0, verbose_name="Залишок на складі")
-
-    # 👇 ДОДАЙТЕ ЦЕ ПОЛЕ 👇
+    
     substitutes = models.ManyToManyField(
-        'self',  # Зв'язок "багато-до-багатьох" з цією ж моделлю
+        'self',
         blank=True, 
-        symmetrical=False, # Важливо! Якщо А - замінник Б, це не означає, що Б - замінник А
+        symmetrical=False,
         verbose_name="Замінники (аналоги)"
+    )
+
+    # 👇 ДОДАЙТЕ ЦІ ДВА ПОЛЯ 👇
+    address_in_stock = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name="Адреса на складі (Полиця, Секція)"
+    )
+    notes = models.TextField(
+        blank=True, 
+        null=True, 
+        verbose_name="Примітки"
     )
 
     class Meta:

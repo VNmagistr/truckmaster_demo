@@ -10,15 +10,29 @@ class PartCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Part)
 class PartAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'sku_code', 'selling_price', 'current_stock')
-    search_fields = ('name', 'sku_code')
+    # 👇 Додаємо 'address_in_stock' до списку 👇
+    list_display = ('name', 'category', 'sku_code', 'selling_price', 'current_stock', 'address_in_stock')
+    search_fields = ('name', 'sku_code', 'address_in_stock', 'notes') # Додаємо поля для пошуку
     list_filter = ('category__parent', 'category') 
-    list_editable = ('selling_price', 'current_stock')
+    list_editable = ('selling_price', 'current_stock', 'address_in_stock') # Додаємо в редаговані
     autocomplete_fields = ['category'] 
-
-    # 👇 ДОДАЄМО ЦЕЙ РЯДОК 👇
-    # Це створить зручний інтерфейс "вибору" для поля 'substitutes'
     filter_horizontal = ('substitutes',)
+
+    # Оновлюємо, щоб нові поля були в формі редагування
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'sku_code', 'category', 'current_stock')
+        }),
+        ('Ціни', {
+            'fields': ('cost_price', 'selling_price')
+        }),
+        ('Інформація про зберігання', {
+            'fields': ('address_in_stock', 'notes')
+        }),
+        ('Опис та аналоги', {
+            'fields': ('description', 'substitutes')
+        }),
+    )
 
 @admin.register(UsedPart)
 class UsedPartAdmin(admin.ModelAdmin):
