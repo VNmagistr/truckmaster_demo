@@ -98,7 +98,7 @@ class RepairPhoto(models.Model):
 
 class MaintenanceRule(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва правила")
-    description = models.TextField(verbose_name="Опис")
+    description = models.TextField(verbose_name="Опис", blank=True)
     applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до моделей")
     
     # 👇 ДОДАНО НОВЕ ПОЛЕ 👇
