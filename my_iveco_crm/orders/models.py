@@ -2,11 +2,8 @@ from django.db import models
 from clients.models import Client, Truck, IvecoBaseModel # Імпортуємо моделі з clients
 from inventory.models import Part # Імпортуємо Part з inventory
 
-# 👇 ВІДСУТНЯ ФУНКЦІЯ, ЯКУ ПОТРІБНО ПОВЕРНУТИ 👇
 # Ця функція потрібна для старих файлів міграцій
 def get_repair_photo_path(instance, filename):
-    # Ця логіка імітує те, що у нас вказано в upload_to
-    # Головне, щоб функція просто існувала
     return f'repair_photos/{instance.service_order.id}/{filename}'
 
 # --- Моделі ---
@@ -68,8 +65,17 @@ class ServiceOrder(models.Model):
 
 class ServiceWork(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
-    work_group = models.ForeignKey(WorkGroup, on_delete=models.SET_NULL, null=True, verbose_name="Категорія робіт")
-    description = models.TextField(verbose_name="Опис виконаних робіт")
+    
+    # 👇 ПОЛЕ ЗМІНЕНО 👇
+    # Раніше було: work_group = models.ForeignKey(WorkGroup, ...)
+    work = models.ForeignKey(
+        'WorkPrice', # Посилаємось на роботу з прайсу
+        on_delete=models.SET_NULL, 
+        null=True, 
+        verbose_name="Виконана робота (з прайсу)"
+    )
+    
+    description = models.TextField(verbose_name="Опис виконаних робіт (додатково)")
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, verbose_name="Виконавець")
     hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
     
@@ -78,11 +84,14 @@ class ServiceWork(models.Model):
         verbose_name_plural = "Виконані роботи"
     
     def __str__(self):
-        return f"{self.work_group.name} (Замовлення №{self.service_order.order_number})"
+        # 👇 __str__ ТАКОЖ ОНОВЛЕНО 👇
+        if self.work:
+            return f"{self.work.name} (Замовлення №{self.service_order.order_number})"
+        return f"Робота без назви (Замовлення №{self.service_order.order_number})"
+
 
 class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
-    # Ми залишаємо тут простий шлях, але функція get_repair_photo_path тепер існує
     image = models.ImageField(upload_to='repair_photos/', verbose_name="Зображення")
     description = models.CharField(max_length=255, blank=True, verbose_name="Опис")
     
