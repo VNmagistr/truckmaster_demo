@@ -13,7 +13,6 @@ class UsedPartInline(admin.TabularInline):
 
 class ServiceWorkInline(admin.TabularInline):
     model = ServiceWork
-    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
     autocomplete_fields = ['work', 'employee'] 
     extra = 1
     inlines = [UsedPartInline] # Дозволяє додавати запчастини прямо до робіт
@@ -54,16 +53,16 @@ class WorkGroupAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
     list_display = ('service_order', 'work', 'employee', 'hours_spent')
     autocomplete_fields = ('service_order', 'work', 'employee')
     inlines = [UsedPartInline]
-
     search_fields = ['description', 'service_order__order_number', 'work__name']
 
+# 👇 ОНОВЛЕНО АДМІНКУ ПРАВИЛ 👇
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    # Додаємо 'km_interval' у список
+    list_display = ('name', 'km_interval', 'description')
     search_fields = ('name',)
     filter_horizontal = ('applicable_models',)
 
@@ -77,6 +76,4 @@ class WorkPriceAdmin(admin.ModelAdmin):
     list_display = ('name', 'work_group', 'price')
     list_filter = ('work_group',)
     search_fields = ('name',)
-
-    # 👇 ДОДАНО: Це поле потрібне для 'autocomplete_fields' у ServiceWorkAdmin 👇
     autocomplete_fields = ['work_group']

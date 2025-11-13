@@ -66,8 +66,6 @@ class ServiceOrder(models.Model):
 class ServiceWork(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     
-    # 👇 ПОЛЕ ЗМІНЕНО 👇
-    # Раніше було: work_group = models.ForeignKey(WorkGroup, ...)
     work = models.ForeignKey(
         'WorkPrice', # Посилаємось на роботу з прайсу
         on_delete=models.SET_NULL, 
@@ -84,7 +82,6 @@ class ServiceWork(models.Model):
         verbose_name_plural = "Виконані роботи"
     
     def __str__(self):
-        # 👇 __str__ ТАКОЖ ОНОВЛЕНО 👇
         if self.work:
             return f"{self.work.name} (Замовлення №{self.service_order.order_number})"
         return f"Робота без назви (Замовлення №{self.service_order.order_number})"
@@ -103,13 +100,19 @@ class MaintenanceRule(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва правила")
     description = models.TextField(verbose_name="Опис")
     applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до моделей")
+    
+    # 👇 ДОДАНО НОВЕ ПОЛЕ 👇
+    km_interval = models.PositiveIntegerField(
+        verbose_name="Інтервал (км)",
+        help_text="Через яку кількість кілометрів потрібно виконувати це правило"
+    )
 
     class Meta:
         verbose_name = "Правило регламенту"
         verbose_name_plural = "Правила регламентів"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (кожні {self.km_interval} км)"
 
 class MaintenanceLog(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")

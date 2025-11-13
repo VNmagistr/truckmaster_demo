@@ -89,18 +89,18 @@ WSGI_APPLICATION = "my_iveco_crm.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'defaultdb',
-        'USER': 'doadmin',
-        'PASSWORD': 'AVNS_0nTi9zC-E28PdOnl4z0',
-        'HOST': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
-        'PORT': '25060',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'defaultdb',
+#         'USER': 'doadmin',
+#         'PASSWORD': 'AVNS_0nTi9zC-E28PdOnl4z0',
+#         'HOST': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
+#         'PORT': '25060',
+#     }
+# }
 
-# DATABASES = {}
+DATABASES = {}
 
 
 # Password validation
