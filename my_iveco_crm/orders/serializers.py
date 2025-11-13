@@ -45,7 +45,8 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
     """
     Серіалізатор для ЧИТАННЯ робіт (з деталями).
     """
-    work_group = WorkGroupSerializer(read_only=True)
+    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
+    work = WorkPriceSerializer(read_only=True)
     employee = EmployeeSerializer(read_only=True)
     used_parts = UsedPartSerializer(many=True, read_only=True)
 
@@ -60,9 +61,10 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ServiceWork
+        # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
         fields = [
             'service_order', 
-            'work_group', 
+            'work', 
             'description', 
             'employee', 
             'hours_spent'

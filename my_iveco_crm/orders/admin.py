@@ -13,7 +13,8 @@ class UsedPartInline(admin.TabularInline):
 
 class ServiceWorkInline(admin.TabularInline):
     model = ServiceWork
-    autocomplete_fields = ['work_group', 'employee']
+    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
+    autocomplete_fields = ['work', 'employee'] 
     extra = 1
     inlines = [UsedPartInline] # Дозволяє додавати запчастини прямо до робіт
 
@@ -51,15 +52,14 @@ class EmployeeAdmin(admin.ModelAdmin):
 class WorkGroupAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
-# 👇 ОСЬ ТУТ ВИПРАВЛЕННЯ 👇
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('service_order', 'work_group', 'employee', 'hours_spent')
-    autocomplete_fields = ('service_order', 'work_group', 'employee')
+    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
+    list_display = ('service_order', 'work', 'employee', 'hours_spent')
+    autocomplete_fields = ('service_order', 'work', 'employee')
     inlines = [UsedPartInline]
 
-    # ДОДАНО ЦЕЙ РЯДОК, ЩОБ ВИПРАВИТИ ПОМИЛКУ AUTOCOMPLETE
-    search_fields = ['description', 'service_order__order_number']
+    search_fields = ['description', 'service_order__order_number', 'work__name']
 
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):
@@ -77,3 +77,6 @@ class WorkPriceAdmin(admin.ModelAdmin):
     list_display = ('name', 'work_group', 'price')
     list_filter = ('work_group',)
     search_fields = ('name',)
+
+    # 👇 ДОДАНО: Це поле потрібне для 'autocomplete_fields' у ServiceWorkAdmin 👇
+    autocomplete_fields = ['work_group']
