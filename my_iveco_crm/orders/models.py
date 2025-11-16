@@ -73,7 +73,6 @@ class ServiceWork(models.Model):
         verbose_name="Виконана робота (з прайсу)"
     )
     
-    # 👇 ПОЛЕ ЗМІНЕНО (додано blank=True, null=True) 👇
     description = models.TextField(
         verbose_name="Опис виконаних робіт (додатково)",
         blank=True,
@@ -81,7 +80,9 @@ class ServiceWork(models.Model):
     )
     
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, verbose_name="Виконавець")
-    hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
+    
+    # 👇 ПОЛЕ ЗМІНЕНО (default=0 змінено на default=1) 👇
+    hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=1, verbose_name="Витрачено годин")
     
     class Meta:
         verbose_name = "Виконана робота"
