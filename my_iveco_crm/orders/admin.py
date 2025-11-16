@@ -3,7 +3,7 @@ from .models import (
     Employee, WorkGroup, ServiceOrder, ServiceWork, 
     RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice
 )
-from inventory.models import UsedPart # UsedPart знаходиться в inventory
+from inventory.models import UsedPart 
 
 # Вбудовані адмінки для зручного редагування
 class UsedPartInline(admin.TabularInline):
@@ -15,8 +15,7 @@ class ServiceWorkInline(admin.TabularInline):
     model = ServiceWork
     autocomplete_fields = ['work', 'employee'] 
     extra = 1
-    # 👇 'inlines = [UsedPartInline]' ВИДАЛЕНО ЗВІДСИ 👇
-    
+
 class RepairPhotoInline(admin.TabularInline):
     model = RepairPhoto
     extra = 1
@@ -24,11 +23,11 @@ class RepairPhotoInline(admin.TabularInline):
 # Головна адмінка для Замовлення-наряду
 @admin.register(ServiceOrder)
 class ServiceOrderAdmin(admin.ModelAdmin):
-    list_display = ('order_number', 'client', 'truck', 'status', 'created_at')
+    list_display = ('order_number', 'client', 'truck', 'status', 'total_cost', 'created_at') # Додали total_cost
     list_filter = ('status', 'created_at', 'client')
     search_fields = ('order_number', 'client__name', 'truck__license_plate')
     autocomplete_fields = ('client', 'truck')
-    
+
     fieldsets = (
         ('Основна інформація', {
             'fields': ('order_number', 'client', 'truck', 'status')
@@ -38,8 +37,16 @@ class ServiceOrderAdmin(admin.ModelAdmin):
             'fields': ('problem_description',)
         }),
     )
-    
+
     inlines = [ServiceWorkInline, RepairPhotoInline]
+
+    # 👇 ВИПРАВЛЕННЯ ФАТАЛЬНОЇ ПОМИЛКИ: Обробляємо збереження inlines 👇
+    def save_formset(self, request, form, formset, change):
+        super().save_formset(request, form, formset, change)
+
+        # Якщо ми зберегли ServiceWork, потрібно перерахувати загальну вартість
+        if formset.model == ServiceWork and form.instance.pk:
+            form.instance.update_total_cost()
 
 # Решта адмін-панелей
 @admin.register(Employee)
@@ -57,10 +64,7 @@ class WorkGroupAdmin(admin.ModelAdmin):
 class ServiceWorkAdmin(admin.ModelAdmin):
     list_display = ('service_order', 'work', 'employee', 'hours_spent')
     autocomplete_fields = ('service_order', 'work', 'employee')
-    
-    # 👇 ДОДАНО: UsedPartInline тепер ТУТ 👇
     inlines = [UsedPartInline]
-    
     search_fields = ['description', 'service_order__order_number', 'work__name']
     ordering = ['-service_order'] 
 

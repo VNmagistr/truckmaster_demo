@@ -1,6 +1,7 @@
 from django.db import models
-from clients.models import Client, Truck, IvecoBaseModel # Імпортуємо моделі з clients
-from inventory.models import Part # Імпортуємо Part з inventory
+from clients.models import Client, Truck, IvecoBaseModel
+from inventory.models import Part
+from django.db.models import Sum, F
 
 # Ця функція потрібна для старих файлів міграцій
 def get_repair_photo_path(instance, filename):
@@ -26,6 +27,7 @@ class WorkGroup(models.Model):
     class Meta:
         verbose_name = "Категорія робіт"
         verbose_name_plural = "Категорії робіт"
+        ordering = ['name']
     
     def __str__(self):
         return self.name
@@ -38,8 +40,8 @@ class ServiceOrder(models.Model):
         CANCELED = 'CANCELED', 'Скасовано'
 
     order_number = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Номер замовлення-наряду")
-    client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт", blank=True)
-    truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка", blank=True)
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт", blank=True, null=True)
+    truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка", blank=True, null=True)
     
     problem_description = models.TextField(
         blank=True, 
@@ -56,19 +58,46 @@ class ServiceOrder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата створення")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата оновлення")
     
+    # 👇 ДОДАНО НОВЕ ПОЛЕ ДЛЯ ЗАГАЛЬНОЇ ВАРТОСТІ 👇
+    total_cost = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="Загальна вартість"
+    )
+
     class Meta:
         verbose_name = "Замовлення-наряд"
         verbose_name_plural = "Замовлення-наряди"
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Замовлення №{self.order_number} ({self.client.name})"
+        client_name = self.client.name if self.client else 'Н/Д'
+        order_num = self.order_number if self.order_number else 'Без номера'
+        return f"Замовлення №{order_num} ({client_name})"
+
+    # 👇 ДОДАНО МЕТОД, ЯКИЙ ВИКЛИКАЄ ПОМИЛКУ 👇
+    def update_total_cost(self):
+        """
+        Перераховує загальну вартість замовлення на основі всіх пов'язаних робіт.
+        """
+        # Обчислюємо вартість: ціна_роботи * витрачені_години
+        total_work_cost = self.works.aggregate(
+            total=Sum(F('work__price') * F('hours_spent'))
+        )['total'] or 0
+        
+        # NOTE: Тут ви також можете додати логіку для розрахунку вартості запчастин,
+        # якщо ServiceWork має посилання на UsedPart
+        
+        self.total_cost = total_work_cost
+        self.save(update_fields=['total_cost']) # Зберігаємо лише змінене поле
+
 
 class ServiceWork(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     
     work = models.ForeignKey(
-        'WorkPrice', # Посилаємось на роботу з прайсу
+        'WorkPrice', 
         on_delete=models.SET_NULL, 
         null=True, 
         verbose_name="Виконана робота (з прайсу)"
@@ -86,13 +115,14 @@ class ServiceWork(models.Model):
     class Meta:
         verbose_name = "Виконана робота"
         verbose_name_plural = "Виконані роботи"
+        ordering = ['-service_order']
     
     def __str__(self):
         if self.work:
             return f"{self.work.name} (Замовлення №{self.service_order.order_number})"
         return f"Робота без назви (Замовлення №{self.service_order.order_number})"
 
-
+# ... (Решта моделей без змін) ...
 class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
     image = models.ImageField(upload_to='repair_photos/', verbose_name="Зображення")
@@ -101,6 +131,7 @@ class RepairPhoto(models.Model):
     class Meta:
         verbose_name = "Фото ремонту"
         verbose_name_plural = "Фото ремонту"
+        ordering = ['-service_order']
 
 class MaintenanceRule(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва правила")
@@ -115,6 +146,7 @@ class MaintenanceRule(models.Model):
     class Meta:
         verbose_name = "Правило регламенту"
         verbose_name_plural = "Правила регламентів"
+        ordering = ['name']
 
     def __str__(self):
         return f"{self.name} (кожні {self.km_interval} км)"
@@ -128,6 +160,7 @@ class MaintenanceLog(models.Model):
     class Meta:
         verbose_name = "Журнал регламентних робіт"
         verbose_name_plural = "Журнал регламентних робіт"
+        ordering = ['-date_performed']
 
 class WorkPrice(models.Model):
     work_group = models.ForeignKey(WorkGroup, on_delete=models.CASCADE, verbose_name="Категорія робіт")
