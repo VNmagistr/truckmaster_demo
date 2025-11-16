@@ -73,7 +73,13 @@ class ServiceWork(models.Model):
         verbose_name="Виконана робота (з прайсу)"
     )
     
-    description = models.TextField(verbose_name="Опис виконаних робіт (додатково)")
+    # 👇 ПОЛЕ ЗМІНЕНО (додано blank=True, null=True) 👇
+    description = models.TextField(
+        verbose_name="Опис виконаних робіт (додатково)",
+        blank=True,
+        null=True
+    )
+    
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, verbose_name="Виконавець")
     hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Витрачено годин")
     
@@ -101,7 +107,6 @@ class MaintenanceRule(models.Model):
     description = models.TextField(verbose_name="Опис", blank=True)
     applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до моделей")
     
-    # 👇 ДОДАНО НОВЕ ПОЛЕ 👇
     km_interval = models.PositiveIntegerField(
         verbose_name="Інтервал (км)",
         help_text="Через яку кількість кілометрів потрібно виконувати це правило"
