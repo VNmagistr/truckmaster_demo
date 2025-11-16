@@ -24,16 +24,24 @@ jobs:
 
           cd /home/ubuntu/truckmaster/my_iveco_crm
 
+          # 1. Примусово оновлюємо код
           git fetch origin
           git reset --hard origin/main
 
-          # 👇 ВИПРАВЛЕНО ШЛЯХ ДО VENV 👇
+          # 2. Активуємо venv
           source /home/ubuntu/truckmaster/my_iveco_crm/venv/bin/activate
 
-          pip install -r requirements.txt
+          # 3. ВИПРАВЛЕННЯ ДЛЯ UBUNTU (PEP 668)
+          # Встановлюємо pip install, ігноруючи системні помилки
+          pip install -r requirements.txt --break-system-packages
+
+          # 4. Запускаємо міграції
           python manage.py migrate
+
+          # 5. Збираємо статику
           python manage.py collectstatic --noinput
 
+          # 6. Перезапускаємо сервіси
           sudo systemctl restart gunicorn
           sudo systemctl restart telegram_bot
         EOF
