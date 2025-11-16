@@ -21,30 +21,21 @@ jobs:
         SSHPASS: ${{ secrets.DO_PASSWORD }}
       run: |
         sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-          
-          # 1. Переходимо в правильну папку проєкту
+
           cd /home/ubuntu/truckmaster/my_iveco_crm
-          
-          # 2. Примусово скидаємо локальні зміни і оновлюємось
+
+          # --- КРИТИЧНЕ ВИПРАВЛЕННЯ ---
+          # 1. Завантажуємо зміни з GitHub
           git fetch origin
+          # 2. Примусово скидаємо всі локальні зміни 
+          #    і оновлюємо код до версії з GitHub
           git reset --hard origin/main
-          
-          # 3. Активуємо віртуальне середовище (ПРАВИЛЬНИЙ ШЛЯХ)
+          # ---------------------------
+
           source /home/ubuntu/truckmaster/my_iveco_crm/venv/bin/activate
-          
-          # 4. Встановлюємо/оновлюємо бібліотеки
-          # Використовуємо --break-system-packages, щоб обійти помилку Ubuntu
-          pip install -r requirements.txt --break-system-packages
-          
-          # 5. Застосовуємо міграції бази даних
+          pip install -r requirements.txt
           python manage.py migrate
-          
-          # 6. Збираємо статичні файли (для адмінки)
           python manage.py collectstatic --noinput
-          
-          # 7. Перезапускаємо Gunicorn (тепер без пароля)
           sudo systemctl restart gunicorn
-          
-          # 8. Перезапускаємо Telegram-бота (тепер без пароля)
           sudo systemctl restart telegram_bot
         EOF
