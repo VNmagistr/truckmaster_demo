@@ -32,3 +32,4 @@ class TruckAdmin(admin.ModelAdmin):
     autocomplete_fields = ('client', 'base_model')
     
     inlines = [OwnershipHistoryInline]
+    
