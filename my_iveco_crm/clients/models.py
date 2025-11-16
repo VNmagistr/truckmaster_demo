@@ -10,8 +10,8 @@ class Client(models.Model):
     class Meta:
         verbose_name = "Клієнт"
         verbose_name_plural = "Клієнти"
-        ordering = ['name']
-    
+        ordering = ['name'] # <-- Додаємо сортування
+
     def __str__(self):
         return self.name
 
@@ -21,7 +21,8 @@ class IvecoBaseModel(models.Model):
     class Meta:
         verbose_name = "Базова модель Iveco"
         verbose_name_plural = "Базові моделі Iveco"
-    
+        ordering = ['name'] # <-- Додаємо сортування
+
     def __str__(self):
         return self.name
 
@@ -36,37 +37,31 @@ class Truck(models.Model):
     class Meta:
         verbose_name = "Вантажівка"
         verbose_name_plural = "Вантажівки"
-        ordering = ['license_plate']
-    
+        ordering = ['license_plate'] # <-- Додаємо сортування
+
     def __str__(self):
         return f"{self.specific_model_name} ({self.license_plate})"
 
-    # --- НОВА ЛОГІКА ДЛЯ ЗБЕРЕЖЕННЯ ІСТОРІЇ ---
+    # --- ЛОГІКА ДЛЯ ЗБЕРЕЖЕННЯ ІСТОРІЇ ---
     def save(self, *args, **kwargs):
-        if self.pk: # Якщо це оновлення існуючого об'єкта
+        if self.pk: 
             try:
-                # Отримуємо стару версію з бази даних
                 old_version = Truck.objects.get(pk=self.pk)
-                
-                # Перевіряємо, чи змінилися ключові поля
                 client_changed = old_version.client_id != self.client_id
                 plate_changed = old_version.license_plate != self.license_plate
 
                 if client_changed or plate_changed:
-                    # Логуємо *старі* значення
                     OwnershipHistory.objects.create(
                         truck=self,
-                        client=old_version.client, # Зберігаємо *попереднього* клієнта
-                        license_plate=old_version.license_plate # Зберігаємо *попередній* номер
+                        client=old_version.client, 
+                        license_plate=old_version.license_plate 
                     )
             except Truck.DoesNotExist:
-                # Об'єкт ще не в базі, нічого не робимо
                 pass 
         
-        # Запускаємо стандартний процес збереження (зберігаємо нові дані)
         super().save(*args, **kwargs)
 
-# --- НОВА МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
+# --- МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
 class OwnershipHistory(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, related_name="ownership_history", verbose_name="Вантажівка")
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Попередній власник")
@@ -76,8 +71,7 @@ class OwnershipHistory(models.Model):
     class Meta:
         verbose_name = "Запис історії"
         verbose_name_plural = "Історія володіння"
-        ordering = ['-change_date'] # Сортуємо від нових до старих
+        ordering = ['-change_date'] 
 
     def __str__(self):
-        # Використовуємо last_seven_vin для чіткості, оскільки VIN - це наш ключ
         return f"{self.truck.last_seven_vin} - {self.client.name if self.client else 'N/A'} ({self.license_plate}) - {self.change_date.strftime('%Y-%m-%d')}"
