@@ -38,8 +38,8 @@ class ServiceOrder(models.Model):
         CANCELED = 'CANCELED', 'Скасовано'
 
     order_number = models.CharField(max_length=50, unique=True, null=True, blank=True, verbose_name="Номер замовлення-наряду")
-    client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт")
-    truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка")
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт", blank=True)
+    truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка", blank=True)
     
     problem_description = models.TextField(
         blank=True, 
