@@ -24,18 +24,16 @@ jobs:
 
           cd /home/ubuntu/truckmaster/my_iveco_crm
 
-          # --- КРИТИЧНЕ ВИПРАВЛЕННЯ ---
-          # 1. Завантажуємо зміни з GitHub
           git fetch origin
-          # 2. Примусово скидаємо всі локальні зміни 
-          #    і оновлюємо код до версії з GitHub
           git reset --hard origin/main
-          # ---------------------------
 
+          # 👇 ВИПРАВЛЕНО ШЛЯХ ДО VENV 👇
           source /home/ubuntu/truckmaster/my_iveco_crm/venv/bin/activate
+
           pip install -r requirements.txt
           python manage.py migrate
           python manage.py collectstatic --noinput
+
           sudo systemctl restart gunicorn
           sudo systemctl restart telegram_bot
         EOF
