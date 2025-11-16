@@ -15,8 +15,9 @@ class ServiceWorkInline(admin.TabularInline):
     model = ServiceWork
     autocomplete_fields = ['work', 'employee'] 
     extra = 1
-    inlines = [UsedPartInline] # Дозволяє додавати запчастини прямо до робіт
-
+    # 👇 ПОМИЛКУ ВИПРАВЛЕНО: 'inlines' з UsedPartInline видалено звідси 👇
+    # inlines = [UsedPartInline] # Це створювало потрійну вкладеність
+    
 class RepairPhotoInline(admin.TabularInline):
     model = RepairPhoto
     extra = 1
@@ -28,7 +29,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'created_at', 'client')
     search_fields = ('order_number', 'client__name', 'truck__license_plate')
     autocomplete_fields = ('client', 'truck')
-
+    
     fieldsets = (
         ('Основна інформація', {
             'fields': ('order_number', 'client', 'truck', 'status')
@@ -38,42 +39,51 @@ class ServiceOrderAdmin(admin.ModelAdmin):
             'fields': ('problem_description',)
         }),
     )
-
+    
+    # Залишаємо інлайни першого рівня
     inlines = [ServiceWorkInline, RepairPhotoInline]
 
 # Решта адмін-панелей
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'position')
-    search_fields = ('name',)
+    search_fields = ('name',) # Потрібно для autocomplete
+    ordering = ['name'] # Додаємо сортування
 
 @admin.register(WorkGroup)
 class WorkGroupAdmin(admin.ModelAdmin):
-    search_fields = ('name',)
+    search_fields = ('name',) # Потрібно для autocomplete
+    ordering = ['name'] # Додаємо сортування
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
     list_display = ('service_order', 'work', 'employee', 'hours_spent')
     autocomplete_fields = ('service_order', 'work', 'employee')
+    
+    # 👇 ДОДАНО: Тепер UsedPartInline знаходиться тут, а не на головній сторінці
     inlines = [UsedPartInline]
+    
+    # Поле для пошуку, на яке посилається UsedPartAdmin (ми виправляли це раніше)
     search_fields = ['description', 'service_order__order_number', 'work__name']
+    ordering = ['-service_order'] # Додаємо сортування
 
-# 👇 ОНОВЛЕНО АДМІНКУ ПРАВИЛ 👇
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):
-    # Додаємо 'km_interval' у список
     list_display = ('name', 'km_interval', 'description')
     search_fields = ('name',)
     filter_horizontal = ('applicable_models',)
+    ordering = ['name'] # Додаємо сортування
 
 @admin.register(MaintenanceLog)
 class MaintenanceLogAdmin(admin.ModelAdmin):
     list_display = ('truck', 'rule', 'date_performed')
     autocomplete_fields = ('truck', 'rule')
+    ordering = ['-date_performed'] # Додаємо сортування
 
 @admin.register(WorkPrice)
 class WorkPriceAdmin(admin.ModelAdmin):
     list_display = ('name', 'work_group', 'price')
     list_filter = ('work_group',)
-    search_fields = ('name',)
+    search_fields = ('name',) # Потрібно для autocomplete
     autocomplete_fields = ['work_group']
+    ordering = ['name'] # Додаємо сортування
