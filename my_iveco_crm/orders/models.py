@@ -82,8 +82,8 @@ class ServiceOrder(models.Model):
         Перераховує загальну вартість замовлення на основі всіх пов'язаних робіт.
         """
         # Обчислюємо вартість: ціна_роботи * витрачені_години
-        total_work_cost = self.works.aggregate(
-            total=Sum(F('work__price') * F('hours_spent'))
+        total_work_cost = self.works.filter(work__isnull=False).aggregate(
+        total=Sum(F('work__price') * F('hours_spent'))
         )['total'] or 0
         
         # NOTE: Тут ви також можете додати логіку для розрахунку вартості запчастин,
