@@ -10,16 +10,18 @@ class PartCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Part)
 class PartAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'sku_code', 'selling_price', 'current_stock')
-
-    # 👇 ДОДАНО ЦЕЙ РЯДОК (вирішує помилку autocomplete) 👇
-    search_fields = ('name', 'sku_code', 'address_in_stock', 'notes')
-
+    # 👇 ПОМИЛКУ ВИПРАВЛЕНО: 'address_in_stock' додано до list_display 👇
+    list_display = ('name', 'category', 'sku_code', 'selling_price', 'current_stock', 'address_in_stock')
+    
+    search_fields = ('name', 'sku_code', 'address_in_stock', 'notes') 
     list_filter = ('category__parent', 'category') 
+    
+    # 'address_in_stock' тепер є в list_display, тому list_editable спрацює
     list_editable = ('selling_price', 'current_stock', 'address_in_stock') 
+    
     autocomplete_fields = ['category'] 
     filter_horizontal = ('substitutes',)
-
+    
     fieldsets = (
         (None, {
             'fields': ('name', 'sku_code', 'category', 'current_stock')
