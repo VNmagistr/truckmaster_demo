@@ -10,6 +10,7 @@ class Client(models.Model):
     class Meta:
         verbose_name = "Клієнт"
         verbose_name_plural = "Клієнти"
+        ordering = ['name']
     
     def __str__(self):
         return self.name
@@ -35,6 +36,7 @@ class Truck(models.Model):
     class Meta:
         verbose_name = "Вантажівка"
         verbose_name_plural = "Вантажівки"
+        ordering = ['license_plate']
     
     def __str__(self):
         return f"{self.specific_model_name} ({self.license_plate})"

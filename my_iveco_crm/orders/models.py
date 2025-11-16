@@ -15,6 +15,7 @@ class Employee(models.Model):
     class Meta:
         verbose_name = "Працівник"
         verbose_name_plural = "Працівники"
+        ordering = ['name']
     
     def __str__(self):
         return f"{self.name} ({self.position})"
@@ -80,8 +81,6 @@ class ServiceWork(models.Model):
     )
     
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, verbose_name="Виконавець")
-    
-    # 👇 ПОЛЕ ЗМІНЕНО (default=0 змінено на default=1) 👇
     hours_spent = models.DecimalField(max_digits=5, decimal_places=2, default=1, verbose_name="Витрачено годин")
     
     class Meta:
@@ -138,6 +137,7 @@ class WorkPrice(models.Model):
     class Meta:
         verbose_name = "Робота з прайсу"
         verbose_name_plural = "Роботи з прайсу"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
