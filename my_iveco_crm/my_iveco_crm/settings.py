@@ -92,11 +92,14 @@ WSGI_APPLICATION = "my_iveco_crm.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'defaultdb',
-        'USER': 'doadmin',
-        'PASSWORD': '***REDACTED_DB_PASSWORD***',
-        'HOST': 'db-postgresql-fra1-53746-do-user-9964121-0.i.db.ondigitalocean.com',
-        'PORT': '25060',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+        'OPTIONS': {
+            'sslmode': 'require',  # <-- ДОДАЙТЕ ЦЕ!
+        },
     }
 }
 
