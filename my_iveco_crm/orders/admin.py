@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Employee, WorkGroup, ServiceOrder, ServiceWork, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice
+    RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit
 )
 from inventory.models import UsedPart 
 
@@ -40,7 +40,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
 
     inlines = [ServiceWorkInline, RepairPhotoInline]
 
-    # 👇 ВИПРАВЛЕННЯ ФАТАЛЬНОЇ ПОМИЛКИ: Обробляємо збереження inlines 👇
+    
     def save_formset(self, request, form, formset, change):
         super().save_formset(request, form, formset, change)
 
@@ -57,8 +57,9 @@ class EmployeeAdmin(admin.ModelAdmin):
 
 @admin.register(WorkGroup)
 class WorkGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'hourly_rate')
     search_fields = ('name',) 
-    ordering = ['name'] 
+    ordering = ['name']
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
@@ -83,8 +84,37 @@ class MaintenanceLogAdmin(admin.ModelAdmin):
 
 @admin.register(WorkPrice)
 class WorkPriceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'work_group', 'price')
+    list_display = ('name', 'work_group', 'standard_hours', 'get_calculated_price')
     list_filter = ('work_group',)
     search_fields = ('name',) 
     autocomplete_fields = ['work_group']
     ordering = ['name']
+    
+    def get_calculated_price(self, obj):
+        """Показує розраховану ціну"""
+        return f"{obj.get_calculated_price():.2f} грн"
+    get_calculated_price.short_description = 'Розрахункова ціна'
+
+@admin.register(MaintenanceKit)
+class MaintenanceKitAdmin(admin.ModelAdmin):
+    list_display = ('truck', 'oil', 'oil_quantity', 'oil_filter', 'updated_at')
+    search_fields = ('truck__license_plate', 'truck__last_seven_vin')
+    autocomplete_fields = ['truck', 'oil', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter']
+    
+    fieldsets = (
+        ('Автомобіль', {
+            'fields': ('truck',)
+        }),
+        ('Олива', {
+            'fields': ('oil', 'oil_quantity')
+        }),
+        ('Фільтри', {
+            'fields': ('oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter')
+        }),
+        ('Додатково', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'updated_at')
