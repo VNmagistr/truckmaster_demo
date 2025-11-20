@@ -178,7 +178,19 @@ class WorkPrice(models.Model):
         decimal_places=2, 
         verbose_name="Ціна (застаріле поле)",
         help_text="Буде видалено. Використовуйте @property price"
-    )  # Поки залишаємо для сумісності
+    )
+
+    class Meta:
+        verbose_name = "Робота з прайсу"
+        verbose_name_plural = "Роботи з прайсу"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.standard_hours} н/г)"
+    
+    def get_calculated_price(self):
+        """Розраховує ціну: нормо-години × вартість години категорії"""
+        return self.standard_hours * self.work_group.hourly_rate
     
     class Meta:
         verbose_name = "Робота з прайсу"
