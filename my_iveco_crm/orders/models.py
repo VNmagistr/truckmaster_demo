@@ -207,12 +207,12 @@ class WorkPrice(models.Model):
     
 
 class MaintenanceKit(models.Model):
-    """Набір оливи та фільтрів для конкретного автомобіля"""
+    """Набір оливи та фільтрів для конкретного автомобіля (прив'язка по VIN)"""
     truck = models.OneToOneField(
         'clients.Truck', 
         on_delete=models.CASCADE, 
         related_name='maintenance_kit',
-        verbose_name="Вантажівка"
+        verbose_name="Вантажівка (по VIN)"
     )
     
     # Олива
@@ -273,4 +273,11 @@ class MaintenanceKit(models.Model):
         verbose_name_plural = "Набори для ТО"
     
     def __str__(self):
-        return f"Набір ТО для {self.truck.license_plate}"
+        # Показуємо VIN замість номера
+        return f"Набір ТО для VIN: {self.truck.last_seven_vin} ({self.truck.license_plate})"
+    
+    def save(self, *args, **kwargs):
+        """Перевірка що набір створюється для унікального авто"""
+        if MaintenanceKit.objects.filter(truck=self.truck).exclude(pk=self.pk).exists():
+            raise ValueError(f"Для вантажівки {self.truck.last_seven_vin} вже існує набір ТО!")
+        super().save(*args, **kwargs)

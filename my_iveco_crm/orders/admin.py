@@ -97,13 +97,23 @@ class WorkPriceAdmin(admin.ModelAdmin):
 
 @admin.register(MaintenanceKit)
 class MaintenanceKitAdmin(admin.ModelAdmin):
-    list_display = ('truck', 'oil', 'oil_quantity', 'oil_filter', 'updated_at')
-    search_fields = ('truck__license_plate', 'truck__last_seven_vin')
+    list_display = ('get_vin', 'get_license_plate', 'oil', 'oil_quantity', 'updated_at')
+    search_fields = ('truck__last_seven_vin', 'truck__full_vin', 'truck__license_plate')
     autocomplete_fields = ['truck', 'oil', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter']
     
+    def get_vin(self, obj):
+        return obj.truck.last_seven_vin
+    get_vin.short_description = 'VIN (останні 7)'
+    get_vin.admin_order_field = 'truck__last_seven_vin'
+    
+    def get_license_plate(self, obj):
+        return obj.truck.license_plate
+    get_license_plate.short_description = 'Номер'
+    
     fieldsets = (
-        ('Автомобіль', {
-            'fields': ('truck',)
+        ('Автомобіль (пошук по VIN)', {
+            'fields': ('truck',),
+            'description': 'Оберіть вантажівку по VIN-коду'
         }),
         ('Олива', {
             'fields': ('oil', 'oil_quantity')
@@ -117,4 +127,3 @@ class MaintenanceKitAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('created_at', 'updated_at')
