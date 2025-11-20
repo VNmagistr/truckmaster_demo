@@ -23,13 +23,26 @@ class OwnershipHistoryInline(admin.TabularInline):
 
 @admin.register(Truck)
 class TruckAdmin(admin.ModelAdmin):
-    list_display = ('license_plate', 'client', 'specific_model_name', 'last_seven_vin')
-    
-    # 👇 ДОДАНО ЦЕЙ РЯДОК (вирішує помилку autocomplete) 👇
+    list_display = ('license_plate', 'client', 'specific_model_name', 'euro_standard', 'last_seven_vin')
     search_fields = ('license_plate', 'last_seven_vin', 'client__name', 'specific_model_name', 'full_vin')
-    
-    list_filter = ('client', 'base_model')
+    list_filter = ('client', 'base_model', 'euro_standard')
     autocomplete_fields = ('client', 'base_model')
+    
+    # last_seven_vin показуємо тільки для читання
+    readonly_fields = ('last_seven_vin',)
+    
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('client', 'base_model', 'specific_model_name', 'euro_standard')
+        }),
+        ('VIN код', {
+            'fields': ('full_vin', 'last_seven_vin'),
+            'description': 'Останні 7 символів розраховуються автоматично'
+        }),
+        ('Реєстрація', {
+            'fields': ('license_plate',)
+        }),
+    )
     
     inlines = [OwnershipHistoryInline]
     

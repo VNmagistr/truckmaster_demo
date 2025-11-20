@@ -205,6 +205,54 @@ class WorkPrice(models.Model):
         """Розраховує ціну: нормо-години × вартість години категорії"""
         return self.standard_hours * self.work_group.hourly_rate
     
+class FilterType(models.Model):
+    """Типи фільтрів (масляний, паливний, AdBlue тощо)"""
+    
+    EURO_STANDARD_CHOICES = [
+        ('EURO3', 'Євро-3'),
+        ('EURO4', 'Євро-4'),
+        ('EURO5', 'Євро-5'),
+        ('EURO6', 'Євро-6'),
+    ]
+    
+    name = models.CharField(max_length=100, verbose_name="Назва типу фільтра")
+    description = models.TextField(blank=True, verbose_name="Опис")
+    
+    # Прив'язка до моделі та євростандарту
+    applicable_models = models.ManyToManyField(
+        'clients.IvecoBaseModel',
+        blank=True,
+        verbose_name="Застосовується до моделей",
+        help_text="Залиште порожнім якщо підходить для всіх моделей"
+    )
+    euro_standard = models.CharField(
+        max_length=10,
+        choices=EURO_STANDARD_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Євростандарт",
+        help_text="Залиште порожнім якщо підходить для всіх стандартів"
+    )
+    
+    replacement_interval_km = models.PositiveIntegerField(
+        default=20000,
+        verbose_name="Інтервал заміни (км)",
+        help_text="Стандартний інтервал заміни для цього типу"
+    )
+    
+    class Meta:
+        verbose_name = "Тип фільтра"
+        verbose_name_plural = "Типи фільтрів"
+        ordering = ['name']
+        # Унікальність: ім'я + модель + євростандарт
+        # (можна мати "Паливний фільтр" для Євро-4 і окремий для Євро-6)
+    
+    def __str__(self):
+        result = self.name
+        if self.euro_standard:
+            result += f" ({self.get_euro_standard_display()})"
+        return result
+
 
 class MaintenanceKit(models.Model):
     """Набір оливи та фільтрів для конкретного автомобіля (прив'язка по VIN)"""
@@ -227,44 +275,12 @@ class MaintenanceKit(models.Model):
         decimal_places=2,
         verbose_name="Кількість оливи (л)"
     )
-    
-    # Фільтри
-    oil_filter = models.ForeignKey(
-        'inventory.Part', 
-        on_delete=models.PROTECT, 
-        related_name='oil_filters_for_trucks',
-        verbose_name="Масляний фільтр"
-    )
-    air_filter = models.ForeignKey(
-        'inventory.Part', 
-        on_delete=models.PROTECT, 
-        related_name='air_filters_for_trucks',
-        blank=True,
-        null=True,
-        verbose_name="Повітряний фільтр"
-    )
-    fuel_filter = models.ForeignKey(
-        'inventory.Part', 
-        on_delete=models.PROTECT, 
-        related_name='fuel_filters_for_trucks',
-        blank=True,
-        null=True,
-        verbose_name="Паливний фільтр"
-    )
-    cabin_filter = models.ForeignKey(
-        'inventory.Part', 
-        on_delete=models.PROTECT, 
-        related_name='cabin_filters_for_trucks',
-        blank=True,
-        null=True,
-        verbose_name="Салонний фільтр"
+    oil_replacement_interval = models.PositiveIntegerField(
+        default=30000,
+        verbose_name="Інтервал заміни оливи (км)"
     )
     
-    notes = models.TextField(
-        blank=True,
-        verbose_name="Примітки"
-    )
-    
+    notes = models.TextField(blank=True, verbose_name="Примітки")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
     
@@ -273,11 +289,55 @@ class MaintenanceKit(models.Model):
         verbose_name_plural = "Набори для ТО"
     
     def __str__(self):
-        # Показуємо VIN замість номера
         return f"Набір ТО для VIN: {self.truck.last_seven_vin} ({self.truck.license_plate})"
+
+
+class MaintenanceKitFilter(models.Model):
+    """Фільтр у наборі ТО (може бути декілька однакових типів)"""
+    maintenance_kit = models.ForeignKey(
+        MaintenanceKit,
+        on_delete=models.CASCADE,
+        related_name='filters',
+        verbose_name="Набір ТО"
+    )
+    filter_type = models.ForeignKey(
+        FilterType,
+        on_delete=models.PROTECT,
+        verbose_name="Тип фільтра"
+    )
+    part = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.PROTECT,
+        verbose_name="Запчастина (фільтр)"
+    )
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Кількість",
+        help_text="Скільки таких фільтрів потрібно"
+    )
+    custom_interval_km = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Індивідуальний інтервал (км)",
+        help_text="Залиште порожнім для використання стандартного інтервалу типу"
+    )
+    notes = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Примітка",
+        help_text="Наприклад: 'грубої очистки', 'тонкої очистки'"
+    )
     
-    def save(self, *args, **kwargs):
-        """Перевірка що набір створюється для унікального авто"""
-        if MaintenanceKit.objects.filter(truck=self.truck).exclude(pk=self.pk).exists():
-            raise ValueError(f"Для вантажівки {self.truck.last_seven_vin} вже існує набір ТО!")
-        super().save(*args, **kwargs)
+    class Meta:
+        verbose_name = "Фільтр у наборі"
+        verbose_name_plural = "Фільтри у наборі"
+        ordering = ['filter_type__name']
+    
+    def __str__(self):
+        note = f" ({self.notes})" if self.notes else ""
+        return f"{self.filter_type.name}{note}: {self.part.name} × {self.quantity}"
+    
+    @property
+    def replacement_interval(self):
+        """Повертає інтервал заміни (індивідуальний або стандартний)"""
+        return self.custom_interval_km or self.filter_type.replacement_interval_km
