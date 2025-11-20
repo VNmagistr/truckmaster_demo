@@ -23,6 +23,12 @@ class Employee(models.Model):
 
 class WorkGroup(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Назва категорії робіт")
+    hourly_rate = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=500,
+        verbose_name="Вартість нормо-години (грн)"
+    )
     
     class Meta:
         verbose_name = "Категорія робіт"
@@ -30,7 +36,7 @@ class WorkGroup(models.Model):
         ordering = ['name']
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.hourly_rate} грн/год)"
 
 class ServiceOrder(models.Model):
     class StatusChoices(models.TextChoices):
@@ -57,8 +63,6 @@ class ServiceOrder(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата створення")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата оновлення")
-    
-    # 👇 ДОДАНО НОВЕ ПОЛЕ ДЛЯ ЗАГАЛЬНОЇ ВАРТОСТІ 👇
     total_cost = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
@@ -76,7 +80,6 @@ class ServiceOrder(models.Model):
         order_num = self.order_number if self.order_number else 'Без номера'
         return f"Замовлення №{order_num} ({client_name})"
 
-    # 👇 ДОДАНО МЕТОД, ЯКИЙ ВИКЛИКАЄ ПОМИЛКУ 👇
     def update_total_cost(self):
         """
         Перераховує загальну вартість замовлення на основі всіх пов'язаних робіт.
@@ -122,7 +125,6 @@ class ServiceWork(models.Model):
             return f"{self.work.name} (Замовлення №{self.service_order.order_number})"
         return f"Робота без назви (Замовлення №{self.service_order.order_number})"
 
-# ... (Решта моделей без змін) ...
 class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
     image = models.ImageField(upload_to='repair_photos/', verbose_name="Зображення")
@@ -165,7 +167,18 @@ class MaintenanceLog(models.Model):
 class WorkPrice(models.Model):
     work_group = models.ForeignKey(WorkGroup, on_delete=models.CASCADE, verbose_name="Категорія робіт")
     name = models.CharField(max_length=255, verbose_name="Назва роботи")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Ціна")
+    standard_hours = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=1,
+        verbose_name="Нормо-годин (стандартна тривалість)"
+    )
+    price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        verbose_name="Ціна (застаріле поле)",
+        help_text="Буде видалено. Використовуйте @property price"
+    )
 
     class Meta:
         verbose_name = "Робота з прайсу"
@@ -173,4 +186,91 @@ class WorkPrice(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.standard_hours} н/г)"
+    
+    def get_calculated_price(self):
+        """Розраховує ціну: нормо-години × вартість години категорії"""
+        return self.standard_hours * self.work_group.hourly_rate
+    
+    class Meta:
+        verbose_name = "Робота з прайсу"
+        verbose_name_plural = "Роботи з прайсу"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.standard_hours} н/г)"
+    
+    @property
+    def price(self):
+        """Розраховує ціну: нормо-години × вартість години категорії"""
+        return self.standard_hours * self.work_group.hourly_rate
+    
+
+class MaintenanceKit(models.Model):
+    """Набір оливи та фільтрів для конкретного автомобіля"""
+    truck = models.OneToOneField(
+        'clients.Truck', 
+        on_delete=models.CASCADE, 
+        related_name='maintenance_kit',
+        verbose_name="Вантажівка"
+    )
+    
+    # Олива
+    oil = models.ForeignKey(
+        'inventory.Part', 
+        on_delete=models.PROTECT, 
+        related_name='oil_for_trucks',
+        verbose_name="Моторна олива"
+    )
+    oil_quantity = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        verbose_name="Кількість оливи (л)"
+    )
+    
+    # Фільтри
+    oil_filter = models.ForeignKey(
+        'inventory.Part', 
+        on_delete=models.PROTECT, 
+        related_name='oil_filters_for_trucks',
+        verbose_name="Масляний фільтр"
+    )
+    air_filter = models.ForeignKey(
+        'inventory.Part', 
+        on_delete=models.PROTECT, 
+        related_name='air_filters_for_trucks',
+        blank=True,
+        null=True,
+        verbose_name="Повітряний фільтр"
+    )
+    fuel_filter = models.ForeignKey(
+        'inventory.Part', 
+        on_delete=models.PROTECT, 
+        related_name='fuel_filters_for_trucks',
+        blank=True,
+        null=True,
+        verbose_name="Паливний фільтр"
+    )
+    cabin_filter = models.ForeignKey(
+        'inventory.Part', 
+        on_delete=models.PROTECT, 
+        related_name='cabin_filters_for_trucks',
+        blank=True,
+        null=True,
+        verbose_name="Салонний фільтр"
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        verbose_name="Примітки"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
+    
+    class Meta:
+        verbose_name = "Набір для ТО"
+        verbose_name_plural = "Набори для ТО"
+    
+    def __str__(self):
+        return f"Набір ТО для {self.truck.license_plate}"
