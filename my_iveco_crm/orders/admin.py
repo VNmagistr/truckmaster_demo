@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Employee, WorkGroup, ServiceOrder, ServiceWork, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit
+    RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit,
+    FilterType, MaintenanceKitFilter
 )
 from inventory.models import UsedPart 
 
@@ -95,35 +96,66 @@ class WorkPriceAdmin(admin.ModelAdmin):
         return f"{obj.get_calculated_price():.2f} грн"
     get_calculated_price.short_description = 'Розрахункова ціна'
 
+# Inline для фільтрів у комплекті ТО
+class MaintenanceKitFilterInline(admin.TabularInline):
+    model = MaintenanceKitFilter
+    extra = 1
+    autocomplete_fields = ['filter_type', 'part']
+    fields = ('filter_type', 'part', 'quantity', 'custom_interval_km', 'notes')
+
 @admin.register(MaintenanceKit)
 class MaintenanceKitAdmin(admin.ModelAdmin):
-    list_display = ('get_vin', 'get_license_plate', 'oil', 'oil_quantity', 'updated_at')
+    list_display = ('get_vin', 'get_license_plate', 'oil', 'oil_quantity', 'oil_replacement_interval', 'updated_at')
     search_fields = ('truck__last_seven_vin', 'truck__full_vin', 'truck__license_plate')
-    autocomplete_fields = ['truck', 'oil', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter']
+    autocomplete_fields = ['truck', 'oil']
+    
+    inlines = [MaintenanceKitFilterInline]  # <-- Додали inline
     
     def get_vin(self, obj):
         return obj.truck.last_seven_vin
     get_vin.short_description = 'VIN (останні 7)'
-    get_vin.admin_order_field = 'truck__last_seven_vin'
     
     def get_license_plate(self, obj):
         return obj.truck.license_plate
     get_license_plate.short_description = 'Номер'
     
     fieldsets = (
-        ('Автомобіль (пошук по VIN)', {
-            'fields': ('truck',),
-            'description': 'Оберіть вантажівку по VIN-коду'
+        ('Автомобіль', {
+            'fields': ('truck',)
         }),
         ('Олива', {
-            'fields': ('oil', 'oil_quantity')
-        }),
-        ('Фільтри', {
-            'fields': ('oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter')
+            'fields': ('oil', 'oil_quantity', 'oil_replacement_interval')
         }),
         ('Додатково', {
             'fields': ('notes',),
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(FilterType)
+class FilterTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'euro_standard', 'get_models', 'replacement_interval_km')
+    list_filter = ('euro_standard', 'applicable_models')
+    search_fields = ('name', 'description')
+    filter_horizontal = ('applicable_models',)
+    ordering = ['name', 'euro_standard']
     
+    def get_models(self, obj):
+        """Показує для яких моделей підходить"""
+        if not obj.applicable_models.exists():
+            return "Всі моделі"
+        return ", ".join([m.name for m in obj.applicable_models.all()[:3]])
+    get_models.short_description = 'Моделі'
+    
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('name', 'description')
+        }),
+        ('Застосовність', {
+            'fields': ('applicable_models', 'euro_standard'),
+            'description': 'Вкажіть для яких моделей та євростандартів підходить цей фільтр'
+        }),
+        ('Обслуговування', {
+            'fields': ('replacement_interval_km',)
+        }),
+    )

@@ -21,29 +21,57 @@ class IvecoBaseModel(models.Model):
     class Meta:
         verbose_name = "Базова модель Iveco"
         verbose_name_plural = "Базові моделі Iveco"
-        ordering = ['name'] # <-- 👇 ДОДАНО СОРТУВАННЯ 👇
+        ordering = ['name']
 
     def __str__(self):
         return self.name
 
 class Truck(models.Model):
+    EURO_STANDARD_CHOICES = [
+        ('EURO3', 'Євро-3'),
+        ('EURO4', 'Євро-4'),
+        ('EURO5', 'Євро-5'),
+        ('EURO6', 'Євро-6'),
+    ]
+    
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Власник")
     base_model = models.ForeignKey(IvecoBaseModel, on_delete=models.SET_NULL, null=True, verbose_name="Базова модель")
     specific_model_name = models.CharField(max_length=100, verbose_name="Конкретна модель (напр. 35C15)")
     full_vin = models.CharField(max_length=17, unique=True, verbose_name="Повний VIN")
-    last_seven_vin = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="Останні 7 символів VIN")
+    
+    # Це поле тепер автоматично заповнюється
+    last_seven_vin = models.CharField(
+        max_length=7, 
+        unique=True, 
+        db_index=True, 
+        verbose_name="Останні 7 символів VIN",
+        editable=False  # <-- Додали editable=False
+    )
+    
     license_plate = models.CharField(max_length=20, verbose_name="Номерний знак", db_index=True)
+    euro_standard = models.CharField(
+        max_length=10,
+        choices=EURO_STANDARD_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Євростандарт викидів"
+    )
     
     class Meta:
         verbose_name = "Вантажівка"
         verbose_name_plural = "Вантажівки"
-        ordering = ['license_plate'] # <-- 👇 ДОДАНО СОРТУВАННЯ 👇
+        ordering = ['license_plate']
 
     def __str__(self):
-        return f"{self.specific_model_name} ({self.license_plate})"
+        euro = f" ({self.get_euro_standard_display()})" if self.euro_standard else ""
+        return f"{self.specific_model_name} ({self.license_plate}){euro}"
 
-    # --- ЛОГІКА ДЛЯ ЗБЕРЕЖЕННЯ ІСТОРІЇ ---
     def save(self, *args, **kwargs):
+        # Автоматично витягуємо останні 7 символів з VIN
+        if self.full_vin:
+            self.last_seven_vin = self.full_vin[-7:]
+        
+        # Зберігаємо історію зміни власника
         if self.pk: 
             try:
                 old_version = Truck.objects.get(pk=self.pk)
