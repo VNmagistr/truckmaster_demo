@@ -259,4 +259,23 @@ class FilterTypeAdmin(admin.ModelAdmin):
             'fields': ('replacement_interval_km',)
         }),
     )
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
