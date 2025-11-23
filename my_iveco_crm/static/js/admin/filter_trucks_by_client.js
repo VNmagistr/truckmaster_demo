@@ -1,10 +1,17 @@
-(function($) {
-    'use strict';
+'use strict';
+
+// Чекаємо поки Django завантажить jQuery
+document.addEventListener('DOMContentLoaded', function() {
+    // Django admin використовує django.jQuery
+    var $ = django.jQuery;
     
-    $(document).ready(function() {
-        // Чекаємо поки select2 ініціалізується
-        setTimeout(initTruckFilter, 500);
-    });
+    if (typeof $ === 'undefined') {
+        console.error('django.jQuery not found');
+        return;
+    }
+    
+    // Чекаємо поки select2 ініціалізується
+    setTimeout(initTruckFilter, 500);
     
     function initTruckFilter() {
         var clientField = $('#id_client');
@@ -21,6 +28,8 @@
             setTimeout(initTruckFilter, 300);
             return;
         }
+        
+        console.log('Truck filter initialized');
         
         // Очищення поля вантажівки при зміні клієнта
         function clearTruckIfNeeded(newClientId) {
@@ -67,12 +76,15 @@
                 settings.url.indexOf('truck') !== -1) {
                 
                 var clientId = clientField.val();
+                console.log('Intercepted truck autocomplete, client_id:', clientId);
+                
                 if (clientId) {
                     // Додаємо client_id до URL
                     var separator = settings.url.indexOf('?') !== -1 ? '&' : '?';
                     settings.url += separator + 'client_id=' + clientId;
+                    console.log('Modified URL:', settings.url);
                 }
             }
         });
     }
-})(django.jQuery);
+});
