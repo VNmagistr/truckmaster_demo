@@ -69,9 +69,15 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         for p in parts:
             work_name = p.service_work.work.name if p.service_work.work else "—"
         
-            # Визначаємо одиницю виміру: літри для оливи, штуки для решти
+            # Визначаємо одиницю виміру: літри для оливи (рідини), штуки для решти
             part_name_lower = p.part.name.lower()
-            if 'олив' in part_name_lower or 'масло' in part_name_lower or 'oil' in part_name_lower:
+
+            # Спочатку перевіряємо чи це НЕ фільтр
+            is_filter = 'фільтр' in part_name_lower or 'filter' in part_name_lower
+            is_oil_liquid = ('олив' in part_name_lower or 'масло' in part_name_lower or 'oil' in part_name_lower)
+
+            # Літри тільки якщо це олива (рідина), а НЕ фільтр
+            if is_oil_liquid and not is_filter:
                 quantity_display = f"{p.quantity} л"
             else:
                 quantity_display = f"{p.quantity} шт."
