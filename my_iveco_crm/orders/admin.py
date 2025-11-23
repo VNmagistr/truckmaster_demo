@@ -1,10 +1,13 @@
 from django.contrib import admin
+from django.urls import path
+from django.http import JsonResponse
 from .models import (
     Employee, WorkGroup, ServiceOrder, ServiceWork, 
     RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit,
     FilterType, MaintenanceKitFilter
 )
 from inventory.models import UsedPart 
+from clients.models import Truck
 
 # Вбудовані адмінки для зручного редагування
 class UsedPartInline(admin.TabularInline):
@@ -49,6 +52,37 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     )
 
     inlines = [ServiceWorkInline, RepairPhotoInline]
+
+    class Media:
+        js = ('js/admin/filter_trucks_by_client.js',)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('get-trucks-by-client/', self.admin_site.admin_view(self.get_trucks_by_client), name='get_trucks_by_client'),
+        ]
+        return custom_urls + urls
+
+    def get_trucks_by_client(self, request):
+        """API endpoint для отримання вантажівок по клієнту"""
+        client_id = request.GET.get('client_id')
+        
+        if not client_id:
+            return JsonResponse({'trucks': []})
+        
+        trucks = Truck.objects.filter(client_id=client_id).values(
+            'id', 'license_plate', 'specific_model_name', 'last_seven_vin'
+        )
+        
+        trucks_list = [
+            {
+                'id': t['id'],
+                'text': f"{t['specific_model_name']} ({t['license_plate']}) - VIN: ...{t['last_seven_vin']}"
+            }
+            for t in trucks
+        ]
+        
+        return JsonResponse({'trucks': trucks_list})
 
     def get_all_parts_display(self, obj):
         """Показує всі запчастини по всіх роботах замовлення"""
@@ -225,3 +259,4 @@ class FilterTypeAdmin(admin.ModelAdmin):
             'fields': ('replacement_interval_km',)
         }),
     )
+    
