@@ -45,4 +45,32 @@ class TruckAdmin(admin.ModelAdmin):
     )
     
     inlines = [OwnershipHistoryInline]
-    
+
+    def get_search_results(self, request, queryset, search_term):
+        """
+        Фільтрує вантажівки по клієнту при autocomplete в ServiceOrder.
+        Якщо в URL є параметр client_id - показуємо тільки вантажівки цього клієнта.
+        """
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        
+        # Перевіряємо чи є фільтр по клієнту в GET параметрах
+        # Django admin autocomplete передає forward параметри
+        client_id = request.GET.get('client_id')
+        
+        # Також перевіряємо referer URL на наявність client
+        referer = request.META.get('HTTP_REFERER', '')
+        if not client_id and 'serviceorder' in referer.lower():
+            # Спробуємо отримати client_id з форми через forward
+            forward = request.GET.get('forward')
+            if forward:
+                import json
+                try:
+                    forward_data = json.loads(forward)
+                    client_id = forward_data.get('client')
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        
+        if client_id:
+            queryset = queryset.filter(client_id=client_id)
+        
+        return queryset, use_distinct
