@@ -1,7 +1,8 @@
 from django.db import models
 from clients.models import Client, Truck, IvecoBaseModel
-from inventory.models import Part
+from inventory.models import UsedPart
 from django.db.models import Sum, F
+from decimal import Decimal
 
 # Ця функція потрібна для старих файлів міграцій
 def get_repair_photo_path(instance, filename):
@@ -81,19 +82,24 @@ class ServiceOrder(models.Model):
         return f"Замовлення №{order_num} ({client_name})"
 
     def update_total_cost(self):
-        """
-        Перераховує загальну вартість замовлення на основі всіх пов'язаних робіт.
-        """
-        # Обчислюємо вартість: ціна_роботи * витрачені_години
-        total_work_cost = self.works.filter(work__isnull=False).aggregate(
-        total=Sum(F('work__price') * F('hours_spent'))
-        )['total'] or 0
-        
-        # NOTE: Тут ви також можете додати логіку для розрахунку вартості запчастин,
-        # якщо ServiceWork має посилання на UsedPart
-        
-        self.total_cost = total_work_cost
-        self.save(update_fields=['total_cost']) # Зберігаємо лише змінене поле
+    # Вартість робіт (використовуємо get_calculated_price замість price)
+        total_work_cost = Decimal('0')
+        for service_work in self.works.filter(work__isnull=False):
+            work_price = service_work.work.get_calculated_price()
+            hours = service_work.hours_spent or Decimal('1')
+            total_work_cost += work_price * hours
+    
+    # Вартість запчастин
+        total_parts_cost = UsedPart.objects.filter(
+            service_work__service_order=self
+        ).aggregate(
+            total=Sum(F('part__selling_price') * F('quantity'))
+        )['total'] or Decimal('0')
+    
+        self.total_cost = total_work_cost + total_parts_cost
+        self.save(update_fields=['total_cost'])
+    
+        return self.total_cost
 
 
 class ServiceWork(models.Model):

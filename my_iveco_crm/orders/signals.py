@@ -8,4 +8,10 @@ def update_order_on_work_change(sender, instance, **kwargs):
     Коли робота створюється, оновлюється або видаляється,
     перераховуємо вартість замовлення.
     """
-    instance.service_order.update_total_cost()
+    try:
+        # Перевіряємо чи існує ще замовлення
+        if instance.service_order_id and instance.service_order:
+            instance.service_order.update_total_cost()
+    except Exception:
+        # Якщо замовлення вже видалено - ігноруємо
+        pass
