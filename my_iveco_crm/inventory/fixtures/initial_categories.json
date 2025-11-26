@@ -1,0 +1,301 @@
+[
+  {
+    "model": "inventory.productcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Оливи",
+      "slug": "oils",
+      "category_type": "oil",
+      "icon": "oil-can",
+      "sort_order": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Фільтри",
+      "slug": "filters",
+      "category_type": "filter",
+      "icon": "filter",
+      "sort_order": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Технічні рідини",
+      "slug": "fluids",
+      "category_type": "fluid",
+      "icon": "droplet",
+      "sort_order": 3,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Омивачі",
+      "slug": "washers",
+      "category_type": "washer",
+      "icon": "spray-can",
+      "sort_order": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Запчастини",
+      "slug": "parts",
+      "category_type": "part",
+      "icon": "tool",
+      "sort_order": 5,
+      "is_active": true
+    }
+  },
+
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 1,
+    "fields": {
+      "category": 1,
+      "name": "Моторна олива",
+      "slug": "motor-oil",
+      "description": "Оливи для двигунів внутрішнього згоряння",
+      "sort_order": 1,
+      "default_change_interval_km": 30000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 2,
+    "fields": {
+      "category": 1,
+      "name": "Трансмісійна олива",
+      "slug": "transmission-oil",
+      "description": "Оливи для коробок передач",
+      "sort_order": 2,
+      "default_change_interval_km": 120000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 3,
+    "fields": {
+      "category": 1,
+      "name": "Гідравлічна олива",
+      "slug": "hydraulic-oil",
+      "description": "Оливи для гідравлічних систем",
+      "sort_order": 3,
+      "default_change_interval_km": 60000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 4,
+    "fields": {
+      "category": 1,
+      "name": "Олива для мостів",
+      "slug": "axle-oil",
+      "description": "Оливи для редукторів мостів",
+      "sort_order": 4,
+      "default_change_interval_km": 120000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 5,
+    "fields": {
+      "category": 1,
+      "name": "Олива для ГПК",
+      "slug": "power-steering-oil",
+      "description": "Оливи для гідропідсилювача керма",
+      "sort_order": 5,
+      "default_change_interval_km": 80000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 6,
+    "fields": {
+      "category": 1,
+      "name": "Олива для АКПП",
+      "slug": "atf-oil",
+      "description": "Оливи для автоматичних коробок передач",
+      "sort_order": 6,
+      "default_change_interval_km": 60000,
+      "is_active": true
+    }
+  },
+
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 7,
+    "fields": {
+      "category": 2,
+      "name": "Оливний фільтр",
+      "slug": "oil-filter",
+      "description": "Фільтри очистки моторної оливи",
+      "sort_order": 1,
+      "default_change_interval_km": 30000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 8,
+    "fields": {
+      "category": 2,
+      "name": "Паливний фільтр",
+      "slug": "fuel-filter",
+      "description": "Фільтри очистки палива",
+      "sort_order": 2,
+      "default_change_interval_km": 30000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 9,
+    "fields": {
+      "category": 2,
+      "name": "Повітряний фільтр",
+      "slug": "air-filter",
+      "description": "Фільтри очистки повітря",
+      "sort_order": 3,
+      "default_change_interval_km": 60000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 10,
+    "fields": {
+      "category": 2,
+      "name": "Салонний фільтр",
+      "slug": "cabin-filter",
+      "description": "Фільтри вентиляції кабіни",
+      "sort_order": 4,
+      "default_change_interval_km": 30000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 11,
+    "fields": {
+      "category": 2,
+      "name": "Фільтр сечовини (AdBlue)",
+      "slug": "adblue-filter",
+      "description": "Фільтри системи SCR",
+      "sort_order": 5,
+      "default_change_interval_km": 120000,
+      "is_active": true
+    }
+  },
+
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 12,
+    "fields": {
+      "category": 3,
+      "name": "Антифриз",
+      "slug": "antifreeze",
+      "description": "Охолоджуючі рідини",
+      "sort_order": 1,
+      "default_change_interval_km": 250000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 13,
+    "fields": {
+      "category": 3,
+      "name": "Гальмівна рідина",
+      "slug": "brake-fluid",
+      "description": "Рідини для гальмівної системи",
+      "sort_order": 2,
+      "default_change_interval_km": 60000,
+      "is_active": true
+    }
+  },
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 14,
+    "fields": {
+      "category": 3,
+      "name": "Дистильована вода",
+      "slug": "distilled-water",
+      "description": "Вода для акумуляторів та системи охолодження",
+      "sort_order": 3,
+      "default_change_interval_km": null,
+      "is_active": true
+    }
+  },
+
+  {
+    "model": "inventory.productsubcategory",
+    "pk": 15,
+    "fields": {
+      "category": 4,
+      "name": "Омивач скла",
+      "slug": "windshield-washer",
+      "description": "Рідини для омивача лобового скла",
+      "sort_order": 1,
+      "default_change_interval_km": null,
+      "is_active": true
+    }
+  },
+
+  {
+    "model": "inventory.warehouse",
+    "pk": 1,
+    "fields": {
+      "name": "Головний склад",
+      "slug": "main",
+      "address": "",
+      "description": "Основний склад запчастин та матеріалів",
+      "is_active": true,
+      "is_default": true,
+      "sort_order": 1
+    }
+  },
+  {
+    "model": "inventory.warehouse",
+    "pk": 2,
+    "fields": {
+      "name": "Задній склад",
+      "slug": "rear",
+      "address": "",
+      "description": "Додатковий склад",
+      "is_active": true,
+      "is_default": false,
+      "sort_order": 2
+    }
+  },
+  {
+    "model": "inventory.warehouse",
+    "pk": 3,
+    "fields": {
+      "name": "Митний склад",
+      "slug": "customs",
+      "address": "",
+      "description": "Склад для товарів на митному оформленні",
+      "is_active": true,
+      "is_default": false,
+      "sort_order": 3
+    }
+  }
+]
