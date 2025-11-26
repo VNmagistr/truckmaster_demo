@@ -31,12 +31,13 @@ INSTALLED_APPS = [
     "django_filters",
     "rest_framework_simplejwt",
     "corsheaders",
+    "users",
     "clients",
     "orders",
     "inventory",
     "accounts",
-    "users",
     "bot",
+    "maintenance",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
