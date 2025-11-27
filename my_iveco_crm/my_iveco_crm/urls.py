@@ -12,8 +12,7 @@ urlpatterns = [
     path('api/', include('clients.urls')),
     path('api/', include('orders.urls')),
     path('api/', include('inventory.urls')),
-    
-    # Маршрути для автентифікації залишаємо тут або виносимо в 'accounts.urls'
+    path('api/maintenance/', include('maintenance.urls')),
     path('api/', include('accounts.urls')), 
 ]
 
