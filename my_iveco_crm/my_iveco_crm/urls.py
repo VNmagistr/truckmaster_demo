@@ -1,19 +1,19 @@
 # my_iveco_crm/urls.py
 
 from django.contrib import admin
-from django.urls import path, include # Переконайтесь, що 'include' імпортовано
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Підключаємо маршрути з наших додатків
+    # API endpoints
+    path('api/', include('accounts.urls')),
     path('api/', include('clients.urls')),
     path('api/', include('orders.urls')),
-    path('api/', include('inventory.urls')),
+    path('api/inventory/', include('inventory.urls')),
     path('api/maintenance/', include('maintenance.urls')),
-    path('api/', include('accounts.urls')), 
 ]
 
 if settings.DEBUG:
