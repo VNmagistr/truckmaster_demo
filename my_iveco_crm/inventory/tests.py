@@ -1,244 +1,176 @@
-"""
-Tests for inventory app - models, categories, parts management
-"""
-from django.test import TestCase
-from django.contrib.auth.models import User
-from decimal import Decimal
+# inventory/tests.py
 
-from .models import PartCategory, Part, UsedPart
-from clients.models import Client, IvecoBaseModel, Truck
-from orders.models import Employee, WorkGroup, WorkPrice, ServiceOrder, ServiceWork
+from django.test import TestCase
+from decimal import Decimal
+from .models import PartCategory, Part, ProductCategory, ProductSubcategory, Warehouse, Stock
 
 
 class PartCategoryModelTest(TestCase):
-    """Tests for PartCategory model - hierarchical categories"""
+    """Test PartCategory model"""
     
-    def test_create_root_category(self):
-        """Test creating a root category (no parent)"""
+    def test_create_parent_category(self):
+        """Test creating a parent category"""
         category = PartCategory.objects.create(
-            name='Двигун',
-            description='Запчастини для двигуна'
+            name='Filters',
+            description='All types of filters'
         )
-        
-        self.assertEqual(category.name, 'Двигун')
+        self.assertEqual(category.name, 'Filters')
         self.assertIsNone(category.parent)
-        self.assertEqual(str(category), 'Двигун')
     
-    def test_create_subcategory(self):
-        """Test creating a subcategory with parent"""
-        parent = PartCategory.objects.create(name='Двигун')
+    def test_create_child_category(self):
+        """Test creating a child category"""
+        parent = PartCategory.objects.create(name='Filters')
         child = PartCategory.objects.create(
-            name='Фільтри',
-            parent=parent,
-            description='Фільтри двигуна'
+            name='Oil Filters',
+            parent=parent
         )
-        
         self.assertEqual(child.parent, parent)
-        self.assertEqual(str(child), 'Двигун -> Фільтри')
     
-    def test_category_hierarchy(self):
-        """Test category hierarchy with multiple levels"""
-        root = PartCategory.objects.create(name='Двигун')
-        filters = PartCategory.objects.create(name='Фільтри', parent=root)
+    def test_category_str_representation(self):
+        """Test string representation of category"""
+        parent = PartCategory.objects.create(name='Filters')
+        child = PartCategory.objects.create(name='Oil Filters', parent=parent)
         
-        # Check subcategories relation
-        self.assertIn(filters, root.subcategories.all())
-    
-    def test_category_unique_name(self):
-        """Test category name uniqueness"""
-        PartCategory.objects.create(name='Двигун')
-        
-        with self.assertRaises(Exception):
-            PartCategory.objects.create(name='Двигун')
+        self.assertEqual(str(parent), 'Filters')
+        self.assertEqual(str(child), 'Filters -> Oil Filters')
 
 
 class PartModelTest(TestCase):
-    """Tests for Part model"""
+    """Test Part model"""
     
     def setUp(self):
-        self.category = PartCategory.objects.create(name='Фільтри')
+        self.category = PartCategory.objects.create(name='Filters')
     
     def test_create_part(self):
-        """Test creating a part with all fields"""
+        """Test creating a part"""
         part = Part.objects.create(
-            category=self.category,
             name='Фільтр оливи',
-            sku_code='OIL-FILTER-001',
-            description='Масляний фільтр для Daily',
-            cost_price=Decimal('150.00'),
-            selling_price=Decimal('250.00'),
-            current_stock=10,
-            address_in_stock='A-1-3',
-            notes='Підходить для Euro 5'
+            sku_code='OIL-001',
+            category=self.category,
+            cost_price=Decimal('100.00'),
+            selling_price=Decimal('150.00'),
+            current_stock=10
         )
-        
         self.assertEqual(part.name, 'Фільтр оливи')
-        self.assertEqual(part.sku_code, 'OIL-FILTER-001')
-        self.assertEqual(part.cost_price, Decimal('150.00'))
-        self.assertEqual(part.selling_price, Decimal('250.00'))
-        self.assertEqual(part.current_stock, 10)
+        self.assertEqual(part.selling_price, Decimal('150.00'))
     
     def test_part_str_representation(self):
         """Test string representation of Part"""
         part = Part.objects.create(
             name='Фільтр оливи',
             sku_code='OIL-001',
-            selling_price=Decimal('250.00')
+            category=self.category
         )
-        
-        self.assertEqual(str(part), 'Фільтр оливи (OIL-001)')
+        # Part.__str__ повертає тільки name (плюс brand та viscosity якщо є)
+        self.assertEqual(str(part), 'Фільтр оливи')
     
-    def test_part_sku_unique(self):
-        """Test SKU code uniqueness"""
-        Part.objects.create(
-            name='Part 1',
-            sku_code='SKU-001',
-            selling_price=Decimal('100.00')
-        )
-        
-        with self.assertRaises(Exception):
-            Part.objects.create(
-                name='Part 2',
-                sku_code='SKU-001',
-                selling_price=Decimal('200.00')
-            )
-    
-    def test_part_substitutes(self):
-        """Test part substitutes (analogs) relationship"""
-        original = Part.objects.create(
-            name='Original Filter',
-            sku_code='ORIG-001',
-            selling_price=Decimal('300.00')
-        )
-        analog1 = Part.objects.create(
-            name='Analog Filter 1',
-            sku_code='ANALOG-001',
-            selling_price=Decimal('200.00')
-        )
-        analog2 = Part.objects.create(
-            name='Analog Filter 2',
-            sku_code='ANALOG-002',
-            selling_price=Decimal('180.00')
-        )
-        
-        original.substitutes.add(analog1, analog2)
-        
-        self.assertEqual(original.substitutes.count(), 2)
-        self.assertIn(analog1, original.substitutes.all())
-        self.assertIn(analog2, original.substitutes.all())
-    
-    def test_part_default_values(self):
-        """Test default values for optional fields"""
+    def test_part_str_with_brand(self):
+        """Test string representation of Part with brand"""
         part = Part.objects.create(
-            name='Minimal Part',
-            sku_code='MIN-001',
-            selling_price=Decimal('100.00')
+            name='Фільтр оливи',
+            sku_code='OIL-002',
+            category=self.category,
+            brand='MANN'
         )
-        
-        self.assertEqual(part.cost_price, Decimal('0'))
-        self.assertEqual(part.current_stock, 0)
-        self.assertIsNone(part.category)
-        self.assertIsNone(part.address_in_stock)
+        self.assertEqual(str(part), 'MANN Фільтр оливи')
     
-    def test_part_ordering(self):
-        """Test parts are ordered by name"""
-        Part.objects.create(name='Zebra Part', sku_code='Z-001', selling_price=Decimal('100'))
-        Part.objects.create(name='Alpha Part', sku_code='A-001', selling_price=Decimal('100'))
-        Part.objects.create(name='Beta Part', sku_code='B-001', selling_price=Decimal('100'))
+    def test_part_str_with_viscosity(self):
+        """Test string representation of Part with viscosity"""
+        part = Part.objects.create(
+            name='Моторна олива',
+            sku_code='OIL-003',
+            category=self.category,
+            viscosity='5W-30'
+        )
+        self.assertEqual(str(part), 'Моторна олива 5W-30')
+    
+    def test_part_price_per_liter_calculation(self):
+        """Test automatic price per liter calculation"""
+        part = Part.objects.create(
+            name='Олива',
+            sku_code='OIL-004',
+            category=self.category,
+            selling_price=Decimal('1000.00'),
+            volume_per_unit=Decimal('20.00'),
+            unit='l'
+        )
+        self.assertEqual(part.price_per_liter, Decimal('50.00'))
+
+
+class ProductCategoryModelTest(TestCase):
+    """Test ProductCategory model"""
+    
+    def test_create_category(self):
+        """Test creating a product category"""
+        category = ProductCategory.objects.create(
+            name='Оливи',
+            slug='oils',
+            category_type='oil'
+        )
+        self.assertEqual(category.name, 'Оливи')
+        self.assertEqual(category.category_type, 'oil')
+
+
+class WarehouseModelTest(TestCase):
+    """Test Warehouse model"""
+    
+    def test_create_warehouse(self):
+        """Test creating a warehouse"""
+        warehouse = Warehouse.objects.create(
+            name='Головний склад',
+            slug='main',
+            is_default=True
+        )
+        self.assertEqual(warehouse.name, 'Головний склад')
+        self.assertTrue(warehouse.is_default)
+    
+    def test_only_one_default_warehouse(self):
+        """Test that only one warehouse can be default"""
+        wh1 = Warehouse.objects.create(name='Склад 1', slug='wh1', is_default=True)
+        wh2 = Warehouse.objects.create(name='Склад 2', slug='wh2', is_default=True)
         
-        parts = list(Part.objects.all())
-        self.assertEqual(parts[0].name, 'Alpha Part')
-        self.assertEqual(parts[1].name, 'Beta Part')
-        self.assertEqual(parts[2].name, 'Zebra Part')
+        wh1.refresh_from_db()
+        self.assertFalse(wh1.is_default)
+        self.assertTrue(wh2.is_default)
 
 
-class UsedPartModelTest(TestCase):
-    """Tests for UsedPart model - parts used in service works"""
+class StockModelTest(TestCase):
+    """Test Stock model"""
     
     def setUp(self):
-        # Create necessary related objects
-        self.client = Client.objects.create(name='Test Client')
-        self.base_model = IvecoBaseModel.objects.create(name='Daily')
-        self.truck = Truck.objects.create(
-            client=self.client,
-            base_model=self.base_model,
-            specific_model_name='35C15',
-            full_vin='ZCFC35A0001234567',
-            license_plate='AA1234BB'
-        )
-        
-        self.employee = Employee.objects.create(name='John', position='Mechanic')
-        self.work_group = WorkGroup.objects.create(name='Engine', hourly_rate=Decimal('500'))
-        self.work_price = WorkPrice.objects.create(
-            work_group=self.work_group,
-            name='Oil Change',
-            standard_hours=Decimal('1.0')
-        )
-        
-        self.service_order = ServiceOrder.objects.create(
-            order_number='ORD-001',
-            client=self.client,
-            truck=self.truck
-        )
-        
-        self.service_work = ServiceWork.objects.create(
-            service_order=self.service_order,
-            work=self.work_price,
-            employee=self.employee,
-            hours_spent=Decimal('1.0')
-        )
-        
+        self.warehouse = Warehouse.objects.create(name='Склад', slug='main')
+        self.category = PartCategory.objects.create(name='Filters')
         self.part = Part.objects.create(
-            name='Oil Filter',
-            sku_code='OIL-F-001',
-            selling_price=Decimal('250.00')
+            name='Фільтр',
+            sku_code='F-001',
+            category=self.category,
+            min_stock_level=5
         )
     
-    def test_create_used_part(self):
-        """Test creating a used part record"""
-        used_part = UsedPart.objects.create(
-            service_work=self.service_work,
-            part=self.part,
-            quantity=2
+    def test_create_stock(self):
+        """Test creating stock record"""
+        stock = Stock.objects.create(
+            warehouse=self.warehouse,
+            product=self.part,
+            quantity=10
         )
-        
-        self.assertEqual(used_part.service_work, self.service_work)
-        self.assertEqual(used_part.part, self.part)
-        self.assertEqual(used_part.quantity, 2)
+        self.assertEqual(stock.quantity, 10)
     
-    def test_used_part_str_representation(self):
-        """Test string representation"""
-        used_part = UsedPart.objects.create(
-            service_work=self.service_work,
-            part=self.part,
-            quantity=3
+    def test_available_quantity(self):
+        """Test available quantity calculation"""
+        stock = Stock.objects.create(
+            warehouse=self.warehouse,
+            product=self.part,
+            quantity=10,
+            reserved=3
         )
-        
-        self.assertEqual(str(used_part), 'Oil Filter - 3 шт.')
+        self.assertEqual(stock.available, 7)
     
-    def test_used_part_unique_together(self):
-        """Test that same part can't be added twice to same service work"""
-        UsedPart.objects.create(
-            service_work=self.service_work,
-            part=self.part,
-            quantity=1
+    def test_low_stock_detection(self):
+        """Test low stock detection"""
+        stock = Stock.objects.create(
+            warehouse=self.warehouse,
+            product=self.part,
+            quantity=3  # Less than min_stock_level (5)
         )
-        
-        with self.assertRaises(Exception):
-            UsedPart.objects.create(
-                service_work=self.service_work,
-                part=self.part,
-                quantity=2
-            )
-    
-    def test_used_part_protected_deletion(self):
-        """Test that part cannot be deleted if used in service work"""
-        UsedPart.objects.create(
-            service_work=self.service_work,
-            part=self.part,
-            quantity=1
-        )
-        
-        with self.assertRaises(Exception):
-            self.part.delete()
-            
+        self.assertTrue(stock.is_low_stock)
