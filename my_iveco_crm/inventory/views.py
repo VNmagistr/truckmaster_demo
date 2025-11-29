@@ -5,10 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-<<<<<<< HEAD
-=======
 from django.db.models import Sum, F
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
 
 from .models import (
     ProductCategory,
@@ -17,11 +14,8 @@ from .models import (
     Part,
     Stock,
     StockMovement,
-<<<<<<< HEAD
-=======
     PartCategory,
     UsedPart,
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
 )
 from .serializers import (
     ProductCategorySerializer,
@@ -31,20 +25,13 @@ from .serializers import (
     PartListSerializer,
     StockSerializer,
     StockMovementSerializer,
-<<<<<<< HEAD
-=======
     PartCategorySerializer,
     UsedPartSerializer,
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
 )
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
-<<<<<<< HEAD
-    """API для категорій товарів (Оливи, Фільтри, тощо)"""
-=======
     """API для категорій товарів"""
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
     permission_classes = [IsAuthenticated]
@@ -54,11 +41,7 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductSubcategoryViewSet(viewsets.ModelViewSet):
-<<<<<<< HEAD
-    """API для підкатегорій (Моторна олива, Оливний фільтр, тощо)"""
-=======
     """API для підкатегорій товарів"""
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
     queryset = ProductSubcategory.objects.select_related('category').all()
     serializer_class = ProductSubcategorySerializer
     permission_classes = [IsAuthenticated]
@@ -74,8 +57,6 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filterset_fields = ['is_active', 'is_default']
     ordering = ['sort_order', 'name']
-<<<<<<< HEAD
-=======
     
     @action(detail=True, methods=['get'])
     def stock_summary(self, request, pk=None):
@@ -104,7 +85,6 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
     queryset = PartCategory.objects.all()
     serializer_class = PartCategorySerializer
     permission_classes = [IsAuthenticated]
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
 
 
 class PartViewSet(viewsets.ModelViewSet):
@@ -125,17 +105,11 @@ class PartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def low_stock(self, request):
         """Товари з низьким залишком"""
-<<<<<<< HEAD
-        products = self.queryset.filter(is_active=True)
-        low = [p for p in products if p.current_stock <= p.min_stock_level]
-        serializer = self.get_serializer(low, many=True)
-=======
         products = self.queryset.filter(
             current_stock__lte=F('min_stock_level'),
             is_active=True
         )
         serializer = self.get_serializer(products, many=True)
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
@@ -162,13 +136,8 @@ class PartViewSet(viewsets.ModelViewSet):
 class StockViewSet(viewsets.ModelViewSet):
     """API для залишків на складі"""
     queryset = Stock.objects.select_related(
-<<<<<<< HEAD
-        'warehouse',
-        'product',
-=======
         'warehouse', 
         'product', 
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
         'product__subcategory',
         'product__subcategory__category'
     ).all()
@@ -184,12 +153,8 @@ class StockViewSet(viewsets.ModelViewSet):
         # Фільтр по низькому залишку
         low_stock = self.request.query_params.get('low_stock')
         if low_stock == 'true':
-<<<<<<< HEAD
-            ids = [s.id for s in queryset if s.quantity <= (s.product.min_stock_level or 0)]
-=======
             # Фільтруємо в Python, бо is_low_stock - це property
             ids = [s.id for s in queryset if s.is_low_stock]
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
             queryset = queryset.filter(id__in=ids)
         
         return queryset
@@ -200,11 +165,7 @@ class StockViewSet(viewsets.ModelViewSet):
         product_id = request.query_params.get('product_id')
         if not product_id:
             return Response(
-<<<<<<< HEAD
-                {'error': 'product_id is required'},
-=======
                 {'error': 'product_id is required'}, 
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -239,11 +200,7 @@ class StockMovementViewSet(viewsets.ModelViewSet):
         product_id = request.query_params.get('product_id')
         if not product_id:
             return Response(
-<<<<<<< HEAD
-                {'error': 'product_id is required'},
-=======
                 {'error': 'product_id is required'}, 
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -257,8 +214,6 @@ class StockMovementViewSet(viewsets.ModelViewSet):
         movements = self.queryset[:50]
         serializer = self.get_serializer(movements, many=True)
         return Response(serializer.data)
-<<<<<<< HEAD
-=======
 
 
 class UsedPartViewSet(viewsets.ModelViewSet):
@@ -267,4 +222,3 @@ class UsedPartViewSet(viewsets.ModelViewSet):
     serializer_class = UsedPartSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['service_work', 'part', 'warehouse']
->>>>>>> a1f17255c6788a0df72d1230f982c97e1a0d302d
