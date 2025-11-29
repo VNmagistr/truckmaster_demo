@@ -312,13 +312,17 @@ class MaintenanceRuleAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         self.client.force_authenticate(user=self.user)
+        # Створюємо модель для applicable_models (ManyToMany)
+        self.base_model = IvecoBaseModel.objects.create(name='Daily')
     
     def test_list_maintenance_rules(self):
         """Test listing maintenance rules"""
-        MaintenanceRule.objects.create(
+        rule = MaintenanceRule.objects.create(
             name='Oil Change',
             km_interval=15000
         )
+        # ManyToMany додаємо окремо
+        rule.applicable_models.add(self.base_model)
         
         response = self.client.get('/api/maintenance-rules/')
         
@@ -326,10 +330,12 @@ class MaintenanceRuleAPITest(APITestCase):
         self.assertEqual(len(response.data), 1)
     
     def test_create_maintenance_rule(self):
+        """Test creating a maintenance rule"""
         data = {
             'name': 'Filter Replacement',
             'description': 'Replace all filters',
-            'km_interval': 30000
+            'km_interval': 30000,
+            'applicable_models': [self.base_model.id]  # Додаємо обов'язкове поле
         }
         
         response = self.client.post('/api/maintenance-rules/', data)
@@ -357,6 +363,7 @@ class MaintenanceLogAPITest(APITestCase):
             name='Oil Change',
             km_interval=15000
         )
+        self.rule.applicable_models.add(self.base_model)
     
     def test_list_maintenance_logs(self):
         """Test listing maintenance logs"""
@@ -383,4 +390,3 @@ class MaintenanceLogAPITest(APITestCase):
         response = self.client.post('/api/maintenance-logs/', data)
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
