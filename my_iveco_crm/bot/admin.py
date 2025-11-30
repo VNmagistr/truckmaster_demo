@@ -26,7 +26,7 @@ class BotUserAdmin(admin.ModelAdmin):
         'client__name'
     )
     list_editable = ('role', 'is_active', 'is_blocked')
-    readonly_fields = ('chat_id', 'created_at', 'last_activity')
+    readonly_fields = ('created_at', 'last_activity')
     
     filter_horizontal = ('allowed_trucks',)
     autocomplete_fields = ['client']
