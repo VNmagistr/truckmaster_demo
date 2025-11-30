@@ -56,9 +56,32 @@ class StockMovementAdmin(admin.ModelAdmin):
     list_display = ('product', 'movement_type', 'quantity', 'warehouse_from', 'warehouse_to', 'created_at')
     list_filter = ('movement_type', 'warehouse_from', 'warehouse_to', 'created_at')
     search_fields = ('product__name', 'invoice_number', 'supplier', 'notes')
-    autocomplete_fields = ['product', 'warehouse_from', 'warehouse_to', 'service_order']
+    
+    # ВИПРАВЛЕНО: видалено 'service_order' з autocomplete_fields
+    autocomplete_fields = ['product', 'warehouse_from', 'warehouse_to']
+    
     readonly_fields = ('created_at', 'created_by')
     date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Тип операції', {
+            'fields': ('movement_type',)
+        }),
+        ('Товар', {
+            'fields': ('product', 'quantity')
+        }),
+        ('Склади', {
+            'fields': ('warehouse_from', 'warehouse_to')
+        }),
+        ('Документи', {
+            'fields': ('service_order', 'supplier', 'invoice_number', 'purchase_price'),
+            'classes': ('collapse',)
+        }),
+        ('Додатково', {
+            'fields': ('notes', 'created_by', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
     
     def save_model(self, request, obj, form, change):
         if not change:  # Тільки при створенні

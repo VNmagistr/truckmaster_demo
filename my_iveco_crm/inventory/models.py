@@ -253,6 +253,20 @@ class Part(models.Model):
             self.price_per_liter = self.selling_price / self.volume_per_unit
         super().save(*args, **kwargs)
 
+    def update_current_stock(self):
+        """Синхронізує загальний залишок з усіх складів"""
+        total = self.stock_items.aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+        
+        if self.current_stock != total:
+            Part.objects.filter(pk=self.pk).update(current_stock=total)
+    
+    @property
+    def total_stock(self):
+        """Використовує кешоване значення"""
+        return self.current_stock  # Швидше ніж агрегація
+
     @property
     def is_oil(self):
         """Чи є цей товар оливою"""
@@ -384,9 +398,9 @@ class StockMovement(models.Model):
         null=True, blank=True
     )
     
-    # Пов'язані документи
+    # Пов'язані документи - ВИПРАВЛЕНО: використовуємо строку замість прямого імпорту
     service_order = models.ForeignKey(
-        'orders.ServiceOrder',
+        'orders.ServiceOrder',  # ← Використовуємо строкове посилання!
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='stock_movements',

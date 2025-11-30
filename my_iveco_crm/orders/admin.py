@@ -1,3 +1,4 @@
+from inventory.models import UsedPart
 from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
@@ -6,13 +7,11 @@ from .models import (
     RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit,
     FilterType, MaintenanceKitFilter
 )
-from inventory.models import UsedPart 
-from clients.models import Truck
 
 # Вбудовані адмінки для зручного редагування
 class UsedPartInline(admin.TabularInline):
-    model = UsedPart
-    autocomplete_fields = ['part']
+    model = UsedPart  # ← НЕ строка!
+    autocomplete_fields = ['part', 'warehouse']
     extra = 1
 
 class ServiceWorkInline(admin.TabularInline):
@@ -51,20 +50,22 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         }),
     )
 
-    inlines = [ServiceWorkInline, RepairPhotoInline]
+    inlines = [ServiceWorkInline, RepairPhotoInline]  # ← ДОДАТИ
 
-    class Media:
+    class Media:  # ← ДОДАТИ
         js = ('js/admin/filter_trucks_by_client.js',)
 
-    def get_urls(self):
+    def get_urls(self):  # ← ДОДАТИ
         urls = super().get_urls()
         custom_urls = [
             path('get-trucks-by-client/', self.admin_site.admin_view(self.get_trucks_by_client), name='get_trucks_by_client'),
         ]
         return custom_urls + urls
 
-    def get_trucks_by_client(self, request):
+    def get_trucks_by_client(self, request):  # ← ДОДАТИ
         """API endpoint для отримання вантажівок по клієнту"""
+        from clients.models import Truck
+        
         client_id = request.GET.get('client_id')
         
         if not client_id:
@@ -84,8 +85,8 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         
         return JsonResponse({'trucks': trucks_list})
 
-    def get_all_parts_display(self, obj):
-        """Показує всі запчастини по всіх роботах замовлення"""
+    def get_all_parts_display(self, obj):  # ← ДОДАТИ ЦЕЙ МЕТОД!
+        """Показує всі запчастини"""
         from django.utils.html import format_html
         from inventory.models import UsedPart
     
@@ -102,20 +103,16 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         rows = []
         for p in parts:
             work_name = p.service_work.work.name if p.service_work.work else "—"
-        
-            # Визначаємо одиницю виміру: літри для оливи (рідини), штуки для решти
+            
             part_name_lower = p.part.name.lower()
-
-            # Спочатку перевіряємо чи це НЕ фільтр
             is_filter = 'фільтр' in part_name_lower or 'filter' in part_name_lower
             is_oil_liquid = ('олив' in part_name_lower or 'масло' in part_name_lower or 'oil' in part_name_lower)
-
-            # Літри тільки якщо це олива (рідина), а НЕ фільтр
+            
             if is_oil_liquid and not is_filter:
                 quantity_display = f"{p.quantity} л"
             else:
                 quantity_display = f"{p.quantity} шт."
-        
+            
             rows.append(
                 f"<tr>"
                 f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{p.part.sku_code}</td>"
@@ -144,50 +141,30 @@ class ServiceOrderAdmin(admin.ModelAdmin):
 
     get_all_parts_display.short_description = 'Перелік запчастин'
 
-    def save_formset(self, request, form, formset, change):
+    def save_formset(self, request, form, formset, change):  # ← ДОДАТИ
         super().save_formset(request, form, formset, change)
         if formset.model == ServiceWork and form.instance.pk:
             form.instance.update_total_cost()
+
 
 # Решта адмін-панелей
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'position')
-    search_fields = ('name',) 
+    search_fields = ('name',)  # ← Обов'язково для autocomplete!
     ordering = ['name'] 
 
 @admin.register(WorkGroup)
 class WorkGroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'hourly_rate')
-    search_fields = ('name',) 
+    search_fields = ('name',)  # ← Обов'язково для autocomplete!
     ordering = ['name']
-
-@admin.register(ServiceWork)
-class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('service_order', 'work', 'employee', 'hours_spent')
-    autocomplete_fields = ('service_order', 'work', 'employee')
-    inlines = [UsedPartInline]
-    search_fields = ['description', 'service_order__order_number', 'work__name']
-    ordering = ['-service_order'] 
-
-@admin.register(MaintenanceRule)
-class MaintenanceRuleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'km_interval', 'description')
-    search_fields = ('name',)
-    filter_horizontal = ('applicable_models',)
-    ordering = ['name'] 
-
-@admin.register(MaintenanceLog)
-class MaintenanceLogAdmin(admin.ModelAdmin):
-    list_display = ('truck', 'rule', 'date_performed')
-    autocomplete_fields = ('truck', 'rule')
-    ordering = ['-date_performed'] 
 
 @admin.register(WorkPrice)
 class WorkPriceAdmin(admin.ModelAdmin):
     list_display = ('name', 'work_group', 'standard_hours', 'get_calculated_price')
     list_filter = ('work_group',)
-    search_fields = ('name',) 
+    search_fields = ('name',)  # ← Обов'язково для autocomplete!
     autocomplete_fields = ['work_group']
     ordering = ['name']
     
@@ -196,86 +173,10 @@ class WorkPriceAdmin(admin.ModelAdmin):
         return f"{obj.get_calculated_price():.2f} грн"
     get_calculated_price.short_description = 'Розрахункова ціна'
 
-# Inline для фільтрів у комплекті ТО
-class MaintenanceKitFilterInline(admin.TabularInline):
-    model = MaintenanceKitFilter
-    extra = 1
-    autocomplete_fields = ['filter_type', 'part']
-    fields = ('filter_type', 'part', 'quantity', 'custom_interval_km', 'notes')
-
-@admin.register(MaintenanceKit)
-class MaintenanceKitAdmin(admin.ModelAdmin):
-    list_display = ('get_vin', 'get_license_plate', 'oil', 'oil_quantity', 'oil_replacement_interval', 'updated_at')
-    search_fields = ('truck__last_seven_vin', 'truck__full_vin', 'truck__license_plate')
-    autocomplete_fields = ['truck', 'oil']
-    
-    inlines = [MaintenanceKitFilterInline]  # <-- Додали inline
-    
-    def get_vin(self, obj):
-        return obj.truck.last_seven_vin
-    get_vin.short_description = 'VIN (останні 7)'
-    
-    def get_license_plate(self, obj):
-        return obj.truck.license_plate
-    get_license_plate.short_description = 'Номер'
-    
-    fieldsets = (
-        ('Автомобіль', {
-            'fields': ('truck',)
-        }),
-        ('Олива', {
-            'fields': ('oil', 'oil_quantity', 'oil_replacement_interval')
-        }),
-        ('Додатково', {
-            'fields': ('notes',),
-            'classes': ('collapse',)
-        }),
-    )
-
-@admin.register(FilterType)
-class FilterTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'euro_standard', 'get_models', 'replacement_interval_km')
-    list_filter = ('euro_standard', 'applicable_models')
-    search_fields = ('name', 'description')
-    filter_horizontal = ('applicable_models',)
-    ordering = ['name', 'euro_standard']
-    
-    def get_models(self, obj):
-        """Показує для яких моделей підходить"""
-        if not obj.applicable_models.exists():
-            return "Всі моделі"
-        return ", ".join([m.name for m in obj.applicable_models.all()[:3]])
-    get_models.short_description = 'Моделі'
-    
-    fieldsets = (
-        ('Основна інформація', {
-            'fields': ('name', 'description')
-        }),
-        ('Застосовність', {
-            'fields': ('applicable_models', 'euro_standard'),
-            'description': 'Вкажіть для яких моделей та євростандартів підходить цей фільтр'
-        }),
-        ('Обслуговування', {
-            'fields': ('replacement_interval_km',)
-        }),
-    )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+@admin.register(ServiceWork)
+class ServiceWorkAdmin(admin.ModelAdmin):
+    list_display = ('service_order', 'work', 'employee', 'hours_spent')
+    autocomplete_fields = ('service_order', 'work', 'employee')
+    inlines = [UsedPartInline]  # ← ТІЛЬКИ це!
+    search_fields = ['description', 'service_order__order_number', 'work__name']
+    ordering = ['-service_order']

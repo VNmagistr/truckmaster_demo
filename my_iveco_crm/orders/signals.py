@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import ServiceWork, MaintenanceKit
-from inventory.models import UsedPart
+# ❌ ВИДАЛЕНО: from inventory.models import UsedPart
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,9 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     При створенні роботи типу 'ТО' або 'Заміна оливи'
     автоматично додає запчастини з набору ТО для цього авто.
     """
+    # ✅ ЛОКАЛЬНИЙ ІМПОРТ всередині функції!
+    from inventory.models import UsedPart
+    
     if not created:
         return  # Тільки при створенні нової роботи
     
@@ -80,4 +83,3 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     
     # Оновлюємо вартість замовлення
     instance.service_order.update_total_cost()
-    

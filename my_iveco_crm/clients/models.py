@@ -61,6 +61,11 @@ class Truck(models.Model):
         verbose_name = "Вантажівка"
         verbose_name_plural = "Вантажівки"
         ordering = ['license_plate']
+        indexes = [
+            models.Index(fields=['license_plate']),
+            models.Index(fields=['last_seven_vin']),
+            models.Index(fields=['client', 'license_plate']),
+        ]
 
     def __str__(self):
         euro = f" ({self.get_euro_standard_display()})" if self.euro_standard else ""
@@ -88,6 +93,26 @@ class Truck(models.Model):
                 pass 
         
         super().save(*args, **kwargs)
+
+    def get_latest_mileage(self):
+        """Отримує останній зафіксований пробіг"""
+        from orders.models import ServiceOrder
+        from maintenance.models import FluidChangeRecord
+        
+        # З замовлень (якщо додасте поле mileage)
+        order_mileage = ServiceOrder.objects.filter(
+            truck=self
+        ).aggregate(Max('mileage'))['mileage__max']
+        
+        # З записів про заміну рідин
+        fluid_mileage = FluidChangeRecord.objects.filter(
+            truck=self
+        ).aggregate(Max('mileage'))['mileage__max']
+        
+        return max(
+            order_mileage or 0,
+            fluid_mileage or 0
+        )
 
 # --- МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
 class OwnershipHistory(models.Model):
