@@ -30,9 +30,47 @@ class WorkGroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class WorkPriceSerializer(serializers.ModelSerializer):
+    """Серіалізатор для робіт з прайсу"""
+    
+    # Додаємо розраховані поля
+    price = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True,
+        source='get_calculated_price'
+    )
+    hourly_rate = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+        source='work_group.hourly_rate'
+    )
+    work_group_name = serializers.CharField(
+        read_only=True,
+        source='work_group.name'
+    )
+    
     class Meta:
         model = WorkPrice
-        fields = '__all__'
+        fields = [
+            'id',
+            'work_group',
+            'work_group_name',
+            'name',
+            'standard_hours',
+            'hourly_rate',
+            'price',  # Розрахункове поле
+        ]
+        read_only_fields = ['price', 'hourly_rate', 'work_group_name']
+
+
+# Якщо потрібен окремий serializer для створення/оновлення
+class WorkPriceWriteSerializer(serializers.ModelSerializer):
+    """Серіалізатор для створення/оновлення робіт"""
+    
+    class Meta:
+        model = WorkPrice
+        fields = ['work_group', 'name', 'standard_hours']
 
 class UsedPartSerializer(serializers.ModelSerializer):
     class Meta:

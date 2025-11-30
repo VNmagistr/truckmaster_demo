@@ -10,6 +10,19 @@ def get_repair_photo_path(instance, filename):
 
 # --- Моделі ---
 
+class ServiceOrderManager(models.Manager):
+    def active(self):
+        """Тільки активні замовлення"""
+        return self.filter(status__in=['OPEN', 'IN_PROGRESS'])
+    
+    def for_client(self, client):
+        """Замовлення клієнта"""
+        return self.filter(client=client).select_related('truck', 'client')
+    
+    def for_truck(self, truck):
+        """Замовлення для вантажівки"""
+        return self.filter(truck=truck).select_related('client')
+
 class Employee(models.Model):
     name = models.CharField(max_length=100, verbose_name="Ім'я")
     position = models.CharField(max_length=100, verbose_name="Посада")
@@ -82,28 +95,32 @@ class ServiceOrder(models.Model):
         return f"Замовлення №{order_num} ({client_name})"
 
     def update_total_cost(self):
-    # Вартість робіт (використовуємо get_calculated_price замість price)
-        total_work_cost = Decimal('0')
-        for service_work in self.works.filter(work__isnull=False):
-            work_price = service_work.work.get_calculated_price()
-            hours = service_work.hours_spent or Decimal('1')
-            total_work_cost += work_price * hours
+        """Оптимізований підрахунок вартості"""
+        # Вартість робіт - одним запитом
+        works = self.works.select_related('work__work_group').filter(work__isnull=False)
+        total_work_cost = sum(
+            work.work.get_calculated_price() * (work.hours_spent or Decimal('1'))
+            for work in works
+        )
     
-    # Вартість запчастин
+        # Вартість запчастин - агрегація в БД
         total_parts_cost = UsedPart.objects.filter(
             service_work__service_order=self
         ).aggregate(
             total=Sum(F('part__selling_price') * F('quantity'))
         )['total'] or Decimal('0')
     
-        self.total_cost = total_work_cost + total_parts_cost
-        self.save(update_fields=['total_cost'])
+        # Оновлюємо тільки якщо змінилося
+        new_total = total_work_cost + total_parts_cost
+        if self.total_cost != new_total:
+            self.total_cost = new_total
+            self.save(update_fields=['total_cost'])
     
         return self.total_cost
 
 
 class ServiceWork(models.Model):
-    service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
+    service_order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")
     
     work = models.ForeignKey(
         'WorkPrice', 
@@ -132,7 +149,7 @@ class ServiceWork(models.Model):
         return f"Робота без назви (Замовлення №{self.service_order.order_number})"
 
 class RepairPhoto(models.Model):
-    service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
+    service_order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name='photos', verbose_name="Замовлення-наряд")
     image = models.ImageField(upload_to='repair_photos/', verbose_name="Зображення")
     description = models.CharField(max_length=255, blank=True, verbose_name="Опис")
     
@@ -171,7 +188,13 @@ class MaintenanceLog(models.Model):
         ordering = ['-date_performed']
 
 class WorkPrice(models.Model):
-    work_group = models.ForeignKey(WorkGroup, on_delete=models.CASCADE, verbose_name="Категорія робіт")
+    """Робота з прайсу з автоматичним розрахунком ціни"""
+    
+    work_group = models.ForeignKey(
+        WorkGroup, 
+        on_delete=models.CASCADE, 
+        verbose_name="Категорія робіт"
+    )
     name = models.CharField(max_length=255, verbose_name="Назва роботи")
     standard_hours = models.DecimalField(
         max_digits=5, 
@@ -179,25 +202,7 @@ class WorkPrice(models.Model):
         default=1,
         verbose_name="Нормо-годин (стандартна тривалість)"
     )
-    price = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        verbose_name="Ціна (застаріле поле)",
-        help_text="Буде видалено. Використовуйте @property price"
-    )
 
-    class Meta:
-        verbose_name = "Робота з прайсу"
-        verbose_name_plural = "Роботи з прайсу"
-        ordering = ['name']
-
-    def __str__(self):
-        return f"{self.name} ({self.standard_hours} н/г)"
-    
-    def get_calculated_price(self):
-        """Розраховує ціну: нормо-години × вартість години категорії"""
-        return self.standard_hours * self.work_group.hourly_rate
-    
     class Meta:
         verbose_name = "Робота з прайсу"
         verbose_name_plural = "Роботи з прайсу"
@@ -210,6 +215,10 @@ class WorkPrice(models.Model):
     def price(self):
         """Розраховує ціну: нормо-години × вартість години категорії"""
         return self.standard_hours * self.work_group.hourly_rate
+    
+    def get_calculated_price(self):
+        """Метод для явного розрахунку ціни (для backward compatibility)"""
+        return self.price
     
 class FilterType(models.Model):
     """Типи фільтрів (масляний, паливний, AdBlue тощо)"""
@@ -296,6 +305,51 @@ class MaintenanceKit(models.Model):
     
     def __str__(self):
         return f"Набір ТО для VIN: {self.truck.last_seven_vin} ({self.truck.license_plate})"
+    
+    def get_total_cost(self):
+        """Розрахунок вартості комплекту ТО"""
+        oil_cost = self.oil.selling_price * self.oil_quantity
+        filters_cost = sum(
+            f.part.selling_price * f.quantity 
+            for f in self.filters.all()
+        )
+        return oil_cost + filters_cost
+    
+    def check_availability(self, warehouse=None):
+        """Перевірка наявності всіх компонентів"""
+        if warehouse:
+            warehouses = [warehouse]
+        else:
+            warehouses = Warehouse.objects.filter(is_active=True)
+        
+        missing = []
+        
+        # Перевірка оливи
+        oil_available = Stock.objects.filter(
+            product=self.oil,
+            warehouse__in=warehouses
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        if oil_available < self.oil_quantity:
+            missing.append(f"{self.oil.name}: потрібно {self.oil_quantity}л, є {oil_available}л")
+        
+        # Перевірка фільтрів
+        for kit_filter in self.filters.all():
+            available = Stock.objects.filter(
+                product=kit_filter.part,
+                warehouse__in=warehouses
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            if available < kit_filter.quantity:
+                missing.append(
+                    f"{kit_filter.part.name}: потрібно {kit_filter.quantity}шт, "
+                    f"є {available}шт"
+                )
+        
+        return {
+            'available': len(missing) == 0,
+            'missing': missing
+        }
 
 
 class MaintenanceKitFilter(models.Model):
