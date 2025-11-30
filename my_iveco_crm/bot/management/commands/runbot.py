@@ -4,6 +4,7 @@ import asyncio
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import timezone  # ← ДОДАНО ЦЕЙ РЯДОК!
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from orders.models import ServiceOrder
