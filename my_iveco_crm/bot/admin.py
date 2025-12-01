@@ -59,8 +59,17 @@ class BotUserAdmin(admin.ModelAdmin):
         'reminder_telegram_enabled'
     ]
     search_fields = ['chat_id', 'username', 'first_name', 'last_name', 'phone_number']
-    readonly_fields = ['chat_id', 'last_activity', 'created_at']
+    # readonly_fields = ['last_activity', 'created_at']
     filter_horizontal = ['allowed_trucks']
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Chat ID readonly тільки при редагуванні існуючого користувача.
+        При створенні нового - можна вказати.
+        """
+        if obj:  # Редагування існуючого
+            return ['chat_id', 'last_activity', 'created_at']
+        else:  # Створення нового
+            return ['last_activity', 'created_at']
     
     fieldsets = (
         ('👤 Особиста інформація', {
@@ -159,7 +168,7 @@ class BotMessageLogAdmin(admin.ModelAdmin):
     list_display = ('user_name', 'phone_number', 'chat_id', 'message_text', 'bot_response', 'created_at')
     list_filter = ('user_name', 'created_at')
     search_fields = ('user_name', 'phone_number', 'message_text', 'bot_response')
-    readonly_fields = ('user_name', 'phone_number', 'message_text', 'bot_response', 'created_at')
+    readonly_fields = ('chat_id', 'user_name', 'phone_number', 'message_text', 'bot_response', 'created_at')
 
     def has_add_permission(self, request):
         return False 
