@@ -1,139 +1,168 @@
 # bot/admin.py
+
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import BotUser, BotMessageLog
+from .models import BotUser, BotMessageLog, BotSettings, SentReminder
+
+
+@admin.register(BotSettings)
+class BotSettingsAdmin(admin.ModelAdmin):
+    """
+    Глобальні налаштування бота
+    """
+    list_display = ['get_status', 'reminder_km_before', 'reminder_days_before', 'reminder_time', 'last_check']
+    
+    fieldsets = (
+        ('🔔 Нагадування про ТО', {
+            'fields': ('maintenance_reminders_enabled', 'reminder_km_before', 'reminder_days_before', 'reminder_time'),
+            'description': '⚠️ УВАГА: Це глобальні налаштування для всієї системи нагадувань'
+        }),
+        ('📊 Системна інформація', {
+            'fields': ('last_check',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['last_check']
+    
+    def get_status(self, obj):
+        if obj.maintenance_reminders_enabled:
+            return format_html('<span style="color: green; font-weight: bold;">✅ УВІМКНЕНО</span>')
+        return format_html('<span style="color: red; font-weight: bold;">❌ ВИМКНЕНО</span>')
+    get_status.short_description = 'Статус нагадувань'
+    
+    def has_add_permission(self, request):
+        # Дозволяємо тільки один запис
+        return not BotSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Не дозволяємо видаляти
+        return False
 
 
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
-    list_display = (
-        'get_full_name_display',
-        'chat_id',
-        'role',
+    list_display = [
+        'get_name_with_emoji', 
+        'username', 
+        'get_role_colored', 
         'client',
-        'phone_number',
-        'is_active',
-        'is_blocked',
+        'get_reminders_status',
+        'is_active', 
         'last_activity'
-    )
-    list_filter = ('role', 'is_active', 'is_blocked', 'notifications_enabled')
-    search_fields = (
-        'chat_id',
-        'username',
-        'first_name',
-        'last_name',
-        'phone_number',
-        'client__name'
-    )
-    list_editable = ('role', 'is_active', 'is_blocked')
-    readonly_fields = ('created_at', 'last_activity')
-    
-    filter_horizontal = ('allowed_trucks',)
-    autocomplete_fields = ['client']
+    ]
+    list_filter = [
+        'role', 
+        'is_active', 
+        'is_blocked',
+        'enable_maintenance_reminders',
+        'reminder_telegram_enabled'
+    ]
+    search_fields = ['chat_id', 'username', 'first_name', 'last_name', 'phone_number']
+    readonly_fields = ['chat_id', 'last_activity', 'created_at']
+    filter_horizontal = ['allowed_trucks']
     
     fieldsets = (
-        ('Основна інформація', {
-            'fields': (
-                'chat_id',
-                'username',
-                'first_name',
-                'last_name',
-                'phone_number'
-            )
+        ('👤 Особиста інформація', {
+            'fields': ('chat_id', 'username', 'first_name', 'last_name', 'phone_number')
         }),
-        ('Роль та доступи', {
-            'fields': (
-                'role',
-                'client',
-                'allowed_trucks',
-            ),
-            'description': (
-                '<strong>Адміністратор</strong>: повний доступ до всього<br>'
-                '<strong>Власник</strong>: доступ до всіх авто свого клієнта<br>'
-                '<strong>Водій</strong>: доступ тільки до вибраних авто<br>'
-                '<strong>Гість</strong>: обмежений доступ'
-            )
+        ('🎭 Роль та права', {
+            'fields': ('role', 'client', 'allowed_trucks')
         }),
-        ('Сповіщення', {
-            'fields': (
-                'notifications_enabled',
-                'notify_order_status',
-                'notify_maintenance'
-            ),
+        ('🔔 Налаштування нагадувань', {
+            'fields': ('enable_maintenance_reminders', 'reminder_telegram_enabled'),
+            'description': 'Персональні налаштування нагадувань для цього користувача'
+        }),
+        ('🔒 Статус', {
+            'fields': ('is_active', 'is_blocked', 'notes')
+        }),
+        ('📅 Системна інформація', {
+            'fields': ('created_at', 'last_activity'),
             'classes': ('collapse',)
-        }),
-        ('Статус', {
-            'fields': (
-                'is_active',
-                'is_blocked',
-                'created_at',
-                'last_activity'
-            )
         }),
     )
     
-    def get_full_name_display(self, obj):
-        """Відображення імені з кольором ролі"""
+    def get_reminders_status(self, obj):
+        """Показує статус нагадувань"""
+        if obj.enable_maintenance_reminders and obj.reminder_telegram_enabled:
+            return format_html('<span style="color: green;">✅ Увімкнено</span>')
+        elif obj.enable_maintenance_reminders:
+            return format_html('<span style="color: orange;">⚠️ Частково</span>')
+        return format_html('<span style="color: red;">❌ Вимкнено</span>')
+    get_reminders_status.short_description = 'Нагадування'
+    
+    def get_name_with_emoji(self, obj):
+        emoji = obj.get_role_emoji()
+        return f"{emoji} {obj.first_name} {obj.last_name}".strip()
+    get_name_with_emoji.short_description = 'Ім\'я'
+    
+    def get_role_colored(self, obj):
         colors = {
-            'admin': '#d32f2f',
-            'owner': '#1976d2',
-            'driver': '#388e3c',
-            'guest': '#757575',
+            'admin': '#ff6b6b',
+            'owner': '#4ecdc4',
+            'driver': '#95e1d3',
+            'guest': '#cccccc'
         }
-        color = colors.get(obj.role, '#000')
-        
-        icon = '👑' if obj.role == 'admin' else '👤'
-        name = obj.full_name
-        
+        color = colors.get(obj.role, '#000000')
         return format_html(
-            '<span style="color: {};">{} {}</span>',
+            '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            icon,
-            name
+            obj.get_role_display()
         )
-    get_full_name_display.short_description = 'Користувач'
+    get_role_colored.short_description = 'Роль'
+
+
+@admin.register(SentReminder)
+class SentReminderAdmin(admin.ModelAdmin):
+    list_display = [
+        'sent_at',
+        'bot_user', 
+        'truck', 
+        'reminder_type',
+        'get_delivery_status',
+        'service_reminder'
+    ]
+    list_filter = ['reminder_type', 'delivery_status', 'sent_at']
+    search_fields = ['bot_user__first_name', 'truck__license_plate']
+    readonly_fields = ['sent_at', 'error_message']
+    date_hierarchy = 'sent_at'
     
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.select_related('client')
+    fieldsets = (
+        ('📤 Нагадування', {
+            'fields': ('bot_user', 'truck', 'service_reminder', 'reminder_type')
+        }),
+        ('📊 Статус доставки', {
+            'fields': ('delivery_status', 'error_message', 'sent_at')
+        }),
+    )
     
-    actions = ['block_users', 'unblock_users', 'enable_notifications', 'disable_notifications']
+    def get_delivery_status(self, obj):
+        colors = {
+            'sent': 'blue',
+            'delivered': 'green',
+            'failed': 'red'
+        }
+        color = colors.get(obj.delivery_status, 'gray')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_delivery_status_display()
+        )
+    get_delivery_status.short_description = 'Статус'
     
-    @admin.action(description='Заблокувати вибраних користувачів')
-    def block_users(self, request, queryset):
-        queryset.update(is_blocked=True)
-    
-    @admin.action(description='Розблокувати вибраних користувачів')
-    def unblock_users(self, request, queryset):
-        queryset.update(is_blocked=False)
-    
-    @admin.action(description='Увімкнути сповіщення')
-    def enable_notifications(self, request, queryset):
-        queryset.update(notifications_enabled=True)
-    
-    @admin.action(description='Вимкнути сповіщення')
-    def disable_notifications(self, request, queryset):
-        queryset.update(notifications_enabled=False)
+    def has_add_permission(self, request):
+        return False  # Створюються автоматично
 
 
 @admin.register(BotMessageLog)
 class BotMessageLogAdmin(admin.ModelAdmin):
-    list_display = ('user_name', 'phone_number', 'chat_id', 'message_text_short', 'created_at')
-    list_filter = ('created_at',)
-    search_fields = ('user_name', 'phone_number', 'message_text', 'bot_response', 'chat_id')
+    list_display = ('user_name', 'phone_number', 'chat_id', 'message_text', 'bot_response', 'created_at')
+    list_filter = ('user_name', 'created_at')
+    search_fields = ('user_name', 'phone_number', 'message_text', 'bot_response')
     readonly_fields = ('chat_id', 'user_name', 'phone_number', 'message_text', 'bot_response', 'created_at')
-    date_hierarchy = 'created_at'
-    
+
     def has_add_permission(self, request):
-        return False
-    
+        return False 
+
     def has_change_permission(self, request, obj=None):
         return False
-    
-    def message_text_short(self, obj):
-        """Скорочений текст повідомлення"""
-        text = obj.message_text[:50]
-        if len(obj.message_text) > 50:
-            text += '...'
-        return text
-    message_text_short.short_description = 'Повідомлення'
