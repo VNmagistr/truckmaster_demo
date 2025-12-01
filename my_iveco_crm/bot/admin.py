@@ -159,7 +159,7 @@ class BotMessageLogAdmin(admin.ModelAdmin):
     list_display = ('user_name', 'phone_number', 'chat_id', 'message_text', 'bot_response', 'created_at')
     list_filter = ('user_name', 'created_at')
     search_fields = ('user_name', 'phone_number', 'message_text', 'bot_response')
-    readonly_fields = ('chat_id', 'user_name', 'phone_number', 'message_text', 'bot_response', 'created_at')
+    readonly_fields = ('user_name', 'phone_number', 'message_text', 'bot_response', 'created_at')
 
     def has_add_permission(self, request):
         return False 
