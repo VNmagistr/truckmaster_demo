@@ -4,7 +4,7 @@ import asyncio
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.utils import timezone  # ← ДОДАНО ЦЕЙ РЯДОК!
+from django.utils import timezone
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from orders.models import ServiceOrder
@@ -46,9 +46,12 @@ OWNER_KEYBOARD = [
 # Адміністратор - все + спецкоманди
 ADMIN_KEYBOARD = [
     [KeyboardButton("Всі замовлення 📦"), KeyboardButton("Всі автомобілі 🚛")],
-    [KeyboardButton("Статистика 📊"), KeyboardButton("Логи бота 📝")],
-    [KeyboardButton("Створити замовлення ➕")],
+    [KeyboardButton("Статистика 📊"), KeyboardButton("Пошук авто 🔍")],
+    [KeyboardButton("Створити замовлення ➕"), KeyboardButton("Логи бота 📝")],
 ]
+
+# Стани для діалогів
+AWAITING_TRUCK_SEARCH = 'awaiting_truck_search'
 
 
 # ============================================================
@@ -290,6 +293,55 @@ def get_bot_stats_for_admin():
         return "Помилка отримання статистики."
 
 
+@sync_to_async
+def search_truck_by_partial_number(partial_number, chat_id):
+    """
+    Шукає автомобілі за частковим номером (тільки для адміна).
+    """
+    try:
+        bot_user = BotUser.objects.get(chat_id=chat_id)
+        
+        if bot_user.role != 'admin':
+            return "У вас немає доступу до цієї функції."
+        
+        # Видаляємо всі не-цифри з введеного тексту
+        digits_only = re.sub(r'\D', '', partial_number)
+        
+        if not digits_only:
+            return "Будь ласка, введіть цифри з номера автомобіля.\nНаприклад: 1234"
+        
+        # Шукаємо автомобілі де license_plate містить ці цифри
+        trucks = Truck.objects.filter(
+            license_plate__icontains=digits_only
+        ).select_related('client')[:20]  # Обмежуємо до 20 результатів
+        
+        if not trucks.exists():
+            return f"Автомобілі з цифрами '{digits_only}' не знайдено."
+        
+        reply = f"🔍 Знайдено автомобілів: {trucks.count()}\n\n"
+        
+        for truck in trucks:
+            reply += f"🚚 {truck.license_plate}\n"
+            reply += f"   Модель: {truck.specific_model_name or 'Н/Д'}\n"
+            reply += f"   Власник: {truck.client.name if truck.client else 'Не вказано'}\n"
+            
+            if truck.client and truck.client.phone:
+                reply += f"   Телефон: {truck.client.phone}\n"
+            
+            reply += "\n"
+        
+        if trucks.count() >= 20:
+            reply += "⚠️ Показано перші 20 результатів. Уточніть пошук для меншої кількості збігів."
+        
+        return reply
+        
+    except BotUser.DoesNotExist:
+        return "Ваш профіль не знайдено."
+    except Exception as e:
+        logger.error(f"Помилка в search_truck_by_partial_number: {e}")
+        return "Помилка пошуку автомобілів."
+
+
 def get_keyboard_for_role(role):
     """Повертає клавіатуру відповідно до ролі"""
     keyboards = {
@@ -313,6 +365,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = user.username or ''
     first_name = user.first_name or 'Користувач'
     last_name = user.last_name or ''
+    
+    # Скидаємо стан діалогу
+    context.user_data['state'] = None
     
     # Отримуємо або створюємо користувача
     bot_user, is_new = await get_or_create_bot_user(chat_id, username, first_name, last_name)
@@ -358,6 +413,9 @@ async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = user.id
     first_name = user.first_name or 'Користувач'
     message_text = update.message.text
+    
+    # Скидаємо стан
+    context.user_data['state'] = None
 
     result = await get_user_trucks_with_keyboard(chat_id)
     reply_text = result.get("reply_text")
@@ -374,6 +432,9 @@ async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYP
     first_name = user.first_name or 'Користувач'
     message_text = update.message.text
     
+    # Скидаємо стан
+    context.user_data['state'] = None
+    
     reply_text = "Будь ласка, надішліть номер замовлення-наряду."
     
     await update.message.reply_text(reply_text)
@@ -385,6 +446,9 @@ async def show_all_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     chat_id = user.id
     first_name = user.first_name or 'Користувач'
+    
+    # Скидаємо стан
+    context.user_data['state'] = None
     
     # Перевірка прав
     try:
@@ -409,6 +473,9 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = user.id
     first_name = user.first_name or 'Користувач'
     
+    # Скидаємо стан
+    context.user_data['state'] = None
+    
     # Перевірка прав
     try:
         bot_user = await sync_to_async(BotUser.objects.get)(chat_id=chat_id)
@@ -426,13 +493,58 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await log_message(chat_id, first_name, "Статистика 📊", reply_text)
 
 
+async def ask_for_truck_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Просить адміна ввести номер/частину номера автомобіля"""
+    user = update.message.from_user
+    chat_id = user.id
+    first_name = user.first_name or 'Користувач'
+    
+    # Перевірка прав
+    try:
+        bot_user = await sync_to_async(BotUser.objects.get)(chat_id=chat_id)
+        if bot_user.role != 'admin':
+            reply_text = "У вас немає доступу до цієї функції."
+            await update.message.reply_text(reply_text)
+            return
+    except BotUser.DoesNotExist:
+        reply_text = "Ваш профіль не знайдено."
+        await update.message.reply_text(reply_text)
+        return
+    
+    # Встановлюємо стан очікування
+    context.user_data['state'] = AWAITING_TRUCK_SEARCH
+    
+    reply_text = (
+        "🔍 Введіть цифри з номера автомобіля.\n\n"
+        "Наприклад:\n"
+        "• 1234 - знайде АА1234ВВ, ВС1234АА і т.д.\n"
+        "• 5678 - знайде всі номери з цими цифрами\n\n"
+        "Для скасування натисніть будь-яку кнопку меню."
+    )
+    
+    await update.message.reply_text(reply_text)
+    await log_message(chat_id, first_name, "Пошук авто 🔍", reply_text)
+
+
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє текстові повідомлення (припускаємо що це номер замовлення)"""
+    """Обробляє текстові повідомлення"""
     user = update.message.from_user
     chat_id = user.id
     first_name = user.first_name or 'Користувач'
     original_text = update.message.text
     
+    # Перевіряємо чи очікуємо введення номера авто
+    if context.user_data.get('state') == AWAITING_TRUCK_SEARCH:
+        # Скидаємо стан
+        context.user_data['state'] = None
+        
+        # Шукаємо авто
+        reply_message = await search_truck_by_partial_number(original_text, chat_id)
+        await update.message.reply_text(reply_message)
+        await log_message(chat_id, first_name, f"[Пошук авто: {original_text}]", reply_message)
+        return
+    
+    # Інакше припускаємо що це номер замовлення
     order_number = re.sub(r'\D', '', original_text)
     
     if not order_number:
@@ -497,6 +609,7 @@ class Command(BaseCommand):
         # Адмін-кнопки
         application.add_handler(MessageHandler(filters.Regex("^Всі замовлення 📦$"), show_all_orders))
         application.add_handler(MessageHandler(filters.Regex("^Статистика 📊$"), show_statistics))
+        application.add_handler(MessageHandler(filters.Regex("^Пошук авто 🔍$"), ask_for_truck_number))
         
         # Inline кнопки
         application.add_handler(CallbackQueryHandler(handle_car_selection, pattern='^history_'))
