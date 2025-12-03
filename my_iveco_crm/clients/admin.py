@@ -1,15 +1,14 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import Client, IvecoBaseModel, Truck, OwnershipHistory
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone', 'email')
-    # 👇 ДОДАНО ЦЕЙ РЯДОК (вирішує помилку autocomplete) 👇
     search_fields = ('name', 'phone', 'email')
 
 @admin.register(IvecoBaseModel)
 class IvecoBaseModelAdmin(admin.ModelAdmin):
-    # 👇 ДОДАНО ЦЕЙ РЯДОК (на майбутнє) 👇
     search_fields = ('name',)
 
 class OwnershipHistoryInline(admin.TabularInline):
@@ -23,7 +22,14 @@ class OwnershipHistoryInline(admin.TabularInline):
 
 @admin.register(Truck)
 class TruckAdmin(admin.ModelAdmin):
-    list_display = ('license_plate', 'client', 'specific_model_name', 'euro_standard', 'last_seven_vin')
+    list_display = (
+        'license_plate', 
+        'client', 
+        'specific_model_name', 
+        'euro_standard', 
+        'last_seven_vin', 
+        'colored_vin'  # ✅ Додано кольорове позначення VIN
+    )
     search_fields = ('license_plate', 'last_seven_vin', 'client__name', 'specific_model_name', 'full_vin')
     list_filter = ('client', 'base_model', 'euro_standard')
     autocomplete_fields = ('client', 'base_model')
@@ -45,6 +51,28 @@ class TruckAdmin(admin.ModelAdmin):
     )
     
     inlines = [OwnershipHistoryInline]
+
+    def colored_vin(self, obj):
+        """
+        Виділяє червоним кольором вантажівки з неповним VIN кодом.
+        Неповний VIN починається з 'XXXXXXXX' або 'TEMP'.
+        """
+        if obj.full_vin.startswith('XXXXXXXX') or obj.full_vin.startswith('TEMP'):
+            return format_html(
+                '<span style="background-color: #ffcccc; color: #cc0000; font-weight: bold; '
+                'padding: 3px 8px; border-radius: 3px; display: inline-block;">'
+                '⚠️ {}'
+                '</span>',
+                obj.full_vin
+            )
+        else:
+            return format_html(
+                '<span style="color: #28a745; font-weight: normal;">{}</span>',
+                obj.full_vin
+            )
+    
+    colored_vin.short_description = 'VIN код (повний)'
+    colored_vin.admin_order_field = 'full_vin'  # Дозволяє сортування
 
     def get_search_results(self, request, queryset, search_term):
         """
