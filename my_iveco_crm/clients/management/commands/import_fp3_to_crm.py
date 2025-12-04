@@ -10,6 +10,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
+from django.utils.timezone import make_aware
 
 from clients.models import Client, Truck, IvecoBaseModel
 from orders.models import ServiceOrder, WorkGroup, WorkPrice, ServiceWork
@@ -343,7 +344,12 @@ class Command(BaseCommand):
             return truck, False
         
         # Отримуємо або створюємо базову модель
-        model_name = data.get('model', 'Не визначено')
+        model_name = data.get('model')
+        
+        # Якщо модель не знайдена або порожня - використовуємо дефолтну
+        if not model_name or model_name.strip() == '':
+            model_name = 'Не визначено'
+        
         base_model, _ = IvecoBaseModel.objects.get_or_create(
             name=model_name
         )
@@ -392,9 +398,10 @@ class Command(BaseCommand):
             problem_description='Імпортовано з .fp3 файлу'
         )
         
-        # Встановлюємо дату з файлу
+        # Встановлюємо дату з файлу (робимо timezone-aware)
         if data.get('date_obj'):
-            order.created_at = data['date_obj']
+            aware_datetime = make_aware(data['date_obj'])
+            order.created_at = aware_datetime
             order.save(update_fields=['created_at'])
         
         return order
@@ -426,8 +433,8 @@ class Command(BaseCommand):
                 work_price = WorkPrice.objects.create(
                     work_group=work_group,
                     name=work_name,
-                    standard_hours=hours,
-                    price=Decimal('0')  # Розрахується автоматично
+                    standard_hours=hours
+                    # price - це @property, не потрібно передавати
                 )
             
             # Додаємо роботу до наряду
@@ -458,7 +465,7 @@ class Command(BaseCommand):
             work_price, _ = WorkPrice.objects.get_or_create(
                 work_group=work_group,
                 name='Загальні запчастини',
-                defaults={'standard_hours': Decimal('0'), 'price': Decimal('0')}
+                defaults={'standard_hours': Decimal('0')}
             )
             service_work = ServiceWork.objects.create(
                 service_order=order,
