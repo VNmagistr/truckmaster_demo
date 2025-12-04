@@ -1,0 +1,39 @@
+# Віртуальне середовище
+venv/
+env/
+
+# Секретні дані
+.env
+
+# Файли кешу Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Локальна база даних SQLite
+db.sqlite3
+*.sqlite3
+
+# Папки, що генеруються Django
+staticfiles/
+mediafiles/
+/media/
+
+# Файли IDE
+.vscode/
+.idea/*.save
+
+# FP3 файли (конфіденційні дані, не повинні бути в Git)
+*.fp3
+test_parsing/
+fp3_files/
+my_iveco_crm/test_parsing/
+my_iveco_crm/fp3_files/
+```
+
+*.fp3
+test_parsing/
+fp3_files/
+my_iveco_crm/test_parsing/
+my_iveco_crm/fp3_files/
