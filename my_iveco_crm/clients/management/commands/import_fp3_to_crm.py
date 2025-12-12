@@ -508,16 +508,16 @@ class Command(BaseCommand):
         # Пошук по телефону
         if normalized_phone:
             # Шукаємо по нормалізованому телефону
-            client = Client.objects.filter(phone_number=normalized_phone).first()
+            client = Client.objects.filter(phone=normalized_phone).first()
             if client:
                 return client, False
             
             # Шукаємо по оригінальному (якщо в базі старий формат)
             if client_phone != normalized_phone:
-                client = Client.objects.filter(phone_number=client_phone).first()
+                client = Client.objects.filter(phone=client_phone).first()
                 if client:
                     # Оновлюємо телефон на нормалізований
-                    client.phone_number = normalized_phone
+                    client.phone = normalized_phone
                     client.save()
                     if self.verbose:
                         self.stdout.write(self.style.SUCCESS(
@@ -529,8 +529,8 @@ class Command(BaseCommand):
         client = Client.objects.filter(name__iexact=client_name).first()
         if client:
             # Якщо знайшли по імені, але телефону немає - додаємо
-            if normalized_phone and not client.phone_number:
-                client.phone_number = normalized_phone
+            if normalized_phone and not client.phone:
+                client.phone = normalized_phone
                 client.save()
                 if self.verbose:
                     self.stdout.write(self.style.SUCCESS(
@@ -541,7 +541,7 @@ class Command(BaseCommand):
         # Створюємо нового
         client = Client.objects.create(
             name=client_name,
-            phone_number=normalized_phone,  # Використовуємо нормалізований
+            phone=normalized_phone,  # Використовуємо нормалізований
             email='',
             notes=f'Автоматично створено при імпорті з fp3: {data["filename"]}'
         )

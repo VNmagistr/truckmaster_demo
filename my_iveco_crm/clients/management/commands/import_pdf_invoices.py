@@ -318,6 +318,42 @@ class Command(BaseCommand):
 
         return datetime.now()
 
+    def normalize_phone_number(self, phone):
+        """
+        Нормалізація українського номера телефону до формату +380XXXXXXXXX
+        
+        Приклади:
+            067123456 -> +380671234567
+            0671234567 -> +380671234567
+            380671234567 -> +380671234567
+            +380671234567 -> +380671234567
+            (067) 123-45-67 -> +380671234567
+        """
+        if not phone:
+            return ''
+        
+        # Прибираємо всі символи крім цифр і +
+        phone = re.sub(r'[^\d+]', '', phone)
+        
+        # Прибираємо + на початку для обробки
+        phone = phone.lstrip('+')
+        
+        # Різні варіанти форматів
+        if phone.startswith('380'):
+            # Вже в міжнародному форматі: 380671234567
+            if len(phone) == 12:
+                return f'+{phone}'
+        elif phone.startswith('0'):
+            # Національний формат: 0671234567
+            if len(phone) == 10:
+                return f'+38{phone}'
+        elif len(phone) == 9:
+            # Без нуля на початку: 671234567
+            return f'+380{phone}'
+        
+        # Якщо не вдалось розпізнати - повертаємо оригінал
+        return phone if phone else ''
+
     def print_extracted_data(self, data):
         """Вивід витягнутих даних"""
         self.stdout.write('\n📄 Витягнуті дані:')
@@ -363,7 +399,7 @@ class Command(BaseCommand):
         if not client_name:
             client_name = 'Клієнт не вказаний'
 
-        # Спроба знайти по імені
+        # Пошук по імені
         client = Client.objects.filter(name__iexact=client_name).first()
         
         if not client:
@@ -371,7 +407,7 @@ class Command(BaseCommand):
             client = Client.objects.create(
                 name=client_name,
                 email='',
-                phone_number='',
+                phone='',
                 notes=f'Автоматично створено при імпорті з PDF рахунку #{data["invoice_number"]}'
             )
             self.stdout.write(self.style.SUCCESS(f'    ✨ Створено нового клієнта: {client_name}'))
@@ -535,4 +571,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('\n✅ Імпорт завершено'))
         
         self.stdout.write('=' * 80 + '\n')
-
