@@ -1,553 +1,682 @@
-# clients/management/commands/import_fp3_to_crm.py
+"""
+Django management command для імпорту даних з .fp3 файлів (FastReport XML) у CRM систему.
+
+НОВІ ФУНКЦІЇ:
+1. Збереження списку файлів з помилками у окремий файл
+2. Детальне логування причин пропуску
+3. Можливість повторного імпорту тільки файлів з помилками
+
+Використання:
+    python manage.py import_fp3_to_crm <path_to_fp3_folder> [опції]
+
+Опції:
+    --dry-run              Тестовий запуск без збереження в БД
+    --retry-errors         Повторити імпорт файлів з помилками з попереднього запуску
+    --error-log FILE       Шлях до файлу з помилками (за замовчуванням: fp3_errors.log)
+    --skip-log FILE        Шлях до файлу з пропущеними (за замовчуванням: fp3_skipped.log)
+    --verbose              Детальний вивід (показувати всі пропущені файли)
+
+Приклади:
+    # Перший імпорт з детальним логуванням
+    python manage.py import_fp3_to_crm /path/to/fp3 --verbose
+    
+    # Повторити тільки файли з помилками
+    python manage.py import_fp3_to_crm /path/to/fp3 --retry-errors
+    
+    # Тестовий запуск з іншими назвами логів
+    python manage.py import_fp3_to_crm /path/to/fp3 --dry-run --error-log errors.txt
+"""
 
 import os
 import re
-import xml.etree.ElementTree as ET
-from pathlib import Path
+import json
 from decimal import Decimal
 from datetime import datetime
+from pathlib import Path
+import xml.etree.ElementTree as ET
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.utils import timezone
 from django.utils.timezone import make_aware
 
-from clients.models import Client, Truck, IvecoBaseModel
-from orders.models import ServiceOrder, WorkGroup, WorkPrice, ServiceWork
-from inventory.models import Part, UsedPart
+from clients.models import (
+    Client, Truck, IvecoBaseModel, ServiceOrder, 
+    WorkPrice, WorkGroup, Part
+)
 
 
 class Command(BaseCommand):
-    help = 'Імпортує дані з .fp3 файлів у CRM систему'
+    help = 'Імпортує дані з .fp3 файлів (FastReport XML) у CRM систему з детальним логуванням'
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'folder_path',
+            'fp3_folder',
             type=str,
             help='Шлях до папки з .fp3 файлами'
         )
         parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Тестовий режим (без збереження в БД)'
+            help='Тестовий запуск без збереження в базу даних'
+        )
+        parser.add_argument(
+            '--retry-errors',
+            action='store_true',
+            help='Повторити імпорт тільки файлів з помилками з попереднього запуску'
+        )
+        parser.add_argument(
+            '--error-log',
+            type=str,
+            default='fp3_errors.log',
+            help='Файл для збереження помилок (за замовчуванням: fp3_errors.log)'
+        )
+        parser.add_argument(
+            '--skip-log',
+            type=str,
+            default='fp3_skipped.log',
+            help='Файл для збереження пропущених файлів (за замовчуванням: fp3_skipped.log)'
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Детальний вивід (показувати всі пропущені файли)'
         )
 
     def handle(self, *args, **options):
-        folder_path = options['folder_path']
-        dry_run = options.get('dry_run', False)
+        fp3_folder = options['fp3_folder']
+        dry_run = options['dry_run']
+        retry_errors = options['retry_errors']
+        error_log_file = options['error_log']
+        skip_log_file = options['skip_log']
+        verbose = options['verbose']
 
-        if not os.path.exists(folder_path):
-            self.stdout.write(self.style.ERROR(f'Папка не знайдена: {folder_path}'))
+        if not os.path.exists(fp3_folder):
+            self.stdout.write(self.style.ERROR(f'Папка не існує: {fp3_folder}'))
             return
 
-        # Знаходимо всі .fp3 файли
-        fp3_files = list(Path(folder_path).glob('*.fp3'))
-        
-        if not fp3_files:
-            self.stdout.write(self.style.WARNING('Не знайдено .fp3 файлів у папці'))
-            return
+        # Ініціалізація логування
+        self.error_log = []
+        self.skip_log = []
+        self.verbose = verbose
 
-        self.stdout.write(self.style.SUCCESS(f'\n{"="*80}'))
-        self.stdout.write(self.style.SUCCESS(f'Знайдено {len(fp3_files)} файлів для імпорту'))
         if dry_run:
-            self.stdout.write(self.style.WARNING('РЕЖИМ ТЕСТУВАННЯ - дані НЕ будуть збережені'))
-        self.stdout.write(self.style.SUCCESS(f'{"="*80}\n'))
+            self.stdout.write(self.style.WARNING('=' * 80))
+            self.stdout.write(self.style.WARNING('ТЕСТОВИЙ РЕЖИМ (--dry-run)'))
+            self.stdout.write(self.style.WARNING('Дані НЕ будуть збережені в базу даних'))
+            self.stdout.write(self.style.WARNING('=' * 80))
 
+        # Визначаємо список файлів для обробки
+        if retry_errors:
+            fp3_files = self.load_error_files(error_log_file, fp3_folder)
+            if not fp3_files:
+                self.stdout.write(self.style.WARNING(
+                    f'Файл з помилками не знайдено або порожній: {error_log_file}'
+                ))
+                return
+            self.stdout.write(self.style.WARNING(
+                f'\n🔄 РЕЖИМ ПОВТОРУ: обробка {len(fp3_files)} файлів з помилками\n'
+            ))
+        else:
+            fp3_files = list(Path(fp3_folder).glob('*.fp3'))
+            if not fp3_files:
+                self.stdout.write(self.style.WARNING(f'FP3 файли не знайдено в {fp3_folder}'))
+                return
+
+        self.stdout.write(f'\nЗнайдено FP3 файлів: {len(fp3_files)}\n')
+
+        # Статистика
         stats = {
-            'processed': 0,
+            'total': len(fp3_files),
             'success': 0,
             'errors': 0,
             'skipped': 0,
-            'clients_created': 0,
-            'trucks_created': 0,
-            'orders_created': 0,
-            'works_created': 0,
-            'parts_created': 0
+            'created': {
+                'clients': 0,
+                'trucks': 0,
+                'orders': 0,
+                'works': 0,
+                'parts': 0
+            }
         }
 
-        for file_path in fp3_files:
-            self.stdout.write(f'\n📄 Обробка: {file_path.name}')
-            stats['processed'] += 1
+        # Обробка файлів
+        for idx, fp3_file in enumerate(fp3_files, 1):
+            if not verbose and idx % 100 == 0:
+                self.stdout.write(f'Оброблено: {idx}/{len(fp3_files)}...')
 
             try:
-                # Парсимо файл
-                data = self.parse_fp3_file(file_path)
+                # Парсимо XML
+                data = self.parse_fp3_file(fp3_file)
                 
                 if not data:
-                    self.stdout.write(self.style.WARNING('  ⚠️  Не вдалося розпарсити файл'))
+                    reason = "Не вдалося розпарсити XML"
+                    self.log_skip(fp3_file, reason)
                     stats['skipped'] += 1
+                    if verbose:
+                        self.stdout.write(self.style.WARNING(
+                            f'⚠️  [{idx}/{len(fp3_files)}] Пропущено: {fp3_file.name} - {reason}'
+                        ))
                     continue
 
-                # Валідація обов'язкових полів
-                if not data.get('plate'):
-                    self.stdout.write(self.style.WARNING('  ⚠️  Не знайдено держномер'))
+                # Перевіряємо обов'язкові поля
+                if not data.get('license_plate'):
+                    reason = "Відсутній держномер"
+                    self.log_skip(fp3_file, reason, data)
                     stats['skipped'] += 1
+                    if verbose:
+                        self.stdout.write(self.style.WARNING(
+                            f'⚠️  [{idx}/{len(fp3_files)}] Пропущено: {fp3_file.name} - {reason}'
+                        ))
                     continue
 
-                if not data.get('invoice'):
-                    self.stdout.write(self.style.WARNING('  ⚠️  Не знайдено номер рахунку'))
-                    stats['skipped'] += 1
-                    continue
+                if verbose:
+                    self.stdout.write(f'\n{"=" * 80}')
+                    self.stdout.write(f'[{idx}/{len(fp3_files)}] Обробка: {fp3_file.name}')
+                    self.print_extracted_data(data)
 
-                # Імпортуємо в БД
                 if not dry_run:
-                    result = self.import_to_database(data)
-                    if result:
-                        stats['success'] += 1
-                        for key in ['clients_created', 'trucks_created', 'orders_created', 
-                                   'works_created', 'parts_created']:
-                            stats[key] += result.get(key, 0)
-                        self.stdout.write(self.style.SUCCESS('  ✅ Успішно імпортовано'))
-                    else:
-                        stats['errors'] += 1
-                else:
-                    # Dry run - тільки показуємо що буде імпортовано
-                    self.display_import_preview(data)
-                    stats['success'] += 1
+                    # Імпортуємо в базу даних
+                    created_counts = self.import_to_database(data)
+                    
+                    # Оновлюємо статистику створених об'єктів
+                    for key, count in created_counts.items():
+                        stats['created'][key] += count
+                    
+                    if verbose:
+                        self.stdout.write(self.style.SUCCESS('✅ Успішно імпортовано'))
+
+                stats['success'] += 1
 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f'  ❌ Помилка: {e}'))
+                error_msg = str(e)
+                self.log_error(fp3_file, error_msg, data if 'data' in locals() else None)
                 stats['errors'] += 1
+                
+                if verbose:
+                    self.stdout.write(self.style.ERROR(
+                        f'❌ [{idx}/{len(fp3_files)}] Помилка: {fp3_file.name} - {error_msg}'
+                    ))
+                    import traceback
+                    self.stdout.write(self.style.ERROR(traceback.format_exc()))
 
-        # Виводимо статистику
-        self.display_statistics(stats, dry_run)
+        # Зберігаємо логи
+        self.save_logs(error_log_file, skip_log_file, fp3_folder)
 
-    def parse_fp3_file(self, file_path):
-        """Парсить .fp3 файл і витягує всі дані"""
+        # Підсумкова статистика
+        self.print_summary(stats, dry_run, error_log_file, skip_log_file)
+
+    def load_error_files(self, error_log_file, fp3_folder):
+        """Завантаження списку файлів з помилками для повторної обробки"""
+        if not os.path.exists(error_log_file):
+            return []
+
+        error_files = []
+        with open(error_log_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('FILE:'):
+                    filename = line.replace('FILE:', '').strip()
+                    filepath = Path(fp3_folder) / filename
+                    if filepath.exists():
+                        error_files.append(filepath)
+
+        return error_files
+
+    def log_error(self, fp3_file, error_msg, data=None):
+        """Логування помилки"""
+        log_entry = {
+            'file': fp3_file.name,
+            'error': error_msg,
+            'timestamp': datetime.now().isoformat()
+        }
+        if data:
+            log_entry['data'] = {
+                'license_plate': data.get('license_plate'),
+                'invoice_number': data.get('invoice_number'),
+                'client_name': data.get('client_name')
+            }
+        self.error_log.append(log_entry)
+
+    def log_skip(self, fp3_file, reason, data=None):
+        """Логування пропущеного файлу"""
+        log_entry = {
+            'file': fp3_file.name,
+            'reason': reason,
+            'timestamp': datetime.now().isoformat()
+        }
+        if data:
+            log_entry['data'] = {
+                'license_plate': data.get('license_plate'),
+                'invoice_number': data.get('invoice_number'),
+                'client_name': data.get('client_name')
+            }
+        self.skip_log.append(log_entry)
+
+    def save_logs(self, error_log_file, skip_log_file, fp3_folder):
+        """Збереження логів у файли"""
+        # Збереження помилок
+        if self.error_log:
+            with open(error_log_file, 'w', encoding='utf-8') as f:
+                f.write(f'# Файли з помилками імпорту\n')
+                f.write(f'# Згенеровано: {datetime.now().isoformat()}\n')
+                f.write(f'# Папка: {fp3_folder}\n')
+                f.write(f'# Всього помилок: {len(self.error_log)}\n\n')
+                
+                for entry in self.error_log:
+                    f.write(f'FILE: {entry["file"]}\n')
+                    f.write(f'TIME: {entry["timestamp"]}\n')
+                    f.write(f'ERROR: {entry["error"]}\n')
+                    if 'data' in entry:
+                        f.write(f'DATA: {json.dumps(entry["data"], ensure_ascii=False)}\n')
+                    f.write('-' * 80 + '\n\n')
+
+            self.stdout.write(self.style.WARNING(
+                f'\n📝 Файли з помилками збережено в: {error_log_file}'
+            ))
+
+        # Збереження пропущених
+        if self.skip_log:
+            with open(skip_log_file, 'w', encoding='utf-8') as f:
+                f.write(f'# Пропущені файли\n')
+                f.write(f'# Згенеровано: {datetime.now().isoformat()}\n')
+                f.write(f'# Папка: {fp3_folder}\n')
+                f.write(f'# Всього пропущено: {len(self.skip_log)}\n\n')
+                
+                # Групуємо по причинах
+                reasons = {}
+                for entry in self.skip_log:
+                    reason = entry['reason']
+                    if reason not in reasons:
+                        reasons[reason] = []
+                    reasons[reason].append(entry)
+
+                # Виводимо статистику по причинах
+                f.write('СТАТИСТИКА ПО ПРИЧИНАХ:\n')
+                for reason, entries in sorted(reasons.items(), key=lambda x: len(x[1]), reverse=True):
+                    f.write(f'  {reason}: {len(entries)} файлів\n')
+                f.write('\n' + '=' * 80 + '\n\n')
+
+                # Виводимо детальну інформацію
+                for reason, entries in sorted(reasons.items(), key=lambda x: len(x[1]), reverse=True):
+                    f.write(f'\n{"=" * 80}\n')
+                    f.write(f'ПРИЧИНА: {reason} ({len(entries)} файлів)\n')
+                    f.write(f'{"=" * 80}\n\n')
+                    
+                    for entry in entries:
+                        f.write(f'FILE: {entry["file"]}\n')
+                        if 'data' in entry:
+                            f.write(f'DATA: {json.dumps(entry["data"], ensure_ascii=False)}\n')
+                        f.write('\n')
+
+            self.stdout.write(self.style.WARNING(
+                f'📝 Пропущені файли збережено в: {skip_log_file}'
+            ))
+
+    def parse_fp3_file(self, fp3_path):
+        """Парсинг .fp3 файлу (FastReport XML)"""
         try:
-            tree = ET.parse(file_path)
+            tree = ET.parse(fp3_path)
             root = tree.getroot()
-            
+
             data = {
-                'plate': None,
+                'filename': fp3_path.name,
+                'license_plate': None,
+                'model': None,
                 'chassis': None,
+                'full_vin': None,
                 'mileage': None,
                 'date': None,
                 'date_obj': None,
-                'model': None,
-                'invoice': None,
+                'invoice_number': None,
                 'client_name': None,
                 'client_phone': None,
                 'works': [],
                 'parts': []
             }
-            
-            page0 = root.find('.//page0')
-            if not page0:
-                return None
-            
-            # Витягуємо дані
-            for elem in page0.iter():
-                if 'u' not in elem.attrib:
-                    continue
-                
-                text = elem.attrib['u']
-                
-                # Номер рахунку
-                if 'Рахунок-фактура №' in text:
-                    invoice_match = re.search(r'№\s*(\d+)', text)
-                    if invoice_match:
-                        data['invoice'] = invoice_match.group(1)
-                
-                # Дата
-                if 'від' in text and 'р.' in text:
-                    date_str = text.replace('від ', '').replace(' р.', '').strip()
-                    data['date'] = date_str
-                    data['date_obj'] = self.parse_date(date_str)
-                
-                # Модель (формат 70С17)
-                if re.match(r'^\d{2}[А-Я]\d{2}$', text):
-                    if not data['model']:
-                        data['model'] = text
-                
-                # Держномер (формат АС9744СК)
-                if re.match(r'^[А-Я]{2}\d{4}[А-Я]{2}$', text):
-                    data['plate'] = text
-                
-                # Шасі (7 цифр)
-                if len(text) == 7 and text.isdigit():
-                    if not data['chassis']:
-                        data['chassis'] = text
-                
-                # Пробіг
-                mileage_match = re.match(r'^(\d{1,3})\s*(\d{3})$', text)
-                if mileage_match:
-                    data['mileage'] = mileage_match.group(1) + mileage_match.group(2)
-                
-                # Клієнт (ім'я та телефон)
-                if re.search(r'\d{10}', text):  # Містить телефон
-                    lines = text.split('\n')
-                    if len(lines) >= 2:
-                        data['client_name'] = lines[0].strip()
-                        phone_match = re.search(r'(\+?\d{10,13})', lines[1])
-                        if phone_match:
-                            data['client_phone'] = phone_match.group(1)
-            
-            # Збираємо роботи та запчастини з Band1 (основний список)
-            self.extract_works_and_parts(page0, data)
-            
-            return data
-            
+
+            # Витягуємо дані з XML
+            for elem in root.iter():
+                if elem.tag == 'u' and 'v' in elem.attrib:
+                    value = elem.attrib['v']
+                    
+                    # Держномер (8-10 символів, містить букви та цифри)
+                    if re.match(r'^[A-ZА-ЯІЇЄ]{2}\d{4}[A-ZА-ЯІЇЄ]{2}$', value):
+                        data['license_plate'] = value
+                    
+                    # Модель (починається з "Iveco")
+                    elif value.startswith('Iveco'):
+                        data['model'] = value
+                    
+                    # Шасі (7 цифр)
+                    elif re.match(r'^\d{7}$', value):
+                        data['chassis'] = value
+                        # Генеруємо неповний VIN
+                        data['full_vin'] = f'XXXXXXXX{value}'
+                    
+                    # Повний VIN (17 символів)
+                    elif re.match(r'^[A-Z0-9]{17}$', value):
+                        data['full_vin'] = value
+                        if not data['chassis']:
+                            data['chassis'] = value[-7:]
+                    
+                    # Пробіг (число більше 1000, менше 2000000)
+                    elif value.isdigit() and 1000 < int(value) < 2000000:
+                        if not data['mileage'] or int(value) > data['mileage']:
+                            data['mileage'] = int(value)
+                    
+                    # Дата (формат ДДММРР)
+                    elif re.match(r'^\d{6}$', value):
+                        data['date'] = value
+                        data['date_obj'] = self.parse_date_ddmmyy(value)
+                    
+                    # Номер рахунку (4-5 цифр на початку)
+                    elif re.match(r'^\d{4,5}$', value) and not data['invoice_number']:
+                        data['invoice_number'] = value
+                    
+                    # Ім'я клієнта (містить букви, довше 3 символів)
+                    elif len(value) > 3 and re.search(r'[а-яіїєА-ЯІЇЄa-zA-Z]', value):
+                        if not data['client_name']:
+                            data['client_name'] = value
+                    
+                    # Телефон (починається з 0 або +380)
+                    elif re.match(r'^(\+380|380|0|8)\d{9}', value.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')):
+                        normalized_phone = self.normalize_phone_number(value)
+                        if normalized_phone:
+                            data['client_phone'] = normalized_phone
+
+            return data if data['license_plate'] else None
+
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Помилка парсингу: {e}'))
             return None
 
-    def extract_works_and_parts(self, page0, data):
-        """Витягує роботи та запчастини з XML"""
-        # Шукаємо всі блоки <b1> - це рядки таблиці
-        for band in page0.findall('.//b1'):
-            item_name = None
-            unit = None
-            quantity = None
-            price = None
-            
-            for elem in band:
-                if elem.tag == 'm1' and 'u' in elem.attrib:
-                    item_name = elem.attrib['u']
-                elif elem.tag == 'm2' and 'u' in elem.attrib:
-                    unit = elem.attrib['u']
-                elif elem.tag == 'm3' and 'u' in elem.attrib:
-                    quantity = elem.attrib['u'].replace(',', '.')
-                elif elem.tag == 'm5' and 'u' in elem.attrib:
-                    price = elem.attrib['u'].replace(',', '.')
-            
-            if item_name and unit and quantity:
-                item_data = {
-                    'name': item_name,
-                    'unit': unit,
-                    'quantity': quantity,
-                    'price': price
-                }
-                
-                # Розділяємо на роботи та запчастини
-                if unit in ['годин', 'год', 'год.']:
-                    data['works'].append(item_data)
-                else:
-                    data['parts'].append(item_data)
-
-    def parse_date(self, date_str):
-        """Конвертує українську дату в datetime"""
-        months = {
-            'січня': 1, 'лютого': 2, 'березня': 3, 'квітня': 4,
-            'травня': 5, 'червня': 6, 'липня': 7, 'серпня': 8,
-            'вересня': 9, 'жовтня': 10, 'листопада': 11, 'грудня': 12
-        }
-        
+    def parse_date_ddmmyy(self, date_str):
+        """Парсинг дати формату ДДММРР"""
         try:
-            parts = date_str.split()
-            day = int(parts[0])
-            month = months.get(parts[1], 1)
-            year = int(parts[2])
+            day = int(date_str[0:2])
+            month = int(date_str[2:4])
+            year = int(date_str[4:6])
+            
+            # Визначаємо століття (якщо рік < 50, то 2000+, інакше 1900+)
+            if year < 50:
+                year += 2000
+            else:
+                year += 1900
+            
             return datetime(year, month, day)
         except:
-            return timezone.now()
+            return datetime.now()
 
-    def import_to_database(self, data):
-        """Імпортує дані в базу даних"""
-        result = {
-            'clients_created': 0,
-            'trucks_created': 0,
-            'orders_created': 0,
-            'works_created': 0,
-            'parts_created': 0
-        }
+    def normalize_phone_number(self, phone):
+        """
+        Нормалізація номера телефону до формату +380XXXXXXXXX
         
-        try:
-            with transaction.atomic():
-                # 1. Створюємо або знаходимо клієнта
-                client = self.get_or_create_client(data)
-                if client and hasattr(client, '_created'):
-                    result['clients_created'] = 1
-                    self.stdout.write(f'  👤 Створено клієнта: {client.name}')
-                elif client:
-                    self.stdout.write(f'  👤 Клієнт: {client.name}')
-                
-                if not client:
-                    self.stdout.write(self.style.WARNING('  ⚠️  Не вдалося створити клієнта'))
-                    return None
-                
-                # 2. Створюємо або знаходимо вантажівку
-                truck, truck_created = self.get_or_create_truck(data, client)
-                if truck_created:
-                    result['trucks_created'] = 1
-                    self.stdout.write(f'  🚗 Створено вантажівку: {truck.license_plate}')
-                    if not data.get('chassis') or len(data.get('chassis', '')) < 17:
-                        self.stdout.write(self.style.WARNING(
-                            f'  ⚠️  УВАГА: Неповний VIN! Потрібно доповнити вручну'
-                        ))
-                else:
-                    self.stdout.write(f'  🚗 Вантажівка: {truck.license_plate}')
-                
-                # 3. Створюємо замовлення-наряд
-                order = self.create_service_order(data, client, truck)
-                if order:
-                    result['orders_created'] = 1
-                    self.stdout.write(f'  📋 Створено наряд: №{order.order_number}')
-                
-                # 4. Додаємо роботи
-                works_added = self.add_works_to_order(data, order)
-                result['works_created'] = works_added
-                if works_added > 0:
-                    self.stdout.write(f'  🔧 Додано робіт: {works_added}')
-                
-                # 5. Додаємо запчастини
-                parts_added = self.add_parts_to_order(data, order)
-                result['parts_created'] = parts_added
-                if parts_added > 0:
-                    self.stdout.write(f'  🛠  Додано запчастин: {parts_added}')
-                
-                return result
-                
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'  ❌ Помилка імпорту в БД: {e}'))
-            return None
+        Приклади:
+            067... -> +38067...
+            0671234567 -> +380671234567
+            380671234567 -> +380671234567
+            +380671234567 -> +380671234567
+            (067) 123-45-67 -> +380671234567
+        """
+        if not phone:
+            return ''
+        
+        # Прибираємо всі нецифрові символи окрім +
+        cleaned = re.sub(r'[^\d+]', '', phone)
+        
+        # Якщо номер починається з +380
+        if cleaned.startswith('+380'):
+            if len(cleaned) == 13:  # +380XXXXXXXXX
+                return cleaned
+            else:
+                return ''  # Невірна довжина
+        
+        # Якщо номер починається з 380
+        if cleaned.startswith('380'):
+            if len(cleaned) == 12:  # 380XXXXXXXXX
+                return '+' + cleaned
+            else:
+                return ''
+        
+        # Якщо номер починається з 0
+        if cleaned.startswith('0'):
+            if len(cleaned) == 10:  # 0XXXXXXXXX
+                return '+38' + cleaned
+            else:
+                return ''
+        
+        # Якщо номер починається з 8 (старий формат)
+        if cleaned.startswith('8') and len(cleaned) == 10:
+            return '+38' + cleaned[1:]  # Замінюємо 8 на +38
+        
+        # Інші випадки - повертаємо порожній рядок
+        return ''
+
+    def print_extracted_data(self, data):
+        """Вивід витягнутих даних"""
+        self.stdout.write('\n📄 Витягнуті дані:')
+        self.stdout.write(f"  Держномер: {data['license_plate']}")
+        self.stdout.write(f"  Модель: {data['model']}")
+        self.stdout.write(f"  Шасі: {data['chassis']}")
+        self.stdout.write(f"  VIN: {data['full_vin']}")
+        self.stdout.write(f"  Пробіг: {data['mileage']} км")
+        self.stdout.write(f"  Дата: {data['date']}")
+        self.stdout.write(f"  Рахунок: {data['invoice_number']}")
+        self.stdout.write(f"  Клієнт: {data['client_name']}")
+        self.stdout.write(f"  Телефон: {data['client_phone']}")
+
+    @transaction.atomic
+    def import_to_database(self, data):
+        """Імпорт даних у базу даних"""
+        created_counts = {
+            'clients': 0,
+            'trucks': 0,
+            'orders': 0,
+            'works': 0,
+            'parts': 0
+        }
+
+        # 1. Клієнт
+        client, client_created = self.get_or_create_client(data)
+        if client_created:
+            created_counts['clients'] += 1
+        if self.verbose:
+            self.stdout.write(f"  👤 Клієнт: {client.name} (ID: {client.id})")
+
+        # 2. Вантажівка
+        truck, truck_created = self.get_or_create_truck(data, client)
+        if truck_created:
+            created_counts['trucks'] += 1
+        if self.verbose:
+            self.stdout.write(f"  🚛 Вантажівка: {truck.license_plate} (ID: {truck.id})")
+
+        # 3. Сервісний наряд
+        order, order_created = self.create_service_order(data, client, truck)
+        if order_created:
+            created_counts['orders'] += 1
+        if self.verbose:
+            self.stdout.write(f"  📋 Наряд: #{order.order_number} (ID: {order.id})")
+
+        return created_counts
 
     def get_or_create_client(self, data):
-        """Створює або знаходить клієнта"""
-        client_name = data.get('client_name')
-        client_phone = data.get('client_phone')
+        """Створення або пошук клієнта"""
+        client_name = data.get('client_name', 'Клієнт не вказаний')
+        client_phone = data.get('client_phone', '')
         
-        if not client_name:
-            # Якщо немає імені, використовуємо номер авто як ідентифікатор
-            client_name = f"Власник {data.get('plate', 'невідомо')}"
-        
-        # Шукаємо по телефону
-        if client_phone:
-            client = Client.objects.filter(phone__icontains=client_phone[-10:]).first()
+        # Нормалізуємо телефон
+        normalized_phone = self.normalize_phone_number(client_phone)
+
+        # Пошук по телефону
+        if normalized_phone:
+            # Шукаємо по нормалізованому телефону
+            client = Client.objects.filter(phone_number=normalized_phone).first()
             if client:
-                return client
-        
-        # Шукаємо по імені
+                return client, False
+            
+            # Шукаємо по оригінальному (якщо в базі старий формат)
+            if client_phone != normalized_phone:
+                client = Client.objects.filter(phone_number=client_phone).first()
+                if client:
+                    # Оновлюємо телефон на нормалізований
+                    client.phone_number = normalized_phone
+                    client.save()
+                    if self.verbose:
+                        self.stdout.write(self.style.SUCCESS(
+                            f'    🔄 Оновлено телефон клієнта: {client_phone} -> {normalized_phone}'
+                        ))
+                    return client, False
+
+        # Пошук по імені
         client = Client.objects.filter(name__iexact=client_name).first()
         if client:
-            return client
-        
+            # Якщо знайшли по імені, але телефону немає - додаємо
+            if normalized_phone and not client.phone_number:
+                client.phone_number = normalized_phone
+                client.save()
+                if self.verbose:
+                    self.stdout.write(self.style.SUCCESS(
+                        f'    📞 Додано телефон клієнту: {normalized_phone}'
+                    ))
+            return client, False
+
         # Створюємо нового
         client = Client.objects.create(
             name=client_name,
-            phone=client_phone if client_phone else None
+            phone_number=normalized_phone,  # Використовуємо нормалізований
+            email='',
+            notes=f'Автоматично створено при імпорті з fp3: {data["filename"]}'
         )
-        client._created = True
-        return client
+        
+        if self.verbose:
+            phone_display = f' ({normalized_phone})' if normalized_phone else ''
+            self.stdout.write(self.style.SUCCESS(
+                f'    ✨ Створено нового клієнта: {client_name}{phone_display}'
+            ))
+        
+        return client, True
 
     def get_or_create_truck(self, data, client):
-        """Створює або знаходить вантажівку"""
-        plate = data.get('plate')
+        """Створення або пошук вантажівки"""
+        license_plate = data['license_plate']
         
-        # Шукаємо по держномеру
-        truck = Truck.objects.filter(license_plate=plate).first()
+        # Шукаємо вантажівку
+        truck = Truck.objects.filter(license_plate=license_plate).first()
+
         if truck:
-            # Оновлюємо власника якщо змінився
-            if truck.client != client:
-                truck.client = client
+            # Оновлюємо пробіг
+            if data.get('mileage') and data['mileage'] > (truck.mileage or 0):
+                truck.mileage = data['mileage']
                 truck.save()
             return truck, False
-        
-        # Отримуємо або створюємо базову модель
+
+        # Генеруємо VIN
+        full_vin = data.get('full_vin')
+        if not full_vin:
+            # Немає ні шасі, ні VIN - генеруємо TEMP
+            chassis_digits = re.sub(r'\D', '', license_plate)[-4:]
+            full_vin = f'TEMP0000{chassis_digits.zfill(8)}'
+
+        # Модель
         model_name = data.get('model')
-        
-        # Якщо модель не знайдена або порожня - використовуємо дефолтну
         if not model_name or model_name.strip() == '':
             model_name = 'Не визначено'
         
-        base_model, _ = IvecoBaseModel.objects.get_or_create(
-            name=model_name
-        )
-        
-        # Створюємо VIN код
-        chassis = data.get('chassis', '')
-        if chassis and len(chassis) == 7:
-            # Якщо тільки 7 цифр - додаємо префікс (неповний VIN)
-            full_vin = f'XXXXXXXX{chassis}'  # Позначаємо що це неповний
-        elif chassis and len(chassis) == 17:
-            full_vin = chassis
-        else:
-            # Генеруємо тимчасовий VIN з номера
-            plate_digits = re.sub(r'\D', '', plate)
-            full_vin = f'TEMP000000{plate_digits:0>7}'
-        
+        base_model, _ = IvecoBaseModel.objects.get_or_create(name=model_name)
+
         # Створюємо вантажівку
         truck = Truck.objects.create(
-            client=client,
+            owner=client,
+            license_plate=license_plate,
             base_model=base_model,
-            specific_model_name=model_name,
             full_vin=full_vin,
-            license_plate=plate
+            mileage=data.get('mileage'),
+            notes=f'Автоматично створено при імпорті з fp3: {data["filename"]}'
         )
-        
+
+        if self.verbose:
+            if full_vin.startswith('XXXXXXXX') or full_vin.startswith('TEMP'):
+                self.stdout.write(self.style.WARNING(
+                    f'    ⚠️  Створено вантажівку з неповним VIN: {license_plate} ({full_vin})'
+                ))
+            else:
+                self.stdout.write(self.style.SUCCESS(
+                    f'    ✨ Створено нову вантажівку: {license_plate}'
+                ))
+
         return truck, True
 
     def create_service_order(self, data, client, truck):
-        """Створює замовлення-наряд"""
-        order_number = data.get('invoice')
+        """Створення сервісного наряду"""
+        invoice_number = data.get('invoice_number', 'FP3-UNKNOWN')
         
-        # Перевіряємо чи існує вже такий наряд
-        existing_order = ServiceOrder.objects.filter(order_number=order_number).first()
+        # Перевіряємо чи не існує
+        existing_order = ServiceOrder.objects.filter(
+            invoice_number=invoice_number
+        ).first()
+
         if existing_order:
-            self.stdout.write(self.style.WARNING(
-                f'  ⚠️  Наряд №{order_number} вже існує, пропускаємо'
-            ))
-            return None
-        
+            if self.verbose:
+                self.stdout.write(self.style.WARNING(
+                    f'    ⚠️  Наряд #{invoice_number} вже існує (ID: {existing_order.id})'
+                ))
+            return existing_order, False
+
         # Створюємо наряд
         order = ServiceOrder.objects.create(
-            order_number=order_number,
             client=client,
             truck=truck,
-            status='CLOSED',  # Старі наряди відразу закриті
-            problem_description='Імпортовано з .fp3 файлу'
+            order_number=f'FP3-{invoice_number}',
+            invoice_number=invoice_number,
+            status='CLOSED',
+            description=f'Імпортовано з fp3: {data["filename"]}',
+            mileage_at_service=data.get('mileage')
         )
-        
-        # Встановлюємо дату з файлу (робимо timezone-aware)
+
+        # Встановлюємо дату
         if data.get('date_obj'):
             aware_datetime = make_aware(data['date_obj'])
             order.created_at = aware_datetime
-            order.save(update_fields=['created_at'])
-        
-        return order
+            order.save()
 
-    def add_works_to_order(self, data, order):
-        """Додає роботи до наряду"""
-        if not order:
-            return 0
-        
-        works_added = 0
-        
-        # Отримуємо або створюємо групу робіт
-        work_group, _ = WorkGroup.objects.get_or_create(
-            name='Імпортовані з fp3',
-            defaults={'hourly_rate': Decimal('500.00')}
-        )
-        
-        for work_data in data.get('works', []):
-            work_name = work_data['name']
-            hours = Decimal(work_data['quantity'])
-            
-            # Шукаємо роботу в прайсі
-            work_price = WorkPrice.objects.filter(
-                name__iexact=work_name
-            ).first()
-            
-            # Якщо не знайдено - створюємо
-            if not work_price:
-                work_price = WorkPrice.objects.create(
-                    work_group=work_group,
-                    name=work_name,
-                    standard_hours=hours
-                    # price - це @property, не потрібно передавати
-                )
-            
-            # Додаємо роботу до наряду
-            ServiceWork.objects.create(
-                service_order=order,
-                work=work_price,
-                hours_spent=hours,
-                description=f'Імпортовано з fp3'
-            )
-            works_added += 1
-        
-        return works_added
+        return order, True
 
-    def add_parts_to_order(self, data, order):
-        """Додає запчастини до наряду"""
-        if not order:
-            return 0
+    def print_summary(self, stats, dry_run, error_log_file, skip_log_file):
+        """Вивід підсумкової статистики"""
+        self.stdout.write('\n' + '=' * 80)
+        self.stdout.write('📊 СТАТИСТИКА ІМПОРТУ')
+        self.stdout.write('=' * 80)
+        self.stdout.write(f"Оброблено файлів: {stats['total']}")
+        self.stdout.write(self.style.SUCCESS(f"✅ Успішно: {stats['success']}"))
         
-        parts_added = 0
+        if stats['errors'] > 0:
+            self.stdout.write(self.style.ERROR(
+                f"❌ Помилок: {stats['errors']} (дивіться {error_log_file})"
+            ))
         
-        # Отримуємо перші роботи (прив'яжемо запчастини до них)
-        service_works = order.works.all()
-        if not service_works:
-            # Якщо немає робіт, створюємо загальну
-            work_group, _ = WorkGroup.objects.get_or_create(
-                name='Імпортовані з fp3'
-            )
-            work_price, _ = WorkPrice.objects.get_or_create(
-                work_group=work_group,
-                name='Загальні запчастини',
-                defaults={'standard_hours': Decimal('0')}
-            )
-            service_work = ServiceWork.objects.create(
-                service_order=order,
-                work=work_price,
-                hours_spent=Decimal('0')
-            )
-            service_works = [service_work]
-        
-        service_work = service_works[0]
-        
-        for part_data in data.get('parts', []):
-            part_name = part_data['name']
-            quantity = int(float(part_data['quantity']))
-            price_str = part_data.get('price', '0')
-            
-            try:
-                price = Decimal(price_str)
-            except:
-                price = Decimal('0')
-            
-            # Шукаємо запчастину
-            part = Part.objects.filter(name__iexact=part_name).first()
-            
-            # Якщо не знайдено - створюємо
-            if not part:
-                # Генеруємо SKU
-                sku = f'FP3-{len(Part.objects.all()) + 1:05d}'
-                
-                part = Part.objects.create(
-                    name=part_name,
-                    sku_code=sku,
-                    selling_price=price,
-                    cost_price=Decimal('0'),
-                    unit='шт' if part_data['unit'] == 'шт' else 'л'
-                )
-            
-            # Додаємо до наряду
-            UsedPart.objects.create(
-                service_work=service_work,
-                part=part,
-                quantity=quantity
-            )
-            parts_added += 1
-        
-        # Оновлюємо загальну вартість наряду
-        order.update_total_cost()
-        
-        return parts_added
+        if stats['skipped'] > 0:
+            self.stdout.write(self.style.WARNING(
+                f"⚠️  Пропущено: {stats['skipped']} (дивіться {skip_log_file})"
+            ))
 
-    def display_import_preview(self, data):
-        """Показує що буде імпортовано (dry-run режим)"""
-        self.stdout.write(f'  📋 Наряд: №{data.get("invoice")}')
-        self.stdout.write(f'  📅 Дата: {data.get("date")}')
-        self.stdout.write(f'  👤 Клієнт: {data.get("client_name", "Н/Д")}')
-        self.stdout.write(f'  📞 Телефон: {data.get("client_phone", "Н/Д")}')
-        self.stdout.write(f'  🚗 Номер: {data.get("plate")}')
-        self.stdout.write(f'  🔧 Модель: {data.get("model", "Н/Д")}')
-        self.stdout.write(f'  🆔 Шасі: {data.get("chassis", "Н/Д")}')
-        self.stdout.write(f'  📊 Пробіг: {data.get("mileage", "Н/Д")} км')
-        self.stdout.write(f'  🔧 Робіт: {len(data.get("works", []))}')
-        self.stdout.write(f'  🛠  Запчастин: {len(data.get("parts", []))}')
-
-    def display_statistics(self, stats, dry_run):
-        """Виводить статистику імпорту"""
-        self.stdout.write(f'\n{"="*80}')
-        self.stdout.write(self.style.SUCCESS('СТАТИСТИКА ІМПОРТУ'))
-        self.stdout.write(f'{"="*80}')
+        if not dry_run and stats['success'] > 0:
+            self.stdout.write('\n📈 Створено в БД:')
+            self.stdout.write(f"  👤 Клієнтів: {stats['created']['clients']}")
+            self.stdout.write(f"  🚗 Вантажівок: {stats['created']['trucks']}")
+            self.stdout.write(f"  📋 Нарядів: {stats['created']['orders']}")
         
         if dry_run:
-            self.stdout.write(self.style.WARNING('\n⚠️  ТЕСТОВИЙ РЕЖИМ - дані НЕ збережені в БД\n'))
+            self.stdout.write(self.style.WARNING(
+                '\n⚠️  ТЕСТОВИЙ РЕЖИМ - Дані НЕ збережено в базу даних'
+            ))
         
-        self.stdout.write(f'📊 Оброблено файлів: {stats["processed"]}')
-        self.stdout.write(self.style.SUCCESS(f'✅ Успішно: {stats["success"]}'))
-        self.stdout.write(self.style.ERROR(f'❌ Помилок: {stats["errors"]}'))
-        self.stdout.write(self.style.WARNING(f'⚠️  Пропущено: {stats["skipped"]}'))
+        self.stdout.write('=' * 80)
         
-        if not dry_run:
-            self.stdout.write(f'\n📈 Створено в БД:')
-            self.stdout.write(f'  👤 Клієнтів: {stats["clients_created"]}')
-            self.stdout.write(f'  🚗 Вантажівок: {stats["trucks_created"]}')
-            self.stdout.write(f'  📋 Нарядів: {stats["orders_created"]}')
-            self.stdout.write(f'  🔧 Робіт: {stats["works_created"]}')
-            self.stdout.write(f'  🛠  Запчастин: {stats["parts_created"]}')
+        # Підказки
+        if stats['errors'] > 0:
+            self.stdout.write(self.style.WARNING(
+                f'\n💡 Для повторного імпорту файлів з помилками використайте:'
+            ))
+            self.stdout.write(
+                f'   python manage.py import_fp3_to_crm <папка> --retry-errors --error-log {error_log_file}'
+            )
         
-        self.stdout.write(f'{"="*80}\n')
+        self.stdout.write('\n')
