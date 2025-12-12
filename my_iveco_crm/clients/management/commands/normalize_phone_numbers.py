@@ -50,7 +50,7 @@ class Command(BaseCommand):
 
         # Знаходимо всіх клієнтів з номерами телефонів
         clients_with_phones = Client.objects.exclude(
-            Q(phone_number='') | Q(phone_number__isnull=True)
+            Q(phone='') | Q(phone__isnull=True)
         )
 
         total_clients = clients_with_phones.count()
@@ -71,7 +71,7 @@ class Command(BaseCommand):
 
         # Обробка кожного клієнта
         for client in clients_with_phones:
-            original_phone = client.phone_number
+            original_phone = client.phone
             normalized_phone = self.normalize_phone_number(original_phone)
 
             # Якщо номер вже в правильному форматі
@@ -104,7 +104,7 @@ class Command(BaseCommand):
 
             # Зберігаємо якщо не dry-run
             if not dry_run:
-                client.phone_number = normalized_phone
+                client.phone = normalized_phone
                 client.save()
 
         # Підсумкова статистика
