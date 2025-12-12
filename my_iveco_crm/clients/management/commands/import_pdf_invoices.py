@@ -33,10 +33,8 @@ try:
 except ImportError:
     PyPDF2 = None
 
-from clients.models import (
-    Client, Truck, IvecoBaseModel, ServiceOrder, 
-    WorkPrice, WorkGroup, Part
-)
+from clients.models import Client, Truck, IvecoBaseModel
+from orders.models import ServiceOrder, WorkPrice, WorkGroup, Part
 
 
 class Command(BaseCommand):

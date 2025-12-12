@@ -39,10 +39,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.timezone import make_aware
 
-from clients.models import (
-    Client, Truck, IvecoBaseModel, ServiceOrder, 
-    WorkPrice, WorkGroup, Part
-)
+from clients.models import Client, Truck, IvecoBaseModel
+from orders.models import ServiceOrder, WorkPrice, WorkGroup, Part
 
 
 class Command(BaseCommand):
