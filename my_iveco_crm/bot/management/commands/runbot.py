@@ -303,7 +303,12 @@ async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text = result.get("reply_text")
     keyboard = result.get("keyboard")
 
-    await update.message.reply_text(reply_text, reply_markup=keyboard)
+    # Якщо немає клавіатури (немає авто або помилка), показуємо головне меню
+    if keyboard is None:
+        await update.message.reply_text(reply_text, reply_markup=MAIN_REPLY_MARKUP)
+    else:
+        await update.message.reply_text(reply_text, reply_markup=keyboard)
+    
     await log_message(chat_id, user_name, message_text, reply_text)
 
 
@@ -318,7 +323,7 @@ async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYP
     
     reply_text = "Будь ласка, надішліть мені номер замовлення-наряду (тільки цифри)."
     
-    await update.message.reply_text(reply_text)
+    await update.message.reply_text(reply_text, reply_markup=MAIN_REPLY_MARKUP)
     await log_message(chat_id, user_name, message_text, reply_text)
 
 
@@ -336,7 +341,7 @@ async def start_create_order(update: Update, context: ContextTypes.DEFAULT_TYPE)
     result = await get_client_trucks_for_order(chat_id)
     
     if not result["success"]:
-        await update.message.reply_text(result["message"])
+        await update.message.reply_text(result["message"], reply_markup=MAIN_REPLY_MARKUP)
         await log_message(chat_id, user_name, message_text, result["message"])
         return ConversationHandler.END
     
@@ -358,6 +363,8 @@ async def truck_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "order_cancel":
         await query.edit_message_text("❌ Створення замовлення скасовано.")
+        # Відправляємо нове повідомлення з головним меню
+        await query.message.reply_text("Оберіть опцію з меню:", reply_markup=MAIN_REPLY_MARKUP)
         await log_message(chat_id, user_name, "[Скасування створення замовлення]", "Створення замовлення скасовано.")
         return ConversationHandler.END
     
@@ -467,13 +474,17 @@ async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYP
         if action == 'history':
             reply_text = await get_repair_history(int(truck_id))
             await query.edit_message_text(text=reply_text)
+            # Відправляємо нове повідомлення з головним меню
+            await query.message.reply_text("Оберіть опцію з меню:", reply_markup=MAIN_REPLY_MARKUP)
             await log_message(chat_id, user_name, f"[Callback: {callback_data}]", reply_text)
         else:
             await query.edit_message_text(text="Невідома дія.")
+            await query.message.reply_text("Оберіть опцію з меню:", reply_markup=MAIN_REPLY_MARKUP)
 
     except Exception as e:
         logger.error(f"Помилка обробки callback: {e}")
         await query.edit_message_text(text="Сталася помилка при обробці вашого запиту.")
+        await query.message.reply_text("Оберіть опцію з меню:", reply_markup=MAIN_REPLY_MARKUP)
 
 
 # --- Django Command ---
