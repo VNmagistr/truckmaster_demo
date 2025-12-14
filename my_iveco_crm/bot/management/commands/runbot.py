@@ -48,6 +48,7 @@ OWNER_KEYBOARD = [
 ADMIN_KEYBOARD = [
     [KeyboardButton("Всі замовлення 📦"), KeyboardButton("Всі автомобілі 🚛")],
     [KeyboardButton("Статистика 📊"), KeyboardButton("Пошук авто 🔍")],
+    [KeyboardButton("Логи бота 📝")],
 ]
 
 # Стани для діалогів
@@ -463,6 +464,41 @@ def get_bot_stats_for_admin():
 
 
 @sync_to_async
+def get_bot_logs_for_admin(limit=20):
+    """Отримує останні логи бота (тільки для адміна)"""
+    try:
+        logs = BotMessageLog.objects.select_related().order_by('-created_at')[:limit]
+        
+        if not logs.exists():
+            return "📭 Логів поки що немає."
+        
+        reply = f"📝 Останні {logs.count()} повідомлень:\n\n"
+        
+        for log in logs:
+            # Форматуємо час
+            time_str = log.created_at.strftime('%d.%m %H:%M')
+            
+            # Обмежуємо довжину повідомлень
+            user_msg = log.message_text[:50] + '...' if len(log.message_text) > 50 else log.message_text
+            bot_msg = log.bot_response[:50] + '...' if len(log.bot_response) > 50 else log.bot_response
+            
+            reply += f"⏰ {time_str}\n"
+            reply += f"👤 {log.user_name or 'Невідомий'}"
+            
+            if log.phone_number:
+                reply += f" ({log.phone_number})"
+            
+            reply += f"\n💬 Користувач: {user_msg}\n"
+            reply += f"🤖 Бот: {bot_msg}\n\n"
+        
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Помилка в get_bot_logs_for_admin: {e}")
+        return "⚠️ Помилка отримання логів."
+
+
+@sync_to_async
 def search_truck_by_partial_number(partial_number, chat_id):
     """
     Шукає автомобілі за частковим номером (тільки для адміна).
@@ -845,6 +881,32 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await log_message(chat_id, first_name, "Статистика 📊", reply_text)
 
 
+async def show_bot_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показує логи бота (тільки для адміна)"""
+    user = update.message.from_user
+    chat_id = user.id
+    first_name = user.first_name or 'Користувач'
+    
+    # Скидаємо стан
+    context.user_data['state'] = None
+    
+    # Перевірка прав
+    try:
+        bot_user = await sync_to_async(BotUser.objects.get)(chat_id=chat_id)
+        if bot_user.role != 'admin':
+            reply_text = "❌ У вас немає доступу до цієї функції."
+            await safe_send_message(update, reply_text)
+            return
+    except BotUser.DoesNotExist:
+        reply_text = "❌ Ваш профіль не знайдено."
+        await safe_send_message(update, reply_text)
+        return
+    
+    reply_text = await get_bot_logs_for_admin(limit=15)
+    await safe_send_message(update, reply_text)
+    await log_message(chat_id, first_name, "Логи бота 📝", reply_text)
+
+
 async def ask_for_truck_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Просить адміна ввести номер/частину номера автомобіля"""
     user = update.message.from_user
@@ -980,6 +1042,7 @@ class Command(BaseCommand):
         application.add_handler(MessageHandler(filters.Regex("^Всі автомобілі 🚛$"), show_all_trucks))
         application.add_handler(MessageHandler(filters.Regex("^Статистика 📊$"), show_statistics))
         application.add_handler(MessageHandler(filters.Regex("^Пошук авто 🔍$"), ask_for_truck_number))
+        application.add_handler(MessageHandler(filters.Regex("^Логи бота 📝$"), show_bot_logs))
         
         # 4. INLINE КНОПКИ (Callbacks)
         application.add_handler(CallbackQueryHandler(handle_car_selection, pattern='^history_'))
