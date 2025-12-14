@@ -6,6 +6,11 @@ class Client(models.Model):
     email = models.EmailField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     telegram_chat_id = models.BigIntegerField(unique=True, blank=True, null=True, db_index=True, verbose_name="ID чату Telegram")
+    is_bot_admin = models.BooleanField(
+        default=False,
+        verbose_name="Адміністратор Telegram бота",
+        help_text="Чи має цей клієнт доступ до адміністраторських функцій бота"
+    )
     
     class Meta:
         verbose_name = "Клієнт"
