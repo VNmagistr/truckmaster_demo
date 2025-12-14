@@ -54,27 +54,11 @@ def check_if_user_is_linked(chat_id):
 @sync_to_async
 def is_admin(chat_id):
     """
-    Перевіряє чи користувач є адміністратором через UserProfile.role
+    Перевіряє чи користувач є адміністратором через Client.is_bot_admin
     """
     try:
-        # Спочатку знаходимо Client по telegram_chat_id
         client = Client.objects.get(telegram_chat_id=chat_id)
-        
-        # Потім шукаємо User який прив'язаний до цього Client
-        # Можна прив'язати через email або phone
-        user = User.objects.filter(email=client.email).first()
-        
-        if not user and client.phone:
-            # Якщо не знайшли по email, шукаємо по phone в UserProfile
-            from users.models import UserProfile
-            profile = UserProfile.objects.filter(phone=client.phone).first()
-            if profile:
-                user = profile.user
-        
-        if user and hasattr(user, 'profile'):
-            return user.profile.role == 'admin'
-        
-        return False
+        return client.is_bot_admin
     except Client.DoesNotExist:
         return False
     except Exception as e:
