@@ -692,6 +692,81 @@ async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYP
     await log_message(chat_id, first_name, message_text, reply_text)
 
 
+async def show_service_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Показує історію обслуговування всіх автомобілів користувача.
+    Це кнопка "Історія обслуговування 📋"
+    """
+    user = update.message.from_user
+    chat_id = user.id
+    first_name = user.first_name or 'Користувач'
+    
+    # Скидаємо стан
+    context.user_data['state'] = None
+    
+    try:
+        bot_user = await sync_to_async(BotUser.objects.select_related('client').prefetch_related('allowed_trucks').get)(chat_id=chat_id)
+        
+        if not bot_user.is_active:
+            reply_text = "❌ Ваш обліковий запис деактивовано."
+            await safe_send_message(update, reply_text)
+            return
+        
+        # Отримуємо доступні автомобілі
+        trucks = bot_user.get_accessible_trucks()
+        
+        if not trucks.exists():
+            reply_text = "📭 За вами не закріплено жодного автомобіля."
+            await safe_send_message(update, reply_text)
+            await log_message(chat_id, first_name, "Історія обслуговування 📋", reply_text)
+            return
+        
+        # Збираємо історію по всіх автомобілях
+        reply_text = f"📋 Історія обслуговування ({trucks.count()} авто):\n\n"
+        
+        for truck in trucks[:5]:  # Показуємо перші 5 авто
+            orders = await sync_to_async(lambda: list(
+                ServiceOrder.objects.filter(truck=truck)
+                .select_related('client')
+                .order_by('-created_at')[:3]
+            ))()
+            
+            reply_text += f"🚚 {truck.license_plate} ({truck.specific_model_name})\n"
+            
+            if not orders:
+                reply_text += "   📭 Історії немає\n\n"
+                continue
+            
+            for order in orders:
+                reply_text += f"   🧾 №{order.order_number or 'б/н'} - {order.get_status_display()}\n"
+                reply_text += f"      📅 {order.created_at.strftime('%d.%m.%Y')}"
+                
+                # Показуємо вартість для власників та адмінів
+                if bot_user.role in ['admin', 'owner']:
+                    reply_text += f" | 💰 {order.total_cost} грн"
+                
+                reply_text += "\n"
+            
+            reply_text += "\n"
+        
+        if trucks.count() > 5:
+            reply_text += f"ℹ️ Показано 5 з {trucks.count()} автомобілів.\n"
+            reply_text += "Для детальної історії оберіть авто в меню 'Мої автомобілі 🚚'."
+        
+        await safe_send_message(update, reply_text)
+        await log_message(chat_id, first_name, "Історія обслуговування 📋", reply_text)
+    
+    except BotUser.DoesNotExist:
+        reply_text = "❌ Ваш профіль не знайдено. Використайте /start"
+        await safe_send_message(update, reply_text)
+        await log_message(chat_id, first_name, "Історія обслуговування 📋", reply_text)
+    except Exception as e:
+        logger.error(f"Помилка в show_service_history: {e}")
+        reply_text = "⚠️ Виникла помилка при отриманні історії обслуговування."
+        await safe_send_message(update, reply_text)
+        await log_message(chat_id, first_name, "Історія обслуговування 📋", reply_text)
+
+
 async def show_all_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показує всі замовлення (тільки для адміна)"""
     user = update.message.from_user
@@ -898,7 +973,7 @@ class Command(BaseCommand):
         # 3. КНОПКИ МЕНЮ (Regex patterns)
         application.add_handler(MessageHandler(filters.Regex("^Мої автомобілі 🚚$"), my_cars))
         application.add_handler(MessageHandler(filters.Regex("^Перевірити статус замовлення 🧾$"), ask_for_order_number))
-        application.add_handler(MessageHandler(filters.Regex("^Історія обслуговування 📋$"), my_cars))
+        application.add_handler(MessageHandler(filters.Regex("^Історія обслуговування 📋$"), show_service_history))
         
         # Адмін-кнопки
         application.add_handler(MessageHandler(filters.Regex("^Всі замовлення 📦$"), show_all_orders))
