@@ -216,7 +216,7 @@ class ConversationState(models.Model):
         self.save()
 
 
-class MessageLog(models.Model):
+class BotMessageLog(models.Model):
     """
     Лог повідомлень бота - зберігає всю історію комунікації
     """
