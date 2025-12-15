@@ -11,6 +11,7 @@ from .models import Client, IvecoBaseModel, Truck, OwnershipHistory
 from .admin import TruckAdmin
 
 
+
 class ClientModelTest(TestCase):
     """Tests for Client model"""
     
