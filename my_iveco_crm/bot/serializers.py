@@ -1,7 +1,7 @@
 # bot/serializers.py
 
 from rest_framework import serializers
-from .models import BotUser, MessageLog, ReminderSettings, SentReminder
+from .models import BotUser, BotMessageLog, ReminderSettings, SentReminder
 
 
 class BotUserSerializer(serializers.ModelSerializer):
@@ -26,7 +26,7 @@ class MessageLogSerializer(serializers.ModelSerializer):
     message_type_display = serializers.CharField(source='get_message_type_display', read_only=True)
     
     class Meta:
-        model = MessageLog
+        model = BotMessageLog
         fields = [
             'id', 'bot_user', 'bot_user_name', 'message_type', 'message_type_display',
             'is_incoming', 'message_text', 'bot_response', 'is_processed',
