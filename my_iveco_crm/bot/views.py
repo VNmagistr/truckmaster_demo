@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import BotUser, MessageLog, ReminderSettings
+from .models import BotUser, BotMessageLog, ReminderSettings
 from .serializers import (
     BotUserSerializer, MessageLogSerializer, ReminderSettingsSerializer
 )
@@ -40,7 +40,7 @@ class BotUserViewSet(viewsets.ModelViewSet):
 
 class MessageLogViewSet(viewsets.ReadOnlyModelViewSet):
     """API для логів повідомлень (тільки читання)"""
-    queryset = MessageLog.objects.select_related('bot_user').all()
+    queryset = BotMessageLog.objects.select_related('bot_user').all()
     serializer_class = MessageLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
