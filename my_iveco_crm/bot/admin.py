@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from django.db.models import Count
 
 from .models import (
-    BotUser, ConversationState, MessageLog, 
+    BotUser, ConversationState, BotMessageLog, 
     ReminderSettings, SentReminder, BotCommand
 )
 
