@@ -89,8 +89,8 @@ class ConversationStateAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(MessageLog)
-class MessageLogAdmin(admin.ModelAdmin):
+@admin.register(BotMessageLog)
+class BotMessageLogAdmin(admin.ModelAdmin):
     list_display = (
         'created_at', 'get_user_info', 'message_type', 'direction', 
         'get_message_preview', 'is_processed', 'processing_time_ms'
