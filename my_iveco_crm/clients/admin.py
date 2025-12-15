@@ -4,7 +4,8 @@ from .models import Client, IvecoBaseModel, Truck, OwnershipHistory
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email')
+    list_display = ('name', 'phone', 'email', 'is_admin')
+    list_editable = ('is_admin',)
     search_fields = ('name', 'phone', 'email')
 
 @admin.register(IvecoBaseModel)
