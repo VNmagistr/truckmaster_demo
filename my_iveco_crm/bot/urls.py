@@ -11,4 +11,5 @@ router.register(r'reminders', ReminderSettingsViewSet, basename='reminder-settin
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('api/bot/', include('bot.urls')),
 ]
