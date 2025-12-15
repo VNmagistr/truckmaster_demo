@@ -20,6 +20,9 @@ urlpatterns = [
     
     # Обслуговування
     path('api/maintenance/', include('maintenance.urls')),
+
+    # Bot API
+    path('api/bot/', include('bot.urls')),
 ]
 
 if settings.DEBUG:
