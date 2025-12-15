@@ -1,5 +1,3 @@
-# inventory/views.py
-
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -153,7 +151,6 @@ class StockViewSet(viewsets.ModelViewSet):
         # Фільтр по низькому залишку
         low_stock = self.request.query_params.get('low_stock')
         if low_stock == 'true':
-            # Фільтруємо в Python, бо is_low_stock - це property
             ids = [s.id for s in queryset if s.is_low_stock]
             queryset = queryset.filter(id__in=ids)
         

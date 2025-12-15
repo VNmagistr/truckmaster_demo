@@ -1,5 +1,3 @@
-# clients/urls.py
-
 from rest_framework.routers import DefaultRouter
 from .views import ClientViewSet, TruckViewSet, IvecoBaseModelViewSet
 

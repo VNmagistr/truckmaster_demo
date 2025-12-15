@@ -7,7 +7,6 @@ class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
 
-# Створюємо ViewSet для довідника моделей, він нам знадобиться у формі
 class IvecoBaseModelViewSet(viewsets.ModelViewSet):
     queryset = IvecoBaseModel.objects.all()
     serializer_class = IvecoBaseModelSerializer
@@ -17,8 +16,7 @@ class TruckViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['client']
 
-    # Ця функція дозволяє нам вибирати серіалізатор в залежності від дії
     def get_serializer_class(self):
         if self.action == 'list':
-            return TruckListSerializer # Для списку
-        return TruckDetailSerializer # Для всього іншого (створення, редагування)
+            return TruckListSerializer
+        return TruckDetailSerializer

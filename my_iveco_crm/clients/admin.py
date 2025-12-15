@@ -74,7 +74,7 @@ class TruckAdmin(admin.ModelAdmin):
             )
     
     colored_vin.short_description = 'VIN код (повний)'
-    colored_vin.admin_order_field = 'full_vin'  # Дозволяє сортування
+    colored_vin.admin_order_field = 'full_vin'
 
     def get_search_results(self, request, queryset, search_term):
         """
@@ -82,15 +82,9 @@ class TruckAdmin(admin.ModelAdmin):
         Якщо в URL є параметр client_id - показуємо тільки вантажівки цього клієнта.
         """
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        
-        # Перевіряємо чи є фільтр по клієнту в GET параметрах
-        # Django admin autocomplete передає forward параметри
         client_id = request.GET.get('client_id')
-        
-        # Також перевіряємо referer URL на наявність client
         referer = request.META.get('HTTP_REFERER', '')
         if not client_id and 'serviceorder' in referer.lower():
-            # Спробуємо отримати client_id з форми через forward
             forward = request.GET.get('forward')
             if forward:
                 import json

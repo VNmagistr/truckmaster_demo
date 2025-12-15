@@ -3,10 +3,6 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 
-# ============================================
-# КАТЕГОРІЇ ТОВАРІВ (НОВЕ)
-# ============================================
-
 class ProductCategory(models.Model):
     """
     Головні категорії товарів
@@ -76,10 +72,6 @@ class ProductSubcategory(models.Model):
         return f"{self.category.name} → {self.name}"
 
 
-# ============================================
-# СКЛАДИ (НОВЕ)
-# ============================================
-
 class Warehouse(models.Model):
     """
     Склад
@@ -106,10 +98,6 @@ class Warehouse(models.Model):
         super().save(*args, **kwargs)
 
 
-# ============================================
-# КАТЕГОРІЇ ЗАПЧАСТИН (ІСНУЮЧА - БЕЗ ЗМІН)
-# ============================================
-
 class PartCategory(models.Model):
     """Існуюча модель категорій запчастин - залишаємо для сумісності"""
     parent = models.ForeignKey(
@@ -134,10 +122,6 @@ class PartCategory(models.Model):
         return self.name
 
 
-# ============================================
-# ТОВАРИ / ЗАПЧАСТИНИ (ОНОВЛЕНА)
-# ============================================
-
 class Part(models.Model):
     """
     Товар / Запчастина
@@ -151,7 +135,6 @@ class Part(models.Model):
         ('m', 'м'),
     ]
 
-    # --- Існуючі поля (для сумісності) ---
     category = models.ForeignKey(
         PartCategory,
         on_delete=models.SET_NULL,
@@ -173,7 +156,7 @@ class Part(models.Model):
         default=0,
         verbose_name="Ціна продажу"
     )
-    # Це поле тепер дублюється в Stock, але залишаємо для сумісності
+ 
     current_stock = models.PositiveIntegerField(default=0, verbose_name="Залишок (заг.)")
     
     substitutes = models.ManyToManyField(
@@ -189,7 +172,6 @@ class Part(models.Model):
     )
     notes = models.TextField(blank=True, null=True, verbose_name="Примітки")
 
-    # --- Нові поля ---
     subcategory = models.ForeignKey(
         ProductSubcategory,
         on_delete=models.SET_NULL,
@@ -199,11 +181,9 @@ class Part(models.Model):
     )
     brand = models.CharField('Бренд', max_length=100, blank=True)
     
-    # Характеристики для олив
     viscosity = models.CharField('В\'язкість', max_length=20, blank=True)
     specifications = models.TextField('Специфікації', blank=True)
-    
-    # Фасування
+
     unit = models.CharField(
         'Одиниця виміру',
         max_length=10,
@@ -222,7 +202,6 @@ class Part(models.Model):
         null=True, blank=True
     )
     
-    # Мінімальний залишок
     min_stock_level = models.DecimalField(
         'Мінімальний залишок',
         max_digits=10, decimal_places=2,
@@ -248,7 +227,6 @@ class Part(models.Model):
         return ' '.join(parts)
 
     def save(self, *args, **kwargs):
-        # Автоматичний розрахунок ціни за літр
         if self.volume_per_unit and self.volume_per_unit > 0 and self.selling_price:
             self.price_per_liter = self.selling_price / self.volume_per_unit
         super().save(*args, **kwargs)
@@ -265,7 +243,7 @@ class Part(models.Model):
     @property
     def total_stock(self):
         """Використовує кешоване значення"""
-        return self.current_stock  # Швидше ніж агрегація
+        return self.current_stock
 
     @property
     def is_oil(self):
@@ -284,10 +262,6 @@ class Part(models.Model):
             total=models.Sum('quantity')
         )['total'] or 0
 
-
-# ============================================
-# ЗАЛИШКИ НА СКЛАДІ (НОВЕ)
-# ============================================
 
 class Stock(models.Model):
     """
@@ -348,10 +322,6 @@ class Stock(models.Model):
         return self.quantity <= self.product.min_stock_level
 
 
-# ============================================
-# РУХ ТОВАРІВ ПО СКЛАДУ (НОВЕ)
-# ============================================
-
 class StockMovement(models.Model):
     """
     Рух товару по складу
@@ -398,9 +368,8 @@ class StockMovement(models.Model):
         null=True, blank=True
     )
     
-    # Пов'язані документи - ВИПРАВЛЕНО: використовуємо строку замість прямого імпорту
     service_order = models.ForeignKey(
-        'orders.ServiceOrder',  # ← Використовуємо строкове посилання!
+        'orders.ServiceOrder',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='stock_movements',
@@ -481,10 +450,6 @@ class StockMovement(models.Model):
                 stock_to.quantity += self.quantity
                 stock_to.save()
 
-
-# ============================================
-# ВИКОРИСТАНІ ЗАПЧАСТИНИ (ІСНУЮЧА - БЕЗ ЗМІН)
-# ============================================
 
 class UsedPart(models.Model):
     """Існуюча модель - залишаємо для сумісності"""
