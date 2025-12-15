@@ -1,129 +1,424 @@
-# bot/management/commands/runbot.py
-
-"""
-Django management команда для запуску Telegram бота
-Використання: python manage.py runbot
-"""
-
 import os
 import logging
-from django.core.management.base import BaseCommand
+import asyncio
+import re
 from django.conf import settings
+from django.core.management.base import BaseCommand
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+from orders.models import ServiceOrder
+from clients.models import Client, Truck
+from bot.models import BotMessageLog
+from asgiref.sync import sync_to_async
 
-from telegram.ext import Application
-
-# Налаштування логування
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 logger = logging.getLogger(__name__)
 
+# --- 1. Клавіатури ---
+MAIN_KEYBOARD = [
+    [KeyboardButton("Мої автомобілі 🚚")],
+    [KeyboardButton("Перевірити статус замовлення 🧾")],
+]
+MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 
+ADMIN_KEYBOARD = [
+    [KeyboardButton("Мої автомобілі 🚚"), KeyboardButton("Всі автомобілі 🚛")],
+    [KeyboardButton("Перевірити статус замовлення 🧾"), KeyboardButton("Всі замовлення 📋")],
+    [KeyboardButton("Статистика 📊")],
+]
+ADMIN_REPLY_MARKUP = ReplyKeyboardMarkup(ADMIN_KEYBOARD, resize_keyboard=True)
+
+# --- 2. Допоміжні функції ---
+@sync_to_async
+def check_if_user_is_linked(chat_id):
+    try:
+        client = Client.objects.get(telegram_chat_id=chat_id)
+        return True, client.is_admin
+    except Client.DoesNotExist:
+        return False, False
+
+@sync_to_async
+def link_client_by_phone(chat_id, user_name, phone_number):
+    try:
+        clean_phone = phone_number.replace('+', '')
+        client = Client.objects.get(phone__contains=clean_phone)
+        client.telegram_chat_id = chat_id
+        if not client.name:
+            client.name = user_name
+        client.save()
+        return (
+            f"Дякую, {user_name}! Я знайшов вас у базі.\n"
+            f"Ваш профіль клієнта '{client.name}' успішно прив'язано до цього чату."
+        )
+    except Client.DoesNotExist:
+        return (
+            f"Дякую, {user_name}! На жаль, я не знайшов клієнта з номером {phone_number} у нашій базі. "
+            "Зверніться до менеджера для реєстрації."
+        )
+    except Client.MultipleObjectsReturned:
+        return (
+            f"Виникла помилка: з номером {phone_number} знайдено декілька клієнтів. "
+            "Будь ласка, зверніться до менеджера для вирішення."
+        )
+    except Exception as e:
+        logger.error(f"Помилка прив'язки клієнта: {e}")
+        return "Виникла невідома помилка. Будь ласка, спробуйте пізніше."
+
+@sync_to_async
+def log_message(chat_id, user_name, message_text, bot_response, phone_number=None):
+    try:
+        if not phone_number:
+            client = Client.objects.filter(telegram_chat_id=chat_id).first()
+            if client and client.phone:
+                phone_number = client.phone
+        
+        BotMessageLog.objects.create(
+            chat_id=chat_id,
+            user_name=user_name,
+            phone_number=phone_number,
+            message_text=message_text,
+            bot_response=bot_response
+        )
+    except Exception as e:
+        logger.error(f"Не вдалося зберегти лог: {e}")
+
+@sync_to_async
+def get_my_cars_with_keyboard(chat_id):
+    try:
+        client = Client.objects.get(telegram_chat_id=chat_id)
+        trucks = Truck.objects.filter(client=client)
+        
+        if not trucks.exists():
+            return {"reply_text": f"За вами ({client.name}) не закріплено жодного автомобіля.", "keyboard": None}
+
+        reply_text = "Ваші автомобілі в нашій системі. Оберіть, по якому з них показати історію:"
+        
+        keyboard = []
+        for truck in trucks:
+            button = InlineKeyboardButton(
+                text=f"🚚 {truck.license_plate} ({truck.specific_model_name})",
+                callback_data=f"history_{truck.id}"
+            )
+            keyboard.append([button])
+        
+        return {"reply_text": reply_text, "keyboard": InlineKeyboardMarkup(keyboard)}
+
+    except Client.DoesNotExist:
+        return {"reply_text": "Я не можу знайти ваш профіль. Використайте /start та надайте номер телефону.", "keyboard": None}
+    except Exception as e:
+        logger.error(f"Помилка get_my_cars: {e}")
+        return {"reply_text": "Виникла помилка при пошуку ваших автомобілів.", "keyboard": None}
+
+@sync_to_async
+def get_all_trucks():
+    """Адмін функція: всі автомобілі"""
+    try:
+        trucks = Truck.objects.select_related('client').all()[:20]
+        
+        if not trucks.exists():
+            return "В системі немає автомобілів."
+
+        reply = "📋 Всі автомобілі в системі (перші 20):\n\n"
+        
+        for truck in trucks:
+            owner = truck.client.name if truck.client else "Без власника"
+            reply += f"🚚 {truck.license_plate} ({truck.specific_model_name})\n"
+            reply += f"   Власник: {owner}\n"
+            reply += f"   VIN: ...{truck.last_seven_vin}\n\n"
+            
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Помилка get_all_trucks: {e}")
+        return "Не вдалося отримати список автомобілів."
+
+@sync_to_async
+def get_all_orders():
+    """Адмін функція: всі замовлення"""
+    try:
+        orders = ServiceOrder.objects.select_related('client', 'truck').order_by('-created_at')[:15]
+        
+        if not orders.exists():
+            return "В системі немає замовлень."
+
+        reply = "📋 Останні 15 замовлень:\n\n"
+        
+        for order in orders:
+            reply += f"🧾 №{order.order_number or 'Н/Д'}\n"
+            reply += f"   Клієнт: {order.client.name if order.client else 'Н/Д'}\n"
+            reply += f"   Авто: {order.truck.license_plate if order.truck else 'Н/Д'}\n"
+            reply += f"   Статус: {order.get_status_display()}\n"
+            reply += f"   Дата: {order.created_at.strftime('%d.%m.%Y')}\n\n"
+            
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Помилка get_all_orders: {e}")
+        return "Не вдалося отримати список замовлень."
+
+@sync_to_async
+def get_statistics():
+    """Адмін функція: статистика"""
+    try:
+        from django.db.models import Count
+        
+        total_clients = Client.objects.count()
+        total_trucks = Truck.objects.count()
+        total_orders = ServiceOrder.objects.count()
+        
+        orders_by_status = ServiceOrder.objects.values('status').annotate(count=Count('id'))
+        
+        reply = "📊 Статистика системи:\n\n"
+        reply += f"👥 Клієнтів: {total_clients}\n"
+        reply += f"🚚 Автомобілів: {total_trucks}\n"
+        reply += f"🧾 Замовлень: {total_orders}\n\n"
+        reply += "За статусами:\n"
+        
+        for item in orders_by_status:
+            status_display = dict(ServiceOrder.StatusChoices.choices).get(item['status'], item['status'])
+            reply += f"  • {status_display}: {item['count']}\n"
+            
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Помилка get_statistics: {e}")
+        return "Не вдалося отримати статистику."
+
+@sync_to_async
+def get_repair_history(truck_id):
+    try:
+        truck = Truck.objects.get(id=truck_id)
+        orders = ServiceOrder.objects.filter(truck=truck).order_by('-created_at')
+        
+        if not orders.exists():
+            return f"Для автомобіля {truck.license_plate} ще немає історії ремонтів."
+
+        reply = f"Історія ремонтів для {truck.license_plate} ({truck.specific_model_name}):\n\n"
+        
+        for order in orders[:5]: 
+            reply += f"🧾 Замовлення №{order.order_number} від {order.created_at.strftime('%d.%m.%Y')}\n"
+            reply += f"   Статус: {order.get_status_display()}\n\n"
+
+        if orders.count() > 5:
+            reply += f"...та ще {orders.count() - 5} записів."
+            
+        return reply
+        
+    except Exception as e:
+        logger.error(f"Помилка get_repair_history: {e}")
+        return "Не вдалося отримати історію ремонтів."
+
+@sync_to_async
+def get_order_from_db(order_number):
+    try:
+        order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number)
+        reply = (
+            f"Замовлення №{order.order_number}\n"
+            f"Статус: {order.get_status_display()}\n"
+            f"Клієнт: {order.client.name}\n"
+            f"Вантажівка: {order.truck.license_plate}"
+        )
+        return reply
+    except ServiceOrder.DoesNotExist:
+        return f"Замовлення з номером {order_number} не знайдено."
+    except Exception as e:
+        logger.error(f"Помилка get_order_from_db: {e}")
+        return "Виникла помилка при пошуку замовлення."
+
+# --- 3. Обробники ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    user_name = user.first_name
+    chat_id = user.id
+    message_text = update.message.text
+    
+    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+
+    if is_linked:
+        reply_text = f'Вітаю знову, {user_name}! Оберіть опцію з меню:'
+        markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
+        await update.message.reply_text(reply_text, reply_markup=markup)
+    else:
+        contact_keyboard = KeyboardButton(text="Надати номер телефону", request_contact=True)
+        custom_keyboard = [[contact_keyboard]]
+        reply_markup = ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True, one_time_keyboard=True)
+        reply_text = (
+            f'Вітаю, {user_name}!\n\n'
+            'Я не впізнав вас. Для прив\'язки до вашої картки клієнта, поділіться номером телефону.'
+        )
+        await update.message.reply_text(reply_text, reply_markup=reply_markup)
+    
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    chat_id = user.id
+    user_name = user.first_name
+    phone_number = update.message.contact.phone_number
+    
+    reply_text = await link_client_by_phone(chat_id, user_name, phone_number)
+    
+    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
+    
+    await update.message.reply_text(reply_text, reply_markup=markup) 
+    await log_message(chat_id, user_name, f"[Контакт: {phone_number}]", reply_text, phone_number=phone_number)
+
+async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    user_name = user.first_name
+    chat_id = user.id
+    message_text = update.message.text
+
+    result = await get_my_cars_with_keyboard(chat_id)
+    reply_text = result.get("reply_text")
+    keyboard = result.get("keyboard")
+
+    await update.message.reply_text(reply_text, reply_markup=keyboard)
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def all_trucks_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Адмін функція: всі автомобілі"""
+    user = update.message.from_user
+    chat_id = user.id
+    user_name = user.first_name
+    message_text = update.message.text
+    
+    # Перевірка адмін прав
+    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    if not is_admin:
+        reply_text = "У вас немає доступу до цієї функції."
+        await update.message.reply_text(reply_text)
+        await log_message(chat_id, user_name, message_text, reply_text)
+        return
+    
+    reply_text = await get_all_trucks()
+    await update.message.reply_text(reply_text)
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def all_orders_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Адмін функція: всі замовлення"""
+    user = update.message.from_user
+    chat_id = user.id
+    user_name = user.first_name
+    message_text = update.message.text
+    
+    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    if not is_admin:
+        reply_text = "У вас немає доступу до цієї функції."
+        await update.message.reply_text(reply_text)
+        await log_message(chat_id, user_name, message_text, reply_text)
+        return
+    
+    reply_text = await get_all_orders()
+    await update.message.reply_text(reply_text)
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def statistics_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Адмін функція: статистика"""
+    user = update.message.from_user
+    chat_id = user.id
+    user_name = user.first_name
+    message_text = update.message.text
+    
+    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    if not is_admin:
+        reply_text = "У вас немає доступу до цієї функції."
+        await update.message.reply_text(reply_text)
+        await log_message(chat_id, user_name, message_text, reply_text)
+        return
+    
+    reply_text = await get_statistics()
+    await update.message.reply_text(reply_text)
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    chat_id = user.id
+    user_name = user.first_name
+    message_text = update.message.text
+    
+    reply_text = "Надішліть номер замовлення-наряду."
+    
+    await update.message.reply_text(reply_text)
+    await log_message(chat_id, user_name, message_text, reply_text)
+
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    user_name = user.first_name
+    chat_id = user.id
+    original_text = update.message.text
+    
+    order_number = re.sub(r'\D', '', original_text)
+    
+    if not order_number:
+        reply_message = "Оберіть опцію з меню або надішліть номер замовлення."
+        await update.message.reply_text(reply_message)
+        await log_message(chat_id, user_name, original_text, reply_message)
+        return
+
+    reply_message = await get_order_from_db(order_number)
+    await update.message.reply_text(reply_message)
+    await log_message(chat_id, user_name, original_text, reply_message)
+
+async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    callback_data = query.data
+    chat_id = query.message.chat.id
+    user_name = query.from_user.first_name
+    
+    try:
+        action, truck_id = callback_data.split('_')
+        
+        if action == 'history':
+            reply_text = await get_repair_history(int(truck_id))
+            await query.edit_message_text(text=reply_text)
+            await log_message(chat_id, user_name, f"[Callback: {callback_data}]", reply_text)
+        else:
+            await query.edit_message_text(text="Невідома дія.")
+
+    except Exception as e:
+        logger.error(f"Помилка callback: {e}")
+        await query.edit_message_text(text="Сталася помилка.")
+
+# --- 4. Команда Django ---
 class Command(BaseCommand):
     help = 'Запускає Telegram бота'
 
     def handle(self, *args, **options):
-        """Основний метод запуску бота"""
-        
-        # Отримуємо токен з оточення
-        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-        
-        if not bot_token:
-            self.stdout.write(
-                self.style.ERROR('❌ TELEGRAM_BOT_TOKEN не встановлено!')
-            )
-            self.stdout.write(
-                self.style.WARNING('Встановіть змінну оточення TELEGRAM_BOT_TOKEN')
-            )
+        if not BOT_TOKEN:
+            logger.error("TELEGRAM_BOT_TOKEN не встановлено!")
             return
+
+        self.stdout.write(self.style.SUCCESS('Бот запускається...'))
+
+        application = Application.builder().token(BOT_TOKEN).build()
+
+        # Команди
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.CONTACT, handle_contact))
         
-        self.stdout.write(self.style.SUCCESS('🤖 Запуск Telegram бота...'))
+        # Кнопки для всіх
+        application.add_handler(MessageHandler(filters.Regex("^Мої автомобілі 🚚$"), my_cars))
+        application.add_handler(MessageHandler(filters.Regex("^Перевірити статус замовлення 🧾$"), ask_for_order_number))
+
+        # Адмін кнопки
+        application.add_handler(MessageHandler(filters.Regex("^Всі автомобілі 🚛$"), all_trucks_admin))
+        application.add_handler(MessageHandler(filters.Regex("^Всі замовлення 📋$"), all_orders_admin))
+        application.add_handler(MessageHandler(filters.Regex("^Статистика 📊$"), statistics_admin))
+
+        # Inline кнопки
+        application.add_handler(CallbackQueryHandler(handle_car_selection, pattern='^history_'))
         
+        # Текст (номер замовлення)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+
         try:
-            # Створюємо application
-            application = Application.builder().token(bot_token).build()
-            
-            # Реєструємо всі обробники
-            self.register_handlers(application)
-            
-            self.stdout.write(self.style.SUCCESS('✅ Бот успішно запущено!'))
-            self.stdout.write(self.style.SUCCESS('Бот очікує повідомлень...'))
-            
-            # Запускаємо бота
-            application.run_polling(
-                allowed_updates=['message', 'callback_query', 'inline_query']
-            )
-            
+            application.run_polling()
         except KeyboardInterrupt:
-            self.stdout.write(self.style.WARNING('\n⚠️ Отримано сигнал зупинки'))
-            self.stdout.write(self.style.SUCCESS('👋 Бот зупинено'))
-            
+            self.stdout.write(self.style.SUCCESS('Бот зупинено.'))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'❌ Критична помилка: {e}'))
-            logger.exception("Критична помилка при запуску бота")
-            raise
-    
-    def register_handlers(self, application):
-        """
-        Реєструє всі обробники команд та повідомлень
-        Порядок важливий! Більш специфічні обробники мають бути першими
-        """
-        from bot.handlers.common import (
-            start_handler, help_handler, cancel_handler, settings_handler,
-            contact_message_handler, text_handler, unknown_command_handler
-        )
-        from bot.handlers.driver import driver_handlers
-        from bot.handlers.owner import owner_handlers
-        from bot.handlers.manager import manager_handlers
-        from bot.handlers.admin import admin_handlers
-        
-        self.stdout.write(self.style.SUCCESS('📝 Реєстрація обробників...'))
-        
-        # 1. ЗАГАЛЬНІ КОМАНДИ (для всіх)
-        application.add_handler(start_handler)
-        application.add_handler(help_handler)
-        application.add_handler(cancel_handler)
-        application.add_handler(settings_handler)
-        
-        # 2. АДМІН КОМАНДИ (найвищий пріоритет)
-        for handler in admin_handlers:
-            application.add_handler(handler)
-        self.stdout.write('  ✓ Адмін обробники')
-        
-        # 3. МЕНЕДЖЕР КОМАНДИ
-        for handler in manager_handlers:
-            application.add_handler(handler)
-        self.stdout.write('  ✓ Менеджер обробники')
-        
-        # 4. ВЛАСНИК КОМАНДИ
-        for handler in owner_handlers:
-            application.add_handler(handler)
-        self.stdout.write('  ✓ Власник обробники')
-        
-        # 5. ВОДІЙ КОМАНДИ
-        for handler in driver_handlers:
-            application.add_handler(handler)
-        self.stdout.write('  ✓ Водій обробники')
-        
-        # 6. ОБРОБНИК КОНТАКТІВ (високий пріоритет)
-        application.add_handler(contact_message_handler)
-        self.stdout.write('  ✓ Обробник контактів')
-        
-        # 7. ОБРОБНИК ТЕКСТОВИХ ПОВІДОМЛЕНЬ (низький пріоритет)
-        application.add_handler(text_handler)
-        self.stdout.write('  ✓ Обробник текстових повідомлень')
-        
-        # 8. ОБРОБНИК НЕВІДОМИХ КОМАНД (найнижчий пріоритет)
-        application.add_handler(unknown_command_handler)
-        self.stdout.write('  ✓ Обробник невідомих команд')
-        
-        self.stdout.write(self.style.SUCCESS('✅ Всі обробники зареєстровані'))
-        
-        # Виводимо список доступних команд
-        self.stdout.write('\n📋 Доступні команди:')
-        self.stdout.write('  Загальні: /start, /help, /cancel, /settings')
-        self.stdout.write('  Водій/Власник: /mycars, /reminders, /order, /history, /active, /contacts')
-        self.stdout.write('  Менеджер: /search, /clients, /notify')
-        self.stdout.write('  Адмін: /find, /logs, /stats, /users, /broadcast')
-        self.stdout.write('')
+            logger.error(f"Бот впав: {e}")
+            raise e
