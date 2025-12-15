@@ -11,6 +11,7 @@ class ClientAdmin(admin.ModelAdmin):
 @admin.register(IvecoBaseModel)
 class IvecoBaseModelAdmin(admin.ModelAdmin):
     search_fields = ('name',)
+    
 
 class OwnershipHistoryInline(admin.TabularInline):
     model = OwnershipHistory
