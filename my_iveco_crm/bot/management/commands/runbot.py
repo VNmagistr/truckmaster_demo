@@ -293,11 +293,27 @@ def find_truck_by_plate(plate_number):
 def find_client_by_name(search_name):
     """Пошук клієнта за ім'ям"""
     try:
-        search_clean = search_name.strip().lower()
-        clients = Client.objects.filter(name__icontains=search_clean).prefetch_related('trucks')
+        from django.db.models import Q
+        
+        search_clean = search_name.strip()
+        
+        # Розбиваємо на слова
+        words = search_clean.split()
+        
+        # Створюємо умови пошуку AND для кожного слова
+        query = Q()
+        for word in words:
+            if len(word) >= 2:  # Мінімум 2 символи
+                query &= Q(name__icontains=word)  # Змінили | на & (AND замість OR)
+        
+        # Якщо не знайдено слів, шукаємо повну фразу
+        if not query:
+            query = Q(name__icontains=search_clean)
+        
+        clients = Client.objects.filter(query).prefetch_related('trucks')
         
         if not clients.exists():
-            return f"Клієнта з ім'ям '{search_name}' не знайдено."
+            return f"Клієнта з ім'ям '{search_name}' не знайдено.\n\nСпробуйте ввести частину імені або прізвища."
         
         if clients.count() == 1:
             client = clients.first()
