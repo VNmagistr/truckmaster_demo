@@ -657,6 +657,29 @@ def find_client_by_name(search_name):
     except Exception as e:
         logger.error(f"Помилка find_client_by_name: {e}")
         return "Не вдалося знайти клієнта."
+    
+async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    callback_data = query.data
+    telegram_user = query.from_user
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    try:
+        action, truck_id = callback_data.split('_')
+        
+        if action == 'history':
+            reply_text = await get_repair_history(int(truck_id))
+            await query.edit_message_text(text=reply_text)
+            await log_message_to_db(bot_user, f"[Callback: {callback_data}]", reply_text, message_type='callback')
+        else:
+            await query.edit_message_text(text="Невідома дія.")
+
+    except Exception as e:
+        logger.error(f"Помилка callback: {e}")
+        await query.edit_message_text(text="Сталася помилка.")
 
 # --- 4. Команда Django ---
 class Command(BaseCommand):
