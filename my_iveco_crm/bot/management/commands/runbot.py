@@ -24,7 +24,8 @@ MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 ADMIN_KEYBOARD = [
     [KeyboardButton("Мої автомобілі 🚚"), KeyboardButton("Всі автомобілі 🚛")],
     [KeyboardButton("Перевірити статус замовлення 🧾"), KeyboardButton("Всі замовлення 📋")],
-    [KeyboardButton("Знайти авто за номером 🔍")], [KeyboardButton("Статистика 📊")],
+    [KeyboardButton("Знайти авто за номером 🔍"), KeyboardButton("Знайти клієнта 👤")],
+    [KeyboardButton("Статистика 📊")],
 ]
 ADMIN_REPLY_MARKUP = ReplyKeyboardMarkup(ADMIN_KEYBOARD, resize_keyboard=True)
 
@@ -289,6 +290,52 @@ def find_truck_by_plate(plate_number):
         return "Не вдалося знайти автомобіль."
 
 @sync_to_async
+def find_client_by_name(search_name):
+    """Пошук клієнта за ім'ям"""
+    try:
+        search_clean = search_name.strip().lower()
+        clients = Client.objects.filter(name__icontains=search_clean).prefetch_related('trucks')
+        
+        if not clients.exists():
+            return f"Клієнта з ім'ям '{search_name}' не знайдено."
+        
+        if clients.count() == 1:
+            client = clients.first()
+            
+            reply = f"👤 Клієнт знайдений:\n\n"
+            reply += f"Ім'я: {client.name}\n"
+            reply += f"Телефон: {client.phone or 'Не вказано'}\n"
+            reply += f"Email: {client.email or 'Не вказано'}\n"
+            
+            # Автомобілі клієнта
+            trucks = client.trucks.all()
+            if trucks.exists():
+                reply += f"\n🚚 Автомобілі ({trucks.count()}):\n"
+                for truck in trucks:
+                    reply += f"  • {truck.license_plate} - {truck.specific_model_name}\n"
+                    reply += f"    VIN: ...{truck.last_seven_vin}\n"
+            else:
+                reply += f"\nАвтомобілів не зареєстровано."
+            
+            return reply
+        else:
+            reply = f"Знайдено {clients.count()} клієнтів:\n\n"
+            for client in clients[:10]:
+                trucks_count = client.trucks.count()
+                reply += f"👤 {client.name}\n"
+                reply += f"   Телефон: {client.phone or 'Н/Д'}\n"
+                reply += f"   Автомобілів: {trucks_count}\n\n"
+            
+            if clients.count() > 10:
+                reply += f"...та ще {clients.count() - 10} клієнтів"
+            
+            return reply
+            
+    except Exception as e:
+        logger.error(f"Помилка find_client_by_name: {e}")
+        return "Не вдалося знайти клієнта."
+
+@sync_to_async
 def get_repair_history(truck_id):
     try:
         truck = Truck.objects.get(id=truck_id)
@@ -478,6 +525,27 @@ async def search_truck_by_plate(update: Update, context: ContextTypes.DEFAULT_TY
     # Встановлюємо стан "очікування номера авто"
     context.user_data['awaiting_truck_plate'] = True
 
+async def search_client_by_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Адмін функція: пошук клієнта за ім'ям"""
+    telegram_user = update.message.from_user
+    message_text = update.message.text
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
+    if not is_admin:
+        reply_text = "У вас немає доступу до цієї функції."
+        await update.message.reply_text(reply_text)
+        await log_message_to_db(bot_user, message_text, reply_text)
+        return
+    
+    reply_text = "Введіть ім'я клієнта для пошуку:"
+    await update.message.reply_text(reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
+    
+    # Встановлюємо стан "очікування імені клієнта"
+    context.user_data['awaiting_client_name'] = True
+
 async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_user = update.message.from_user
     message_text = update.message.text
@@ -497,6 +565,14 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     if not bot_user:
         await update.message.reply_text("Виникла помилка.")
+        return
+    
+    # Перевірка чи очікуємо ім'я клієнта
+    if context.user_data.get('awaiting_client_name'):
+        context.user_data['awaiting_client_name'] = False
+        reply_message = await find_client_by_name(original_text)
+        await update.message.reply_text(reply_message)
+        await log_message_to_db(bot_user, original_text, reply_message)
         return
     
     # Перевірка чи очікуємо номер авто
@@ -519,29 +595,6 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
     await log_message_to_db(bot_user, original_text, reply_message)
-
-async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    callback_data = query.data
-    telegram_user = query.from_user
-    
-    bot_user = await get_or_create_bot_user(telegram_user)
-    
-    try:
-        action, truck_id = callback_data.split('_')
-        
-        if action == 'history':
-            reply_text = await get_repair_history(int(truck_id))
-            await query.edit_message_text(text=reply_text)
-            await log_message_to_db(bot_user, f"[Callback: {callback_data}]", reply_text, message_type='callback')
-        else:
-            await query.edit_message_text(text="Невідома дія.")
-
-    except Exception as e:
-        logger.error(f"Помилка callback: {e}")
-        await query.edit_message_text(text="Сталася помилка.")
 
 # --- 4. Команда Django ---
 class Command(BaseCommand):
@@ -569,6 +622,7 @@ class Command(BaseCommand):
         application.add_handler(MessageHandler(filters.Regex("^Всі замовлення 📋$"), all_orders_admin))
         application.add_handler(MessageHandler(filters.Regex("^Статистика 📊$"), statistics_admin))
         application.add_handler(MessageHandler(filters.Regex("^Знайти авто за номером 🔍$"), search_truck_by_plate))
+        application.add_handler(MessageHandler(filters.Regex("^Знайти клієнта 👤$"), search_client_by_name))
 
         # Inline кнопки
         application.add_handler(CallbackQueryHandler(handle_car_selection, pattern='^history_'))
