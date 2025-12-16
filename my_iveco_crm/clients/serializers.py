@@ -11,11 +11,11 @@ class IvecoBaseModelSerializer(serializers.ModelSerializer):
         model = IvecoBaseModel
         fields = '__all__'
 
-# Цей серіалізатор будемо використовувати для списків (GET)
+
 class TruckListSerializer(serializers.ModelSerializer):
     client = serializers.StringRelatedField()
     base_model = serializers.StringRelatedField()
-    emission_standard = serializers.CharField(source='get_emission_standard_display') # Показує читабельну назву
+    emission_standard = serializers.CharField(source='get_emission_standard_display')
 
     class Meta:
         model = Truck
@@ -27,12 +27,12 @@ class TruckListSerializer(serializers.ModelSerializer):
             'client_id',
             'base_model',
             'current_mileage',
-            'emission_standard', # Додали стандарт
+            'emission_standard',
             'last_seven_vin',
         ]
 
-# А цей - для створення та редагування (POST, PUT)
+
 class TruckDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Truck
-        fields = '__all__' # Включаємо всі поля для можливості редагування
+        fields = '__all__'
