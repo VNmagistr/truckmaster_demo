@@ -304,7 +304,7 @@ def find_client_by_name(search_name):
         query = Q()
         for word in words:
             if len(word) >= 2:  # Мінімум 2 символи
-                query &= Q(name__icontains=word)  # Змінили | на & (AND замість OR)
+                query &= Q(name__icontains=word)
         
         # Якщо не знайдено слів, шукаємо повну фразу
         if not query:
@@ -611,68 +611,6 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
     await log_message_to_db(bot_user, original_text, reply_message)
-
-@sync_to_async
-def find_client_by_name(search_name):
-    """Пошук клієнта за ім'ям"""
-    try:
-        from django.db.models import Q
-        
-        search_clean = search_name.strip()
-        
-        # Розбиваємо на слова для кращого пошуку
-        words = search_clean.split()
-        
-        # Створюємо умови пошуку для кожного слова
-        query = Q()
-        for word in words:
-            if len(word) >= 2:  # Мінімум 2 символи
-                query |= Q(name__icontains=word)
-        
-        # Якщо не знайдено слів, шукаємо повну фразу
-        if not query:
-            query = Q(name__icontains=search_clean)
-        
-        clients = Client.objects.filter(query).prefetch_related('trucks').distinct()
-        
-        if not clients.exists():
-            return f"Клієнта з ім'ям '{search_name}' не знайдено."
-        
-        if clients.count() == 1:
-            client = clients.first()
-            
-            reply = f"👤 Клієнт знайдений:\n\n"
-            reply += f"Ім'я: {client.name}\n"
-            reply += f"Телефон: {client.phone or 'Не вказано'}\n"
-            reply += f"Email: {client.email or 'Не вказано'}\n"
-            
-            # Автомобілі клієнта
-            trucks = client.trucks.all()
-            if trucks.exists():
-                reply += f"\n🚚 Автомобілі ({trucks.count()}):\n"
-                for truck in trucks:
-                    reply += f"  • {truck.license_plate} - {truck.specific_model_name}\n"
-                    reply += f"    VIN: ...{truck.last_seven_vin}\n"
-            else:
-                reply += f"\nАвтомобілів не зареєстровано."
-            
-            return reply
-        else:
-            reply = f"Знайдено {clients.count()} клієнтів:\n\n"
-            for client in clients[:10]:
-                trucks_count = client.trucks.count()
-                reply += f"👤 {client.name}\n"
-                reply += f"   Телефон: {client.phone or 'Н/Д'}\n"
-                reply += f"   Автомобілів: {trucks_count}\n\n"
-            
-            if clients.count() > 10:
-                reply += f"...та ще {clients.count() - 10} клієнтів"
-            
-            return reply
-            
-    except Exception as e:
-        logger.error(f"Помилка find_client_by_name: {e}")
-        return "Не вдалося знайти клієнта."
     
 async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
