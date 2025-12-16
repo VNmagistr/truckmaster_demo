@@ -190,10 +190,21 @@ def check_custom_reminder(reminder: ReminderSettings) -> tuple[bool, str]:
 def send_reminder_to_user(bot: Bot, reminder: ReminderSettings, message: str):
     """Відправка нагадування користувачу"""
     try:
-        bot.send_message(
-            chat_id=reminder.bot_user.telegram_id,
-            text=message
-        )
+        import asyncio
+        
+        # Створюємо event loop для async виклику
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            loop.run_until_complete(
+                bot.send_message(
+                    chat_id=reminder.bot_user.telegram_id,
+                    text=message
+                )
+            )
+        finally:
+            loop.close()
         
         # Зберігаємо відправлене нагадування
         SentReminder.objects.create(
