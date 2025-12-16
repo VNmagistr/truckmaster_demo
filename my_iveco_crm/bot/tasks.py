@@ -192,19 +192,14 @@ def send_reminder_to_user(bot: Bot, reminder: ReminderSettings, message: str):
     try:
         import asyncio
         
-        # Створюємо event loop для async виклику
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        try:
-            loop.run_until_complete(
-                bot.send_message(
-                    chat_id=reminder.bot_user.telegram_id,
-                    text=message
-                )
+        async def send():
+            await bot.send_message(
+                chat_id=reminder.bot_user.telegram_id,
+                text=message
             )
-        finally:
-            loop.close()
+        
+        # Запускаємо async функцію
+        asyncio.run(send())
         
         # Зберігаємо відправлене нагадування
         SentReminder.objects.create(
@@ -220,7 +215,6 @@ def send_reminder_to_user(bot: Bot, reminder: ReminderSettings, message: str):
     except TelegramError as e:
         logger.error(f"Помилка відправки в Telegram: {e}")
         
-        # Зберігаємо невдалу спробу
         SentReminder.objects.create(
             bot_user=reminder.bot_user,
             truck=reminder.truck,
