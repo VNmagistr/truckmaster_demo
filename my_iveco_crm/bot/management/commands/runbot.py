@@ -94,13 +94,13 @@ def link_bot_user_by_phone(bot_user, phone_number):
         # Якщо клієнт was адмін в старій системі
         if client.is_admin:
             bot_user.role = 'admin'
-        elif client.trucks.exists():
+        elif client.truck_set.exists():
             bot_user.role = 'owner'
         else:
             bot_user.role = 'guest'
         
         # Призначаємо автомобілі
-        bot_user.assigned_trucks.set(client.trucks.all())
+        bot_user.assigned_trucks.set(client.truck_set.all())
         
         bot_user.save()
         
@@ -337,7 +337,7 @@ def find_client_by_name(search_name):
         else:
             reply = f"Знайдено {clients.count()} клієнтів:\n\n"
             for client in clients[:10]:
-                trucks_count = client.trucks.count()
+                trucks_count = client.truck_set.count()
                 reply += f"👤 {client.name}\n"
                 reply += f"   Телефон: {client.phone or 'Н/Д'}\n"
                 reply += f"   Автомобілів: {trucks_count}\n\n"
