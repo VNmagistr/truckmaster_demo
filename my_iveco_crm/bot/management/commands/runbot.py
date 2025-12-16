@@ -24,8 +24,7 @@ MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 ADMIN_KEYBOARD = [
     [KeyboardButton("Мої автомобілі 🚚"), KeyboardButton("Всі автомобілі 🚛")],
     [KeyboardButton("Перевірити статус замовлення 🧾"), KeyboardButton("Всі замовлення 📋")],
-    [KeyboardButton("Знайти авто за номером 🔍")],
-    [KeyboardButton("Статистика 📊")],
+    [KeyboardButton("Знайти авто за номером 🔍")], [KeyboardButton("Статистика 📊")],
 ]
 ADMIN_REPLY_MARKUP = ReplyKeyboardMarkup(ADMIN_KEYBOARD, resize_keyboard=True)
 
@@ -174,12 +173,12 @@ def get_my_cars_with_keyboard(bot_user):
 def get_all_trucks():
     """Адмін функція: всі автомобілі"""
     try:
-        trucks = Truck.objects.select_related('client').all()[:20]
+        trucks = Truck.objects.select_related('client').all()[:10]
         
         if not trucks.exists():
             return "В системі немає автомобілів."
 
-        reply = "📋 Всі автомобілі в системі (перші 20):\n\n"
+        reply = "📋 Всі автомобілі в системі (перші 10):\n\n"
         
         for truck in trucks:
             owner = truck.client.name if truck.client else "Без власника"
@@ -197,12 +196,12 @@ def get_all_trucks():
 def get_all_orders():
     """Адмін функція: всі замовлення"""
     try:
-        orders = ServiceOrder.objects.select_related('client', 'truck').order_by('-created_at')[:15]
+        orders = ServiceOrder.objects.select_related('client', 'truck').order_by('-created_at')[:10]
         
         if not orders.exists():
             return "В системі немає замовлень."
 
-        reply = "📋 Останні 15 замовлень:\n\n"
+        reply = "📋 Останні 10 замовлень:\n\n"
         
         for order in orders:
             reply += f"🧾 №{order.order_number or 'Н/Д'}\n"

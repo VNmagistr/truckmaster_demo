@@ -1,5 +1,3 @@
-# inventory/admin.py
-
 from django.contrib import admin
 from .models import (
     PartCategory, 
@@ -12,8 +10,6 @@ from .models import (
     StockMovement,
 )
 
-
-# === Нові моделі ===
 
 @admin.register(ProductCategory)
 class ProductCategoryAdmin(admin.ModelAdmin):
@@ -56,13 +52,9 @@ class StockMovementAdmin(admin.ModelAdmin):
     list_display = ('product', 'movement_type', 'quantity', 'warehouse_from', 'warehouse_to', 'created_at')
     list_filter = ('movement_type', 'warehouse_from', 'warehouse_to', 'created_at')
     search_fields = ('product__name', 'invoice_number', 'supplier', 'notes')
-    
-    # ВИПРАВЛЕНО: видалено 'service_order' з autocomplete_fields
     autocomplete_fields = ['product', 'warehouse_from', 'warehouse_to']
-    
     readonly_fields = ('created_at', 'created_by')
     date_hierarchy = 'created_at'
-    
     fieldsets = (
         ('Тип операції', {
             'fields': ('movement_type',)
@@ -84,12 +76,10 @@ class StockMovementAdmin(admin.ModelAdmin):
     )
     
     def save_model(self, request, obj, form, change):
-        if not change:  # Тільки при створенні
+        if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-
-# === Старі моделі ===
 
 @admin.register(PartCategory)
 class PartCategoryAdmin(admin.ModelAdmin):
