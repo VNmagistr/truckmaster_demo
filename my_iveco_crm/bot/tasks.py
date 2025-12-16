@@ -118,7 +118,7 @@ def check_if_reminder_needed(reminder: ReminderSettings) -> tuple[bool, str]:
     return False, ""
 
 
-def check_maintenance_reminder(reminder: ReminderSettings) -> tuple[bool, str]:
+def check_maintenance_reminder(reminder: ReminderSettings) -> tuple:
     """Перевірка нагадування про ТО"""
     truck = reminder.truck
     
@@ -129,8 +129,15 @@ def check_maintenance_reminder(reminder: ReminderSettings) -> tuple[bool, str]:
     ).order_by('-created_at').first()
     
     if not last_maintenance:
-        # Немає історії ТО
-        return False, ""
+        # Немає історії ТО - відправляємо нагадування про перше ТО
+        message = (
+            f"🔔 Нагадування про ТО\n\n"
+            f"Автомобіль: {truck.license_plate}\n"
+            f"Модель: {truck.specific_model_name}\n\n"
+            f"⚠️ Для цього автомобіля немає записів про технічне обслуговування.\n"
+            f"Рекомендуємо записатися на ТО!"
+        )
+        return True, message
     
     days_since = (timezone.now().date() - last_maintenance.created_at.date()).days
     
@@ -140,6 +147,7 @@ def check_maintenance_reminder(reminder: ReminderSettings) -> tuple[bool, str]:
             message = (
                 f"🔔 Нагадування про ТО\n\n"
                 f"Автомобіль: {truck.license_plate}\n"
+                f"Модель: {truck.specific_model_name}\n"
                 f"Останнє ТО: {last_maintenance.created_at.strftime('%d.%m.%Y')}\n"
                 f"Днів тому: {days_since}\n\n"
                 f"⚠️ Рекомендуємо записатися на технічне обслуговування!"
