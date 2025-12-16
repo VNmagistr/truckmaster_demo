@@ -310,7 +310,7 @@ def find_client_by_name(search_name):
         if not query:
             query = Q(name__icontains=search_clean)
         
-        clients = Client.objects.filter(query).prefetch_related('trucks')
+        clients = Client.objects.filter(query).prefetch_related('truck_set')
         
         if not clients.exists():
             return f"Клієнта з ім'ям '{search_name}' не знайдено.\n\nСпробуйте ввести частину імені або прізвища."
@@ -324,7 +324,7 @@ def find_client_by_name(search_name):
             reply += f"Email: {client.email or 'Не вказано'}\n"
             
             # Автомобілі клієнта
-            trucks = client.trucks.all()
+            trucks = client.truck_set.all()
             if trucks.exists():
                 reply += f"\n🚚 Автомобілі ({trucks.count()}):\n"
                 for truck in trucks:
