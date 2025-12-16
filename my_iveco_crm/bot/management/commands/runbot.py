@@ -8,7 +8,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardR
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from orders.models import ServiceOrder
 from clients.models import Client, Truck
-from bot.models import BotMessageLog
+from bot.models import BotUser, BotMessageLog
 from asgiref.sync import sync_to_async
 
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
@@ -31,29 +31,91 @@ ADMIN_REPLY_MARKUP = ReplyKeyboardMarkup(ADMIN_KEYBOARD, resize_keyboard=True)
 
 # --- 2. Допоміжні функції ---
 @sync_to_async
-def check_if_user_is_linked(chat_id):
+def get_or_create_bot_user(telegram_user):
+    """Отримати або створити BotUser з telegram User об'єкта"""
     try:
-        client = Client.objects.get(telegram_chat_id=chat_id)
-        return True, client.is_admin
-    except Client.DoesNotExist:
-        return False, False
+        bot_user, created = BotUser.objects.get_or_create(
+            telegram_id=telegram_user.id,
+            defaults={
+                'username': telegram_user.username or '',
+                'first_name': telegram_user.first_name or '',
+                'last_name': telegram_user.last_name or '',
+                'language_code': telegram_user.language_code or 'uk',
+                'role': 'guest',
+                'is_active': True,
+            }
+        )
+        
+        # Оновлюємо інфо при кожному контакті
+        if not created:
+            updated = False
+            if bot_user.username != (telegram_user.username or ''):
+                bot_user.username = telegram_user.username or ''
+                updated = True
+            if bot_user.first_name != (telegram_user.first_name or ''):
+                bot_user.first_name = telegram_user.first_name or ''
+                updated = True
+            if bot_user.last_name != (telegram_user.last_name or ''):
+                bot_user.last_name = telegram_user.last_name or ''
+                updated = True
+            
+            if updated:
+                bot_user.save()
+        
+        return bot_user
+    except Exception as e:
+        logger.error(f"Помилка get_or_create_bot_user: {e}")
+        return None
 
 @sync_to_async
-def link_client_by_phone(chat_id, user_name, phone_number):
+def check_if_user_is_linked(telegram_id):
+    """Перевірка чи користувач прив'язаний до клієнта"""
     try:
-        clean_phone = phone_number.replace('+', '')
-        client = Client.objects.get(phone__contains=clean_phone)
-        client.telegram_chat_id = chat_id
-        if not client.name:
-            client.name = user_name
+        bot_user = BotUser.objects.select_related('client').get(telegram_id=telegram_id)
+        is_linked = bot_user.client is not None
+        is_admin = bot_user.role == 'admin'
+        return is_linked, is_admin, bot_user
+    except BotUser.DoesNotExist:
+        return False, False, None
+
+@sync_to_async
+def link_bot_user_by_phone(bot_user, phone_number):
+    """Прив'язка BotUser до Client через номер телефону"""
+    try:
+        clean_phone = phone_number.replace('+', '').replace(' ', '').replace('-', '')
+        
+        # Шукаємо клієнта за номером
+        client = Client.objects.get(phone__contains=clean_phone[-9:])  # Останні 9 цифр
+        
+        # Прив'язуємо
+        bot_user.client = client
+        bot_user.phone_number = phone_number
+        
+        # Якщо клієнт was адмін в старій системі
+        if client.is_admin:
+            bot_user.role = 'admin'
+        elif client.trucks.exists():
+            bot_user.role = 'owner'
+        else:
+            bot_user.role = 'guest'
+        
+        # Призначаємо автомобілі
+        bot_user.assigned_trucks.set(client.trucks.all())
+        
+        bot_user.save()
+        
+        # Оновлюємо Client для зворотної сумісності
+        client.telegram_chat_id = bot_user.telegram_id
         client.save()
+        
         return (
-            f"Дякую, {user_name}! Я знайшов вас у базі.\n"
-            f"Ваш профіль клієнта '{client.name}' успішно прив'язано до цього чату."
+            f"Дякую, {bot_user.first_name}! Я знайшов вас у базі.\n"
+            f"Ваш профіль клієнта '{client.name}' успішно прив'язано до цього чату.\n"
+            f"Ваша роль: {bot_user.get_role_display()}"
         )
     except Client.DoesNotExist:
         return (
-            f"Дякую, {user_name}! На жаль, я не знайшов клієнта з номером {phone_number} у нашій базі. "
+            f"Дякую, {bot_user.first_name}! На жаль, я не знайшов клієнта з номером {phone_number} у нашій базі. "
             "Зверніться до менеджера для реєстрації."
         )
     except Client.MultipleObjectsReturned:
@@ -62,35 +124,35 @@ def link_client_by_phone(chat_id, user_name, phone_number):
             "Будь ласка, зверніться до менеджера для вирішення."
         )
     except Exception as e:
-        logger.error(f"Помилка прив'язки клієнта: {e}")
+        logger.error(f"Помилка прив'язки: {e}")
         return "Виникла невідома помилка. Будь ласка, спробуйте пізніше."
 
 @sync_to_async
-def log_message(chat_id, user_name, message_text, bot_response, phone_number=None):
+def log_message_to_db(bot_user, message_text, bot_response, message_type='text', is_incoming=True):
+    """Логування повідомлення в БД"""
     try:
-        if not phone_number:
-            client = Client.objects.filter(telegram_chat_id=chat_id).first()
-            if client and client.phone:
-                phone_number = client.phone
-        
         BotMessageLog.objects.create(
-            chat_id=chat_id,
-            user_name=user_name,
-            phone_number=phone_number,
+            bot_user=bot_user,
+            message_type=message_type,
+            is_incoming=is_incoming,
             message_text=message_text,
-            bot_response=bot_response
+            bot_response=bot_response,
+            is_processed=True,
         )
     except Exception as e:
         logger.error(f"Не вдалося зберегти лог: {e}")
 
 @sync_to_async
-def get_my_cars_with_keyboard(chat_id):
+def get_my_cars_with_keyboard(bot_user):
+    """Отримати автомобілі користувача"""
     try:
-        client = Client.objects.get(telegram_chat_id=chat_id)
-        trucks = Truck.objects.filter(client=client)
+        if not bot_user.client:
+            return {"reply_text": "Ваш профіль не прив'язано до клієнта. Використайте /start", "keyboard": None}
+        
+        trucks = bot_user.assigned_trucks.all()
         
         if not trucks.exists():
-            return {"reply_text": f"За вами ({client.name}) не закріплено жодного автомобіля.", "keyboard": None}
+            return {"reply_text": f"За вами ({bot_user.client.name}) не закріплено жодного автомобіля.", "keyboard": None}
 
         reply_text = "Ваші автомобілі в нашій системі. Оберіть, по якому з них показати історію:"
         
@@ -104,8 +166,6 @@ def get_my_cars_with_keyboard(chat_id):
         
         return {"reply_text": reply_text, "keyboard": InlineKeyboardMarkup(keyboard)}
 
-    except Client.DoesNotExist:
-        return {"reply_text": "Я не можу знайти ваш профіль. Використайте /start та надайте номер телефону.", "keyboard": None}
     except Exception as e:
         logger.error(f"Помилка get_my_cars: {e}")
         return {"reply_text": "Виникла помилка при пошуку ваших автомобілів.", "keyboard": None}
@@ -166,13 +226,17 @@ def get_statistics():
         total_clients = Client.objects.count()
         total_trucks = Truck.objects.count()
         total_orders = ServiceOrder.objects.count()
+        total_bot_users = BotUser.objects.count()
+        linked_users = BotUser.objects.exclude(client__isnull=True).count()
         
         orders_by_status = ServiceOrder.objects.values('status').annotate(count=Count('id'))
         
         reply = "📊 Статистика системи:\n\n"
         reply += f"👥 Клієнтів: {total_clients}\n"
         reply += f"🚚 Автомобілів: {total_trucks}\n"
-        reply += f"🧾 Замовлень: {total_orders}\n\n"
+        reply += f"🧾 Замовлень: {total_orders}\n"
+        reply += f"🤖 Користувачів бота: {total_bot_users}\n"
+        reply += f"🔗 Прив'язаних: {linked_users}\n\n"
         reply += "За статусами:\n"
         
         for item in orders_by_status:
@@ -273,15 +337,20 @@ def get_order_from_db(order_number):
 
 # --- 3. Обробники ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    user_name = user.first_name
-    chat_id = user.id
+    telegram_user = update.message.from_user
     message_text = update.message.text
     
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    # Отримуємо або створюємо BotUser
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    if not bot_user:
+        await update.message.reply_text("Виникла помилка. Спробуйте пізніше.")
+        return
+    
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
 
     if is_linked:
-        reply_text = f'Вітаю знову, {user_name}! Оберіть опцію з меню:'
+        reply_text = f'Вітаю знову, {bot_user.first_name}! Оберіть опцію з меню:'
         markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
         await update.message.reply_text(reply_text, reply_markup=markup)
     else:
@@ -289,139 +358,154 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         custom_keyboard = [[contact_keyboard]]
         reply_markup = ReplyKeyboardMarkup(custom_keyboard, resize_keyboard=True, one_time_keyboard=True)
         reply_text = (
-            f'Вітаю, {user_name}!\n\n'
+            f'Вітаю, {bot_user.first_name}!\n\n'
             'Я не впізнав вас. Для прив\'язки до вашої картки клієнта, поділіться номером телефону.'
         )
         await update.message.reply_text(reply_text, reply_markup=reply_markup)
     
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text, message_type='command')
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     phone_number = update.message.contact.phone_number
     
-    reply_text = await link_client_by_phone(chat_id, user_name, phone_number)
+    # Отримуємо BotUser
+    bot_user = await get_or_create_bot_user(telegram_user)
     
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    if not bot_user:
+        await update.message.reply_text("Виникла помилка. Спробуйте пізніше.")
+        return
+    
+    # Прив'язуємо до Client
+    reply_text = await link_bot_user_by_phone(bot_user, phone_number)
+    
+    # Перевіряємо знову після прив'язки
+    is_linked, is_admin, bot_user = await check_if_user_is_linked(telegram_user.id)
     markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
     
     await update.message.reply_text(reply_text, reply_markup=markup) 
-    await log_message(chat_id, user_name, f"[Контакт: {phone_number}]", reply_text, phone_number=phone_number)
+    await log_message_to_db(bot_user, f"[Контакт: {phone_number}]", reply_text, message_type='contact')
 
 async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    user_name = user.first_name
-    chat_id = user.id
+    telegram_user = update.message.from_user
     message_text = update.message.text
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    if not bot_user:
+        await update.message.reply_text("Виникла помилка.")
+        return
 
-    result = await get_my_cars_with_keyboard(chat_id)
+    result = await get_my_cars_with_keyboard(bot_user)
     reply_text = result.get("reply_text")
     keyboard = result.get("keyboard")
 
     await update.message.reply_text(reply_text, reply_markup=keyboard)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
 
 async def all_trucks_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Адмін функція: всі автомобілі"""
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     message_text = update.message.text
     
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
     # Перевірка адмін прав
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
     if not is_admin:
         reply_text = "У вас немає доступу до цієї функції."
         await update.message.reply_text(reply_text)
-        await log_message(chat_id, user_name, message_text, reply_text)
+        await log_message_to_db(bot_user, message_text, reply_text)
         return
     
     reply_text = await get_all_trucks()
     await update.message.reply_text(reply_text)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
 
 async def all_orders_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Адмін функція: всі замовлення"""
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     message_text = update.message.text
     
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
     if not is_admin:
         reply_text = "У вас немає доступу до цієї функції."
         await update.message.reply_text(reply_text)
-        await log_message(chat_id, user_name, message_text, reply_text)
+        await log_message_to_db(bot_user, message_text, reply_text)
         return
     
     reply_text = await get_all_orders()
     await update.message.reply_text(reply_text)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
 
 async def statistics_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Адмін функція: статистика"""
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     message_text = update.message.text
     
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
     if not is_admin:
         reply_text = "У вас немає доступу до цієї функції."
         await update.message.reply_text(reply_text)
-        await log_message(chat_id, user_name, message_text, reply_text)
+        await log_message_to_db(bot_user, message_text, reply_text)
         return
     
     reply_text = await get_statistics()
     await update.message.reply_text(reply_text)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
 
 async def search_truck_by_plate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Адмін функція: пошук авто за номером"""
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     message_text = update.message.text
     
-    is_linked, is_admin = await check_if_user_is_linked(chat_id)
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    is_linked, is_admin, _ = await check_if_user_is_linked(telegram_user.id)
     if not is_admin:
         reply_text = "У вас немає доступу до цієї функції."
         await update.message.reply_text(reply_text)
-        await log_message(chat_id, user_name, message_text, reply_text)
+        await log_message_to_db(bot_user, message_text, reply_text)
         return
     
     reply_text = "Введіть номерний знак автомобіля (наприклад: АА1234ВВ):"
     await update.message.reply_text(reply_text)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
     
     # Встановлюємо стан "очікування номера авто"
     context.user_data['awaiting_truck_plate'] = True
 
 async def ask_for_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    chat_id = user.id
-    user_name = user.first_name
+    telegram_user = update.message.from_user
     message_text = update.message.text
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
     
     reply_text = "Надішліть номер замовлення-наряду."
     
     await update.message.reply_text(reply_text)
-    await log_message(chat_id, user_name, message_text, reply_text)
+    await log_message_to_db(bot_user, message_text, reply_text)
 
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    user_name = user.first_name
-    chat_id = user.id
+    telegram_user = update.message.from_user
     original_text = update.message.text
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
+    
+    if not bot_user:
+        await update.message.reply_text("Виникла помилка.")
+        return
     
     # Перевірка чи очікуємо номер авто
     if context.user_data.get('awaiting_truck_plate'):
         context.user_data['awaiting_truck_plate'] = False
         reply_message = await find_truck_by_plate(original_text)
         await update.message.reply_text(reply_message)
-        await log_message(chat_id, user_name, original_text, reply_message)
+        await log_message_to_db(bot_user, original_text, reply_message)
         return
     
     # Стара логіка для пошуку замовлень
@@ -430,20 +514,21 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not order_number:
         reply_message = "Оберіть опцію з меню або надішліть номер замовлення."
         await update.message.reply_text(reply_message)
-        await log_message(chat_id, user_name, original_text, reply_message)
+        await log_message_to_db(bot_user, original_text, reply_message)
         return
 
     reply_message = await get_order_from_db(order_number)
     await update.message.reply_text(reply_message)
-    await log_message(chat_id, user_name, original_text, reply_message)
+    await log_message_to_db(bot_user, original_text, reply_message)
 
 async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     callback_data = query.data
-    chat_id = query.message.chat.id
-    user_name = query.from_user.first_name
+    telegram_user = query.from_user
+    
+    bot_user = await get_or_create_bot_user(telegram_user)
     
     try:
         action, truck_id = callback_data.split('_')
@@ -451,7 +536,7 @@ async def handle_car_selection(update: Update, context: ContextTypes.DEFAULT_TYP
         if action == 'history':
             reply_text = await get_repair_history(int(truck_id))
             await query.edit_message_text(text=reply_text)
-            await log_message(chat_id, user_name, f"[Callback: {callback_data}]", reply_text)
+            await log_message_to_db(bot_user, f"[Callback: {callback_data}]", reply_text, message_type='callback')
         else:
             await query.edit_message_text(text="Невідома дія.")
 
