@@ -13,18 +13,18 @@ class IvecoBaseModelSerializer(serializers.ModelSerializer):
 
 
 class TruckListSerializer(serializers.ModelSerializer):
-    client = serializers.StringRelatedField()
+    client_name = serializers.CharField(source='client.name', read_only=True)
     base_model = serializers.StringRelatedField()
     emission_standard = serializers.CharField(source='get_euro_standard_display')
-
+    
     class Meta:
         model = Truck
         fields = [
             'id',
             'specific_model_name',
             'license_plate',
-            'client',
-            'client_id',
+            'client_id',       # ID клієнта
+            'client_name',     # Назва клієнта
             'base_model',
             'emission_standard',
             'last_seven_vin',
