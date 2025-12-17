@@ -4,7 +4,7 @@ from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSeria
 from django_filters.rest_framework import DjangoFilterBackend
 
 class ClientViewSet(viewsets.ModelViewSet):
-    queryset = Client.objects.prefetch_related('trucks').all()
+    queryset = Client.objects.all()
     serializer_class = ClientSerializer
 
 class IvecoBaseModelViewSet(viewsets.ModelViewSet):
