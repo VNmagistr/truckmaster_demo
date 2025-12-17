@@ -23,8 +23,8 @@ class TruckListSerializer(serializers.ModelSerializer):
             'id',
             'specific_model_name',
             'license_plate',
-            'client_id',       # ID клієнта
-            'client_name',     # Назва клієнта
+            'client_id',
+            'client_name',
             'base_model',
             'emission_standard',
             'last_seven_vin',
