@@ -26,7 +26,6 @@ class TruckListSerializer(serializers.ModelSerializer):
             'client',
             'client_id',
             'base_model',
-            'current_mileage',
             'emission_standard',
             'last_seven_vin',
         ]
