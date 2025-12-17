@@ -4,7 +4,7 @@ from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSeria
 from django_filters.rest_framework import DjangoFilterBackend
 
 class ClientViewSet(viewsets.ModelViewSet):
-    queryset = Client.objects.all()
+    queryset = Client.objects.prefetch_related('trucks').all()
     serializer_class = ClientSerializer
 
 class IvecoBaseModelViewSet(viewsets.ModelViewSet):
@@ -12,7 +12,7 @@ class IvecoBaseModelViewSet(viewsets.ModelViewSet):
     serializer_class = IvecoBaseModelSerializer
 
 class TruckViewSet(viewsets.ModelViewSet):
-    queryset = Truck.objects.all()
+    queryset = Truck.objects.select_related('client', 'base_model').all()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['client']
 
