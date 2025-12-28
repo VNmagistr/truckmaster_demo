@@ -135,40 +135,40 @@ class FluidChangeRecord(models.Model):
         return f"{self.truck} - {self.subcategory.name} ({self.performed_at.date()})"
 
     def save(self, *args, **kwargs):
-        """
-        Автоматичний розрахунок:
-        1. Наступної заміни за пробігом (якщо не вказано вручну)
-        2. Наступної заміни за датою (якщо не вказано вручну)
-        3. Загальної вартості
-        4. НОВИЙ: Створення нагадування про наступну заміну
-        """
-        
-        is_new = self.pk is None
-        
-        # 1. Розрахунок наступної заміни за пробігом
-        if self.mileage and not self.next_change_mileage:
-            if self.subcategory and self.subcategory.default_change_interval_km:
-                interval_km = self.subcategory.default_change_interval_km
-                self.next_change_mileage = self.mileage + interval_km
-        
-        # 2. Розрахунок наступної заміни за датою
-        if not self.next_change_date:
-            if self.performed_at:
-                performed_date = self.performed_at.date() if hasattr(self.performed_at, 'date') else self.performed_at
-                self.next_change_date = performed_date + relativedelta(years=1)
-        
-        # 3. Розрахунок загальної вартості
-        if self.quantity and self.unit_price:
-            self.total_price = self.quantity * self.unit_price
-        
-        super().save(*args, **kwargs)
-        
-        # 4. Автоматичне створення нагадування (тільки для нових записів)
-        if is_new:
-            self._create_reminder()
+    """
+    Автоматичний розрахунок:
+    1. Наступної заміни за пробігом (якщо не вказано вручну)
+    2. Наступної заміни за датою (якщо не вказано вручну)
+    3. Загальної вартості
+    4. НОВИЙ: Створення нагадування про наступну заміну
+    """
     
-    def _create_reminder(self):
-        """
+    is_new = self.pk is None  # ← ВАЖЛИВО: перевіряємо ДО save()
+    
+    # 1. Розрахунок наступної заміни за пробігом
+    if self.mileage and not self.next_change_mileage:
+        if self.subcategory and self.subcategory.default_change_interval_km:
+            interval_km = self.subcategory.default_change_interval_km
+            self.next_change_mileage = self.mileage + interval_km
+    
+    # 2. Розрахунок наступної заміни за датою
+    if not self.next_change_date:
+        if self.performed_at:
+            performed_date = self.performed_at.date() if hasattr(self.performed_at, 'date') else self.performed_at
+            self.next_change_date = performed_date + relativedelta(years=1)
+    
+    # 3. Розрахунок загальної вартості
+    if self.quantity and self.unit_price:
+        self.total_price = self.quantity * self.unit_price
+    
+    super().save(*args, **kwargs)
+    
+    # 4. Автоматичне створення нагадування (тільки для нових записів)
+    if is_new:  # ← ВАЖЛИВО: викликаємо ПІСЛЯ save()
+        self._create_reminder()
+    
+def _create_reminder(self):
+    	"""
         Автоматично створює нагадування про наступну заміну
         на основі типу обслуговування пов'язаного з підкатегорією
         """
@@ -237,6 +237,8 @@ class ServiceReminder(models.Model):
         ServiceType,
         on_delete=models.PROTECT,
         verbose_name='Тип обслуговування',
+	null=True,
+        blank=True,
         help_text='Конкретний тип ТО (заміна оливи, колодок і т.д.)'
     )
     
