@@ -3,6 +3,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 
 
 class FluidChangeRecord(models.Model):
