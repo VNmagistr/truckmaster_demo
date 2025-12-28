@@ -2,7 +2,38 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec
+from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec, ServiceType
+
+
+@admin.register(ServiceType)
+class ServiceTypeAdmin(admin.ModelAdmin):
+    list_display = [
+        'name',
+        'default_interval_km',
+        'default_interval_months',
+        'default_priority',
+        'is_active'
+    ]
+    list_filter = ['is_active', 'default_priority']
+    search_fields = ['name', 'description']
+    filter_horizontal = ['related_subcategories']
+    list_editable = ['is_active', 'sort_order']
+    
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('name', 'description', 'is_active', 'sort_order')
+        }),
+        ('Інтервали обслуговування', {
+            'fields': ('default_interval_km', 'default_interval_months')
+        }),
+        ('Пов\'язані товари', {
+            'fields': ('related_subcategories',),
+            'description': 'При заміні товарів з цих підкатегорій автоматично створюються нагадування'
+        }),
+        ('Налаштування нагадувань', {
+            'fields': ('default_priority',)
+        }),
+    )
 
 
 @admin.register(FluidChangeRecord)
@@ -25,7 +56,7 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
         'notes'
     ]
     date_hierarchy = 'performed_at'
-    readonly_fields = ['created_at', 'total_price', 'get_interval_info']
+    readonly_fields = ['created_at', 'total_price', 'get_interval_info', 'get_reminder_info']
     
     # Autocomplete для пошуку Вантажівки, Наряду-замовлення та Товару
     autocomplete_fields = ['truck', 'service_order', 'product', 'subcategory']
@@ -44,6 +75,10 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
         ('Наступна заміна', {
             'fields': ('next_change_mileage', 'next_change_date'),
             'description': 'Заповнюється автоматично, але можна змінити вручну'
+        }),
+        ('Автоматичні нагадування', {
+            'fields': ('get_reminder_info',),
+            'description': 'При збереженні автоматично створюються нагадування'
         }),
         ('Вартість', {
             'fields': ('unit_price', 'total_price')
@@ -87,9 +122,50 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
     
     get_interval_info.short_description = 'Інтервал заміни'
     
+    def get_reminder_info(self, obj):
+        """Показує інформацію про автоматичне створення нагадувань"""
+        if not obj.subcategory:
+            return "—"
+        
+        from .models import ServiceType
+        
+        # Шукаємо типи обслуговування для цієї підкатегорії
+        service_types = ServiceType.objects.filter(
+            related_subcategories=obj.subcategory,
+            is_active=True
+        )
+        
+        if service_types.exists():
+            types_list = "<ul style='margin: 5px 0;'>"
+            for st in service_types:
+                types_list += f"<li>{st.name}</li>"
+            types_list += "</ul>"
+            
+            html = f"""
+            <div style="background: #d4edda; padding: 10px; border-radius: 5px;">
+                <strong>✅ При збереженні автоматично створяться нагадування:</strong>
+                {types_list}
+                <p style="margin: 5px 0; font-size: 0.9em; color: #666;">
+                    ℹ️ Нагадування створюються тільки якщо не існують активні нагадування цього типу для вантажівки.
+                </p>
+            </div>
+            """
+        else:
+            html = f"""
+            <div style="background: #f8d7da; padding: 10px; border-radius: 5px;">
+                <strong>⚠️ Увага:</strong> Для підкатегорії "{obj.subcategory.name}" 
+                не налаштовано автоматичне створення нагадувань.<br>
+                <small>Налаштуйте типи обслуговування в розділі "Типи технічного обслуговування".</small>
+            </div>
+            """
+        
+        return format_html(html)
+    
+    get_reminder_info.short_description = 'Автоматичні нагадування'
+    
     def save_model(self, request, obj, form, change):
         """Автоматично заповнюємо created_by"""
-        if not change:  # Якщо новий запис
+        if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
@@ -98,27 +174,27 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
 class ServiceReminderAdmin(admin.ModelAdmin):
     list_display = [
         'truck', 
+        'service_type',  # ЗМІНЕНО: замість subcategory
         'title', 
-        'subcategory',
         'status', 
         'priority', 
         'target_date', 
         'target_mileage'
     ]
-    list_filter = ['status', 'priority', 'subcategory', 'reminder_type']
+    list_filter = ['status', 'priority', 'service_type', 'reminder_type']  # ЗМІНЕНО
     search_fields = ['truck__license_plate', 'title', 'description']
     list_editable = ['status', 'priority']
     date_hierarchy = 'target_date'
     
-    # Autocomplete для truck
-    autocomplete_fields = ['truck', 'completed_order', 'subcategory']
+    # Autocomplete
+    autocomplete_fields = ['truck', 'completed_order', 'service_type']  # ЗМІНЕНО
     
     fieldsets = (
         ('Вантажівка', {
             'fields': ('truck',)
         }),
         ('Нагадування', {
-            'fields': ('title', 'description', 'subcategory')
+            'fields': ('service_type', 'title', 'description')  # ЗМІНЕНО
         }),
         ('Параметри', {
             'fields': ('reminder_type', 'target_mileage', 'target_date', 'priority')
@@ -157,7 +233,7 @@ class TruckFluidSpecAdmin(admin.ModelAdmin):
     ]
     filter_horizontal = ['alternative_products']
     
-    # Autocomplete для truck та products
+    # Autocomplete
     autocomplete_fields = ['truck', 'recommended_product', 'subcategory']
     
     fieldsets = (

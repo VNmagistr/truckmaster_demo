@@ -6,6 +6,59 @@ from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 
 
+class ServiceType(models.Model):
+    """
+    Тип технічного обслуговування
+    Приклади: Заміна моторної оливи, Заміна гальмівних колодок, Заміна ременя генератора
+    """
+    name = models.CharField('Назва', max_length=200)
+    description = models.TextField('Опис', blank=True)
+    
+    # Інтервали обслуговування
+    default_interval_km = models.PositiveIntegerField(
+        'Інтервал за пробігом (км)',
+        null=True, blank=True,
+        help_text='Наприклад: 20000 км для моторної оливи'
+    )
+    default_interval_months = models.PositiveIntegerField(
+        'Інтервал за часом (місяців)',
+        null=True, blank=True,
+        help_text='Наприклад: 12 місяців для моторної оливи'
+    )
+    
+    # Пов'язані підкатегорії товарів (для автоматичного створення нагадувань)
+    related_subcategories = models.ManyToManyField(
+        'inventory.ProductSubcategory',
+        blank=True,
+        verbose_name='Пов\'язані підкатегорії товарів',
+        help_text='Коли змінюється товар з цієї підкатегорії - створюється нагадування цього типу'
+    )
+    
+    # Пріоритет нагадування за замовчуванням
+    default_priority = models.CharField(
+        'Пріоритет за замовчуванням',
+        max_length=20,
+        choices=[
+            ('low', 'Низький'),
+            ('medium', 'Середній'),
+            ('high', 'Високий'),
+            ('critical', 'Критичний'),
+        ],
+        default='medium'
+    )
+    
+    is_active = models.BooleanField('Активний', default=True)
+    sort_order = models.IntegerField('Порядок сортування', default=0)
+
+    class Meta:
+        verbose_name = 'Тип технічного обслуговування'
+        verbose_name_plural = 'Типи технічного обслуговування'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class FluidChangeRecord(models.Model):
     """
     Запис про заміну рідини/оливи для конкретної вантажівки
@@ -87,18 +140,19 @@ class FluidChangeRecord(models.Model):
         1. Наступної заміни за пробігом (якщо не вказано вручну)
         2. Наступної заміни за датою (якщо не вказано вручну)
         3. Загальної вартості
+        4. НОВИЙ: Створення нагадування про наступну заміну
         """
+        
+        is_new = self.pk is None
         
         # 1. Розрахунок наступної заміни за пробігом
         if self.mileage and not self.next_change_mileage:
-            # Беремо інтервал з підкатегорії
             if self.subcategory and self.subcategory.default_change_interval_km:
                 interval_km = self.subcategory.default_change_interval_km
                 self.next_change_mileage = self.mileage + interval_km
         
-        # 2. Розрахунок наступної заміни за датою (якщо не вказано вручну)
+        # 2. Розрахунок наступної заміни за датою
         if not self.next_change_date:
-            # Беремо дату виконання (performed_at) і додаємо 1 рік
             if self.performed_at:
                 performed_date = self.performed_at.date() if hasattr(self.performed_at, 'date') else self.performed_at
                 self.next_change_date = performed_date + relativedelta(years=1)
@@ -108,6 +162,42 @@ class FluidChangeRecord(models.Model):
             self.total_price = self.quantity * self.unit_price
         
         super().save(*args, **kwargs)
+        
+        # 4. Автоматичне створення нагадування (тільки для нових записів)
+        if is_new:
+            self._create_reminder()
+    
+    def _create_reminder(self):
+        """
+        Автоматично створює нагадування про наступну заміну
+        на основі типу обслуговування пов'язаного з підкатегорією
+        """
+        # Шукаємо тип обслуговування для цієї підкатегорії
+        service_types = ServiceType.objects.filter(
+            related_subcategories=self.subcategory,
+            is_active=True
+        )
+        
+        for service_type in service_types:
+            # Перевіряємо чи не існує вже активне нагадування
+            existing = ServiceReminder.objects.filter(
+                truck=self.truck,
+                service_type=service_type,
+                status__in=['pending', 'notified']
+            ).exists()
+            
+            if not existing:
+                # Створюємо нагадування
+                ServiceReminder.objects.create(
+                    truck=self.truck,
+                    service_type=service_type,
+                    title=f"{service_type.name} для {self.truck.license_plate}",
+                    description=f"Автоматично створено на основі заміни {self.subcategory.name}",
+                    reminder_type='both',
+                    target_mileage=self.next_change_mileage,
+                    target_date=self.next_change_date,
+                    priority=service_type.default_priority
+                )
 
 
 class ServiceReminder(models.Model):
@@ -142,14 +232,16 @@ class ServiceReminder(models.Model):
         verbose_name='Вантажівка'
     )
     
+    # ЗМІНЕНО: замість subcategory використовуємо service_type
+    service_type = models.ForeignKey(
+        ServiceType,
+        on_delete=models.PROTECT,
+        verbose_name='Тип обслуговування',
+        help_text='Конкретний тип ТО (заміна оливи, колодок і т.д.)'
+    )
+    
     title = models.CharField('Назва', max_length=200)
     description = models.TextField('Опис', blank=True)
-    subcategory = models.ForeignKey(
-        'inventory.ProductSubcategory',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name='Тип обслуговування'
-    )
     
     reminder_type = models.CharField(
         'Тип нагадування',
