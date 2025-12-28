@@ -34,11 +34,13 @@ class FluidChangeRecord(models.Model):
     
     next_change_mileage = models.PositiveIntegerField(
         'Наступна заміна (км)',
-        null=True, blank=True
+        null=True, blank=True,
+        help_text='Розраховується автоматично на основі інтервалу підкатегорії'
     )
     next_change_date = models.DateField(
         'Наступна заміна (дата)',
-        null=True, blank=True
+        null=True, blank=True,
+        help_text='Розраховується автоматично: +1 рік від дати виконання'
     )
     
     service_order = models.ForeignKey(
@@ -79,12 +81,28 @@ class FluidChangeRecord(models.Model):
         return f"{self.truck} - {self.subcategory.name} ({self.performed_at.date()})"
 
     def save(self, *args, **kwargs):
-        # Автоматичний розрахунок наступної заміни
-        if self.mileage and not self.next_change_mileage:
-            if self.subcategory and self.subcategory.default_change_interval_km:
-                self.next_change_mileage = self.mileage + self.subcategory.default_change_interval_km
+        """
+        Автоматичний розрахунок:
+        1. Наступної заміни за пробігом (якщо не вказано вручну)
+        2. Наступної заміни за датою (якщо не вказано вручну)
+        3. Загальної вартості
+        """
         
-        # Розрахунок загальної вартості
+        # 1. Розрахунок наступної заміни за пробігом
+        if self.mileage and not self.next_change_mileage:
+            # Беремо інтервал з підкатегорії
+            if self.subcategory and self.subcategory.default_change_interval_km:
+                interval_km = self.subcategory.default_change_interval_km
+                self.next_change_mileage = self.mileage + interval_km
+        
+        # 2. Розрахунок наступної заміни за датою (якщо не вказано вручну)
+        if not self.next_change_date:
+            # Беремо дату виконання (performed_at) і додаємо 1 рік
+            if self.performed_at:
+                performed_date = self.performed_at.date() if hasattr(self.performed_at, 'date') else self.performed_at
+                self.next_change_date = performed_date + relativedelta(years=1)
+        
+        # 3. Розрахунок загальної вартості
         if self.quantity and self.unit_price:
             self.total_price = self.quantity * self.unit_price
         
