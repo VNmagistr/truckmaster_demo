@@ -25,6 +25,9 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
     date_hierarchy = 'performed_at'
     readonly_fields = ['created_at', 'total_price']
     
+    # Autocomplete для пошуку Вантажівки, Наряду-замовлення та Товару
+    autocomplete_fields = ['truck', 'service_order', 'product', 'subcategory']
+    
     fieldsets = (
         ('Вантажівка', {
             'fields': ('truck', 'service_order')
@@ -60,6 +63,9 @@ class ServiceReminderAdmin(admin.ModelAdmin):
     search_fields = ['truck__license_plate', 'title', 'description']
     list_editable = ['status', 'priority']
     date_hierarchy = 'target_date'
+    
+    # Autocomplete для truck
+    autocomplete_fields = ['truck', 'completed_order']
     
     fieldsets = (
         ('Вантажівка', {
@@ -104,6 +110,9 @@ class TruckFluidSpecAdmin(admin.ModelAdmin):
         'recommended_product__name'
     ]
     filter_horizontal = ['alternative_products']
+    
+    # Autocomplete для truck та products
+    autocomplete_fields = ['truck', 'recommended_product']
     
     fieldsets = (
         ('Вантажівка', {
