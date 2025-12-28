@@ -167,8 +167,8 @@ class FluidChangeRecord(models.Model):
         if is_new:  # ← ВАЖЛИВО: викликаємо ПІСЛЯ save()
             self._create_reminder()
     
-def _create_reminder(self):
-    	"""
+    def _create_reminder(self):
+        """
         Автоматично створює нагадування про наступну заміну
         на основі типу обслуговування пов'язаного з підкатегорією
         """
