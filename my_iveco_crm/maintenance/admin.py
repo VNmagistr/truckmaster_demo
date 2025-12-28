@@ -12,6 +12,7 @@ class ServiceTypeAdmin(admin.ModelAdmin):
         'default_interval_km',
         'default_interval_months',
         'default_priority',
+        'sort_order',
         'is_active'
     ]
     list_filter = ['is_active', 'default_priority']
