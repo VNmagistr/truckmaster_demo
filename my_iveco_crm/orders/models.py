@@ -95,29 +95,36 @@ class ServiceOrder(models.Model):
         return f"Замовлення №{order_num} ({client_name})"
 
     def update_total_cost(self):
-        """Оптимізований підрахунок вартості"""
-        # Вартість робіт - одним запитом
+        """Оптимізований підрахунок вартості: роботи + всі запчастини"""
+        
+        # 1. Вартість робіт
         works = self.works.select_related('work__work_group').filter(work__isnull=False)
         total_work_cost = sum(
             work.work.get_calculated_price() * (work.hours_spent or Decimal('1'))
             for work in works
         )
-    
-        # Вартість запчастин - агрегація в БД
-        total_parts_cost = UsedPart.objects.filter(
+        
+        # 2. Вартість запчастин через роботи
+        parts_via_works = UsedPart.objects.filter(
             service_work__service_order=self
         ).aggregate(
-            total=Sum(F('part__selling_price') * F('quantity'))
+            total=Sum(F('quantity') * F('unit_price'))
         )['total'] or Decimal('0')
-    
+        
+        # 3. Вартість запчастин доданих напряму до замовлення
+        direct_parts = self.direct_parts.aggregate(
+            total=Sum(F('quantity') * F('unit_price'))
+        )['total'] or Decimal('0')
+        
+        # Підсумок
+        new_total = total_work_cost + parts_via_works + direct_parts
+        
         # Оновлюємо тільки якщо змінилося
-        new_total = total_work_cost + total_parts_cost
         if self.total_cost != new_total:
             self.total_cost = new_total
             self.save(update_fields=['total_cost'])
-    
+        
         return self.total_cost
-
 
 class ServiceWork(models.Model):
     service_order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name="works", verbose_name="Замовлення-наряд")

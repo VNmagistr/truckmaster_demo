@@ -452,32 +452,91 @@ class StockMovement(models.Model):
 
 
 class UsedPart(models.Model):
-    """Існуюча модель - залишаємо для сумісності"""
+    """
+    Використана запчастина
+    Може бути прив'язана або до роботи (ServiceWork) або напряму до замовлення (ServiceOrder)
+    """
+    # Прив'язка до роботи (необов'язкова)
     service_work = models.ForeignKey(
         'orders.ServiceWork',
         on_delete=models.CASCADE,
         related_name='used_parts',
-        verbose_name="Робота"
+        verbose_name="Робота",
+        null=True,
+        blank=True
     )
+    
+    # Пряма прив'язка до замовлення (необов'язкова)
+    service_order = models.ForeignKey(
+        'orders.ServiceOrder',
+        on_delete=models.CASCADE,
+        related_name='direct_parts',
+        verbose_name="Наряд-замовлення",
+        null=True,
+        blank=True
+    )
+    
     part = models.ForeignKey(
-        Part,
+        'Part',
         on_delete=models.PROTECT,
         verbose_name="Запчастина"
     )
-    quantity = models.PositiveIntegerField(verbose_name="Кількість")
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Кількість"
+    )
     
-    # Нове поле - з якого складу
+    # З якого складу
     warehouse = models.ForeignKey(
-        Warehouse,
+        'Warehouse',
         on_delete=models.PROTECT,
         null=True, blank=True,
         verbose_name='Склад'
+    )
+    
+    # Ціна на момент використання (може відрізнятись від поточної)
+    unit_price = models.DecimalField(
+        'Ціна за одиницю',
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Заповнюється автоматично з selling_price товару'
     )
 
     class Meta:
         verbose_name = "Використана запчастина"
         verbose_name_plural = "Використані запчастини"
-        unique_together = ('service_work', 'part')
+        ordering = ['part__name']
 
     def __str__(self):
-        return f"{self.part.name} - {self.quantity} шт."
+        return f"{self.part.name} - {self.quantity} {self.part.unit}"
+    
+    def clean(self):
+        """Валідація: повинна бути прив'язка або до роботи, або до замовлення"""
+        from django.core.exceptions import ValidationError
+        
+        if not self.service_work and not self.service_order:
+            raise ValidationError(
+                'Запчастина повинна бути прив\'язана або до роботи, або до наряду-замовлення'
+            )
+        
+        if self.service_work and self.service_order:
+            raise ValidationError(
+                'Запчастина не може бути одночасно прив\'язана до роботи та наряду-замовлення'
+            )
+    
+    def save(self, *args, **kwargs):
+        # Автоматично заповнюємо ціну з товару якщо не вказана
+        if self.unit_price is None and self.part:
+            self.unit_price = self.part.selling_price
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def total_price(self):
+        """Загальна вартість = кількість × ціна"""
+        if self.unit_price:
+            return self.quantity * self.unit_price
+        return self.quantity * (self.part.selling_price or 0)
