@@ -591,7 +591,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await log_message_to_db(bot_user, original_text, reply_message)
         return
     
-    # Перевірка чи очікуємо номер авто
+    # Перевірка чи очікуємо номер авто (після натискання кнопки)
     if context.user_data.get('awaiting_truck_plate'):
         context.user_data['awaiting_truck_plate'] = False
         reply_message = await find_truck_by_plate(original_text)
@@ -599,16 +599,8 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await log_message_to_db(bot_user, original_text, reply_message)
         return
     
-    # Стара логіка для пошуку замовлень
-    order_number = re.sub(r'\D', '', original_text)
-    
-    if not order_number:
-        reply_message = "Оберіть опцію з меню або надішліть номер замовлення."
-        await update.message.reply_text(reply_message)
-        await log_message_to_db(bot_user, original_text, reply_message)
-        return
-
-    reply_message = await get_order_from_db(order_number)
+    # За замовчуванням - завжди шукаємо автомобіль за номером
+    reply_message = await find_truck_by_plate(original_text)
     await update.message.reply_text(reply_message)
     await log_message_to_db(bot_user, original_text, reply_message)
     
