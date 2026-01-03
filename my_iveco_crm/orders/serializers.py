@@ -157,8 +157,9 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
         model = ServiceOrder
         fields = [
             'id', 'order_number', 'client', 'truck', 
-            'problem_description', 'status', 'created_at', 'updated_at',
-            'works', 'photos'
+            'current_mileage', 'problem_description', 
+            'status', 'created_at', 'updated_at',
+            'works', 'photos', 'total_cost'
         ]
 
 # --- Серіалізатори Регламентів ---
