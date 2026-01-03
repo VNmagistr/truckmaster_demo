@@ -30,7 +30,7 @@ jobs:
           
           # Оновлюємо код з токеном
           echo "🔄 Pulling latest code..."
-          git pull https://${{ secrets.GH_TOKEN }}@github.com/VolodymyrRushchak/truckmaster_backend.git main
+          git pull https://${{ secrets.GH_TOKEN }}@github.com/VolodymyrRushchak/truckmaster.git main
 
           # Активуємо venv
           echo "🐍 Activating virtual environment..."
