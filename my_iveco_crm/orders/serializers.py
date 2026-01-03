@@ -125,6 +125,7 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'order_number', 
             'client',
             'truck',
+            'current_mileage',
             'problem_description', 
             'status'
         ]

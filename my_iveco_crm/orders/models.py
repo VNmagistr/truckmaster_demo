@@ -63,6 +63,12 @@ class ServiceOrder(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт", blank=True, null=True)
     truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка", blank=True, null=True)
     
+    current_mileage = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Поточний пробіг (км)"
+    )
+    
     problem_description = models.TextField(
         blank=True, 
         null=True, 
@@ -93,6 +99,30 @@ class ServiceOrder(models.Model):
         client_name = self.client.name if self.client else 'Н/Д'
         order_num = self.order_number if self.order_number else 'Без номера'
         return f"Замовлення №{order_num} ({client_name})"
+
+    def save(self, *args, **kwargs):
+        """Автоматична генерація номера замовлення"""
+        if not self.order_number:
+            # Генеруємо номер формату: SO-YYYYMMDD-XXXX
+            from django.utils import timezone
+            today = timezone.now()
+            prefix = f"SO-{today.strftime('%Y%m%d')}"
+            
+            # Знаходимо останній номер за сьогодні
+            last_order = ServiceOrder.objects.filter(
+                order_number__startswith=prefix
+            ).order_by('-order_number').first()
+            
+            if last_order and last_order.order_number:
+                # Витягуємо номер і збільшуємо
+                last_num = int(last_order.order_number.split('-')[-1])
+                new_num = last_num + 1
+            else:
+                new_num = 1
+            
+            self.order_number = f"{prefix}-{new_num:04d}"
+        
+        super().save(*args, **kwargs)
 
     def update_total_cost(self):
         """Оптимізований підрахунок вартості: роботи + всі запчастини"""
