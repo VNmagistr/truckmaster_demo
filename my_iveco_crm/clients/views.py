@@ -32,7 +32,7 @@ class TruckViewSet(viewsets.ModelViewSet):
         results = [{
             'id': truck.id,
             'license_plate': truck.license_plate,
-            'vin_code': truck.vin_code,
+            'full_vin': truck.full_vin,
             'last_seven_vin': truck.last_seven_vin,
             'specific_model_name': truck.specific_model_name,
             'client_id': truck.client_id,
@@ -45,4 +45,3 @@ class TruckViewSet(viewsets.ModelViewSet):
 class IvecoBaseModelViewSet(viewsets.ModelViewSet):
     queryset = IvecoBaseModel.objects.all()
     serializer_class = IvecoBaseModelSerializer
-
