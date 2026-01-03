@@ -20,48 +20,45 @@ jobs:
     - name: Deploy to Server
       env:
         SSHPASS: ${{ secrets.DO_PASSWORD }}
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
-        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << EOF
           set -e
 
           echo "📦 Starting deployment..."
 
           cd /home/ubuntu/truckmaster/my_iveco_crm
+          
           # Оновлюємо код з токеном
           echo "🔄 Pulling latest code..."
-          git config --global credential.helper store
-          echo "https://$GH_TOKEN@github.com" > ~/.git-credentials
-          git fetch origin
-          git reset --hard origin/main
+          git pull https://${{ secrets.GH_TOKEN }}@github.com/VolodymyrRushchak/truckmaster_backend.git main
 
-          # 2. Активуємо venv
+          # Активуємо venv
           echo "🐍 Activating virtual environment..."
           source venv/bin/activate
 
-          # 3. Оновлюємо залежності
+          # Оновлюємо залежності
           echo "📚 Installing dependencies..."
           pip install -r requirements.txt
 
-          # 4. Запускаємо міграції
+          # Запускаємо міграції
           echo "🗄️  Running migrations..."
           python manage.py migrate --noinput
 
-          # 5. Збираємо статику
+          # Збираємо статику
           echo "🎨 Collecting static files..."
           python manage.py collectstatic --noinput
 
-          # 6. Перевірка системи
+          # Перевірка системи
           echo "✅ Running system check..."
           python manage.py check --deploy
 
-          # 7. Перезапускаємо сервіси
+          # Перезапускаємо сервіси
           echo "🔄 Restarting services..."
           sudo systemctl restart gunicorn
           sudo systemctl restart telegram_bot
           sudo systemctl reload nginx
 
-          # 8. Перевірка статусу
+          # Перевірка статусу
           echo "📊 Checking service status..."
           sudo systemctl is-active gunicorn
           sudo systemctl is-active telegram_bot
