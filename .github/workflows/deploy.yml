@@ -20,16 +20,18 @@ jobs:
     - name: Deploy to Server
       env:
         SSHPASS: ${{ secrets.DO_PASSWORD }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-          set -e  # Зупинити при помилці
-          
-          echo "📦 Starting deployment..."
-          
-          cd /home/ubuntu/truckmaster/my_iveco_crm
+          set -e
 
-          # 1. Оновлюємо код
+          echo "📦 Starting deployment..."
+
+          cd /home/ubuntu/truckmaster/my_iveco_crm
+          # Оновлюємо код з токеном
           echo "🔄 Pulling latest code..."
+          git config --global credential.helper store
+          echo "https://$GH_TOKEN@github.com" > ~/.git-credentials
           git fetch origin
           git reset --hard origin/main
 
