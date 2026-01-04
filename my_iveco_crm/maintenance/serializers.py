@@ -42,7 +42,7 @@ class ServiceReminderSerializer(serializers.ModelSerializer):
     """Серіалізатор для нагадувань про ТО"""
     
     truck_display = serializers.StringRelatedField(source='truck', read_only=True)
-    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
+    service_type_name = serializers.CharField(source='service_type.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     reminder_type_display = serializers.CharField(source='get_reminder_type_display', read_only=True)
@@ -56,8 +56,8 @@ class ServiceReminderSerializer(serializers.ModelSerializer):
             'truck_display',
             'title',
             'description',
-            'subcategory',
-            'subcategory_name',
+            'service_type',
+            'service_type_name',
             'reminder_type',
             'reminder_type_display',
             'target_mileage',
@@ -123,3 +123,4 @@ class TruckFluidSpecSerializer(serializers.ModelSerializer):
             {'id': p.id, 'name': str(p)} 
             for p in obj.alternative_products.all()
         ]
+    
