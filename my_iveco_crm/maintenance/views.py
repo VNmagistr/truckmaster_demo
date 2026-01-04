@@ -69,12 +69,12 @@ class ServiceReminderViewSet(viewsets.ModelViewSet):
     API для нагадувань про ТО
     """
     queryset = ServiceReminder.objects.select_related(
-        'truck', 'subcategory', 'completed_order'
+        'truck', 'service_type', 'completed_order'
     ).all()
     serializer_class = ServiceReminderSerializer
     permission_classes = [IsAuthenticated]
     
-    filterset_fields = ['truck', 'status', 'priority', 'subcategory']
+    filterset_fields = ['truck', 'status', 'priority', 'service_type']
     search_fields = ['truck__license_plate', 'title', 'description']
     ordering_fields = ['target_date', 'target_mileage', 'priority', 'status']
     ordering = ['status', 'target_date']
