@@ -7,12 +7,25 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec
+from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec, ServiceType
 from .serializers import (
     FluidChangeRecordSerializer,
     ServiceReminderSerializer,
-    TruckFluidSpecSerializer
+    TruckFluidSpecSerializer,
+    ServiceTypeSerializer
 )
+
+
+class ServiceTypeViewSet(viewsets.ModelViewSet):
+    """
+    API для типів технічного обслуговування
+    """
+    queryset = ServiceType.objects.filter(is_active=True).all()
+    serializer_class = ServiceTypeSerializer
+    permission_classes = [IsAuthenticated]
+    
+    ordering_fields = ['sort_order', 'name']
+    ordering = ['sort_order', 'name']
 
 
 class FluidChangeRecordViewSet(viewsets.ModelViewSet):

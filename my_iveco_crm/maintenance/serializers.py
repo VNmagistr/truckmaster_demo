@@ -1,7 +1,24 @@
 # maintenance/serializers.py
 
 from rest_framework import serializers
-from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec
+from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec, ServiceType
+
+
+class ServiceTypeSerializer(serializers.ModelSerializer):
+    """Серіалізатор для типів технічного обслуговування"""
+    
+    class Meta:
+        model = ServiceType
+        fields = [
+            'id',
+            'name',
+            'description',
+            'default_interval_km',
+            'default_interval_months',
+            'default_priority',
+            'is_active',
+            'sort_order',
+        ]
 
 
 class FluidChangeRecordSerializer(serializers.ModelSerializer):
@@ -123,4 +140,3 @@ class TruckFluidSpecSerializer(serializers.ModelSerializer):
             {'id': p.id, 'name': str(p)} 
             for p in obj.alternative_products.all()
         ]
-    
