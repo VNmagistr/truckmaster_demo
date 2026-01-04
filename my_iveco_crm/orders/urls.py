@@ -16,7 +16,7 @@ from .views import (
 # Створюємо роутер для автоматичної генерації URL
 router = DefaultRouter()
 router.register(r'service-orders', ServiceOrderViewSet, basename='serviceorder')
-router.register(r'orders', ServiceOrderViewSet, basename='order')  # Алiас для фронтенду
+router.register(r'orders', ServiceOrderViewSet, basename='order')
 router.register(r'service-works', ServiceWorkViewSet, basename='servicework')
 router.register(r'employees', EmployeeViewSet, basename='employee')
 router.register(r'work-groups', WorkGroupViewSet, basename='workgroup')
