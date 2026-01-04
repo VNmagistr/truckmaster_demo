@@ -31,7 +31,7 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
             'work',
             'description',
             'hours_spent',
-            'hourly_rate',
+            'employee',
         ]
         read_only_fields = ['id']
 
@@ -51,11 +51,10 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
             'work_group_name',
             'description',
             'hours_spent',
-            'hourly_rate',
-            'total_cost',
+            'employee',
             'created_at'
         ]
-        read_only_fields = ['total_cost', 'created_at']
+        read_only_fields = ['created_at']
 
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
@@ -131,4 +130,3 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceLog
         fields = '__all__'
-        
