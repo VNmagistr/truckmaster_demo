@@ -182,4 +182,3 @@ class DashboardOrderStatsView(APIView):
             'this_year': this_year,
             'compare_year': compare_year,
         })
-    

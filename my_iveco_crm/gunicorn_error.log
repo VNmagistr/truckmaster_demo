@@ -1,0 +1,3891 @@
+[2025-11-16 17:36:55 +0000] [1691] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7d4015c9c5e0>
+  on_reload: <function OnReload.on_reload at 0x7d4015c9c720>
+  when_ready: <function WhenReady.when_ready at 0x7d4015c9c860>
+  pre_fork: <function Prefork.pre_fork at 0x7d4015c9ca40>
+  post_fork: <function Postfork.post_fork at 0x7d4015c9cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7d4015c9ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7d4015c9ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7d4015c9cf40>
+  pre_exec: <function PreExec.pre_exec at 0x7d4015c9d080>
+  pre_request: <function PreRequest.pre_request at 0x7d4015c9d1c0>
+  post_request: <function PostRequest.post_request at 0x7d4015c9d260>
+  child_exit: <function ChildExit.child_exit at 0x7d4015c9d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7d4015c9d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7d4015c9d620>
+  on_exit: <function OnExit.on_exit at 0x7d4015c9d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7d4015c9d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 17:36:55 +0000] [1691] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 17:36:55 +0000] [1691] [DEBUG] Arbiter booted
+[2025-11-16 17:36:55 +0000] [1691] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (1691)
+[2025-11-16 17:36:55 +0000] [1691] [INFO] Using worker: sync
+[2025-11-16 17:36:55 +0000] [1694] [INFO] Booting worker with pid: 1694
+[2025-11-16 17:36:56 +0000] [1695] [INFO] Booting worker with pid: 1695
+[2025-11-16 17:36:56 +0000] [1691] [DEBUG] 2 workers
+[2025-11-16 17:37:02 +0000] [1694] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:37:05 +0000] [1694] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:37:05 +0000] [1695] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 17:37:07 +0000] [1695] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:37:07 +0000] [1694] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 17:37:11 +0000] [1694] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:37:12 +0000] [1695] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:37:14 +0000] [1695] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:37:16 +0000] [1694] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:37:18 +0000] [1694] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 17:40:23 +0000] [1691] [INFO] Handling signal: term
+[2025-11-16 17:40:23 +0000] [1694] [INFO] Worker exiting (pid: 1694)
+[2025-11-16 17:40:23 +0000] [1695] [INFO] Worker exiting (pid: 1695)
+[2025-11-16 17:40:24 +0000] [1691] [INFO] Shutting down: Master
+[2025-11-16 17:40:24 +0000] [1817] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7b8a6239c5e0>
+  on_reload: <function OnReload.on_reload at 0x7b8a6239c720>
+  when_ready: <function WhenReady.when_ready at 0x7b8a6239c860>
+  pre_fork: <function Prefork.pre_fork at 0x7b8a6239ca40>
+  post_fork: <function Postfork.post_fork at 0x7b8a6239cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7b8a6239ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7b8a6239ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7b8a6239cf40>
+  pre_exec: <function PreExec.pre_exec at 0x7b8a6239d080>
+  pre_request: <function PreRequest.pre_request at 0x7b8a6239d1c0>
+  post_request: <function PostRequest.post_request at 0x7b8a6239d260>
+  child_exit: <function ChildExit.child_exit at 0x7b8a6239d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7b8a6239d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7b8a6239d620>
+  on_exit: <function OnExit.on_exit at 0x7b8a6239d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7b8a6239d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 17:40:24 +0000] [1817] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 17:40:24 +0000] [1817] [DEBUG] Arbiter booted
+[2025-11-16 17:40:24 +0000] [1817] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (1817)
+[2025-11-16 17:40:24 +0000] [1817] [INFO] Using worker: sync
+[2025-11-16 17:40:24 +0000] [1820] [INFO] Booting worker with pid: 1820
+[2025-11-16 17:40:24 +0000] [1821] [INFO] Booting worker with pid: 1821
+[2025-11-16 17:40:24 +0000] [1817] [DEBUG] 2 workers
+[2025-11-16 17:40:45 +0000] [1821] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:40:55 +0000] [1820] [DEBUG] POST /admin/logout/
+[2025-11-16 17:40:57 +0000] [1820] [DEBUG] GET /admin/
+[2025-11-16 17:40:57 +0000] [1821] [DEBUG] GET /admin/login/
+[2025-11-16 17:41:00 +0000] [1821] [DEBUG] POST /admin/login/
+[2025-11-16 17:41:02 +0000] [1820] [DEBUG] GET /admin/
+[2025-11-16 17:41:03 +0000] [1820] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:41:04 +0000] [1821] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 17:41:06 +0000] [1821] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:41:07 +0000] [1820] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:41:09 +0000] [1820] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:41:10 +0000] [1821] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:41:13 +0000] [1821] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 17:43:01 +0000] [1821] [DEBUG] GET /
+[2025-11-16 17:55:43 +0000] [1820] [INFO] Worker exiting (pid: 1820)
+[2025-11-16 17:55:43 +0000] [1821] [INFO] Worker exiting (pid: 1821)
+[2025-11-16 17:55:43 +0000] [1817] [INFO] Handling signal: term
+[2025-11-16 17:55:43 +0000] [1817] [ERROR] Worker (pid:1821) was sent SIGTERM!
+[2025-11-16 17:55:44 +0000] [1817] [INFO] Shutting down: Master
+[2025-11-16 17:55:44 +0000] [2224] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x72c9ba2cc5e0>
+  on_reload: <function OnReload.on_reload at 0x72c9ba2cc720>
+  when_ready: <function WhenReady.when_ready at 0x72c9ba2cc860>
+  pre_fork: <function Prefork.pre_fork at 0x72c9ba2cca40>
+  post_fork: <function Postfork.post_fork at 0x72c9ba2ccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x72c9ba2cccc0>
+  worker_int: <function WorkerInt.worker_int at 0x72c9ba2cce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x72c9ba2ccf40>
+  pre_exec: <function PreExec.pre_exec at 0x72c9ba2cd080>
+  pre_request: <function PreRequest.pre_request at 0x72c9ba2cd1c0>
+  post_request: <function PostRequest.post_request at 0x72c9ba2cd260>
+  child_exit: <function ChildExit.child_exit at 0x72c9ba2cd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x72c9ba2cd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x72c9ba2cd620>
+  on_exit: <function OnExit.on_exit at 0x72c9ba2cd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x72c9ba2cd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 17:55:44 +0000] [2224] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 17:55:44 +0000] [2224] [DEBUG] Arbiter booted
+[2025-11-16 17:55:44 +0000] [2224] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2224)
+[2025-11-16 17:55:44 +0000] [2224] [INFO] Using worker: sync
+[2025-11-16 17:55:44 +0000] [2229] [INFO] Booting worker with pid: 2229
+[2025-11-16 17:55:44 +0000] [2230] [INFO] Booting worker with pid: 2230
+[2025-11-16 17:55:44 +0000] [2224] [DEBUG] 2 workers
+[2025-11-16 17:56:20 +0000] [2224] [INFO] Handling signal: term
+[2025-11-16 17:56:20 +0000] [2229] [INFO] Worker exiting (pid: 2229)
+[2025-11-16 17:56:20 +0000] [2230] [INFO] Worker exiting (pid: 2230)
+[2025-11-16 17:56:21 +0000] [2224] [INFO] Shutting down: Master
+[2025-11-16 17:56:21 +0000] [2319] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7fc4943845e0>
+  on_reload: <function OnReload.on_reload at 0x7fc494384720>
+  when_ready: <function WhenReady.when_ready at 0x7fc494384860>
+  pre_fork: <function Prefork.pre_fork at 0x7fc494384a40>
+  post_fork: <function Postfork.post_fork at 0x7fc494384b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7fc494384cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7fc494384e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7fc494384f40>
+  pre_exec: <function PreExec.pre_exec at 0x7fc494385080>
+  pre_request: <function PreRequest.pre_request at 0x7fc4943851c0>
+  post_request: <function PostRequest.post_request at 0x7fc494385260>
+  child_exit: <function ChildExit.child_exit at 0x7fc4943853a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7fc4943854e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7fc494385620>
+  on_exit: <function OnExit.on_exit at 0x7fc494385760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7fc494385940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 17:56:21 +0000] [2319] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 17:56:21 +0000] [2319] [DEBUG] Arbiter booted
+[2025-11-16 17:56:21 +0000] [2319] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2319)
+[2025-11-16 17:56:21 +0000] [2319] [INFO] Using worker: sync
+[2025-11-16 17:56:21 +0000] [2322] [INFO] Booting worker with pid: 2322
+[2025-11-16 17:56:21 +0000] [2323] [INFO] Booting worker with pid: 2323
+[2025-11-16 17:56:21 +0000] [2319] [DEBUG] 2 workers
+[2025-11-16 17:57:22 +0000] [2323] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:57:23 +0000] [2322] [DEBUG] GET /admin/
+[2025-11-16 17:57:26 +0000] [2323] [DEBUG] GET /admin/
+[2025-11-16 17:57:28 +0000] [2323] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 17:57:28 +0000] [2322] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 17:57:30 +0000] [2322] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:57:31 +0000] [2323] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:57:34 +0000] [2323] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:57:35 +0000] [2322] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 17:57:38 +0000] [2322] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:04:23 +0000] [2319] [INFO] Handling signal: term
+[2025-11-16 18:04:23 +0000] [2322] [INFO] Worker exiting (pid: 2322)
+[2025-11-16 18:04:23 +0000] [2323] [INFO] Worker exiting (pid: 2323)
+[2025-11-16 18:04:23 +0000] [2319] [INFO] Shutting down: Master
+[2025-11-16 18:04:23 +0000] [2459] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x73713e74c5e0>
+  on_reload: <function OnReload.on_reload at 0x73713e74c720>
+  when_ready: <function WhenReady.when_ready at 0x73713e74c860>
+  pre_fork: <function Prefork.pre_fork at 0x73713e74ca40>
+  post_fork: <function Postfork.post_fork at 0x73713e74cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x73713e74ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x73713e74ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x73713e74cf40>
+  pre_exec: <function PreExec.pre_exec at 0x73713e74d080>
+  pre_request: <function PreRequest.pre_request at 0x73713e74d1c0>
+  post_request: <function PostRequest.post_request at 0x73713e74d260>
+  child_exit: <function ChildExit.child_exit at 0x73713e74d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x73713e74d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x73713e74d620>
+  on_exit: <function OnExit.on_exit at 0x73713e74d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x73713e74d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:04:23 +0000] [2459] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:04:23 +0000] [2459] [DEBUG] Arbiter booted
+[2025-11-16 18:04:23 +0000] [2459] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2459)
+[2025-11-16 18:04:23 +0000] [2459] [INFO] Using worker: sync
+[2025-11-16 18:04:23 +0000] [2462] [INFO] Booting worker with pid: 2462
+[2025-11-16 18:04:23 +0000] [2463] [INFO] Booting worker with pid: 2463
+[2025-11-16 18:04:23 +0000] [2459] [DEBUG] 2 workers
+[2025-11-16 18:04:35 +0000] [2463] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:07:15 +0000] [2459] [INFO] Handling signal: term
+[2025-11-16 18:07:15 +0000] [2462] [INFO] Worker exiting (pid: 2462)
+[2025-11-16 18:07:15 +0000] [2463] [INFO] Worker exiting (pid: 2463)
+[2025-11-16 18:07:16 +0000] [2459] [INFO] Shutting down: Master
+[2025-11-16 18:07:16 +0000] [2550] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x76ddb34cc5e0>
+  on_reload: <function OnReload.on_reload at 0x76ddb34cc720>
+  when_ready: <function WhenReady.when_ready at 0x76ddb34cc860>
+  pre_fork: <function Prefork.pre_fork at 0x76ddb34cca40>
+  post_fork: <function Postfork.post_fork at 0x76ddb34ccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x76ddb34cccc0>
+  worker_int: <function WorkerInt.worker_int at 0x76ddb34cce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x76ddb34ccf40>
+  pre_exec: <function PreExec.pre_exec at 0x76ddb34cd080>
+  pre_request: <function PreRequest.pre_request at 0x76ddb34cd1c0>
+  post_request: <function PostRequest.post_request at 0x76ddb34cd260>
+  child_exit: <function ChildExit.child_exit at 0x76ddb34cd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x76ddb34cd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x76ddb34cd620>
+  on_exit: <function OnExit.on_exit at 0x76ddb34cd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x76ddb34cd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:07:16 +0000] [2550] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:07:16 +0000] [2550] [DEBUG] Arbiter booted
+[2025-11-16 18:07:16 +0000] [2550] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2550)
+[2025-11-16 18:07:16 +0000] [2550] [INFO] Using worker: sync
+[2025-11-16 18:07:16 +0000] [2551] [INFO] Booting worker with pid: 2551
+[2025-11-16 18:07:16 +0000] [2552] [INFO] Booting worker with pid: 2552
+[2025-11-16 18:07:16 +0000] [2550] [DEBUG] 2 workers
+[2025-11-16 18:07:20 +0000] [2551] [DEBUG] GET /backup/
+[2025-11-16 18:07:24 +0000] [2551] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:07:26 +0000] [2552] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:07:26 +0000] [2552] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:07:29 +0000] [2551] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:07:30 +0000] [2552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:07:32 +0000] [2552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:07:34 +0000] [2551] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:07:36 +0000] [2551] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:10:06 +0000] [2550] [INFO] Handling signal: term
+[2025-11-16 18:10:06 +0000] [2551] [INFO] Worker exiting (pid: 2551)
+[2025-11-16 18:10:06 +0000] [2552] [INFO] Worker exiting (pid: 2552)
+[2025-11-16 18:10:06 +0000] [2550] [INFO] Shutting down: Master
+[2025-11-16 18:10:07 +0000] [2605] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x74e5c809c5e0>
+  on_reload: <function OnReload.on_reload at 0x74e5c809c720>
+  when_ready: <function WhenReady.when_ready at 0x74e5c809c860>
+  pre_fork: <function Prefork.pre_fork at 0x74e5c809ca40>
+  post_fork: <function Postfork.post_fork at 0x74e5c809cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x74e5c809ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x74e5c809ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x74e5c809cf40>
+  pre_exec: <function PreExec.pre_exec at 0x74e5c809d080>
+  pre_request: <function PreRequest.pre_request at 0x74e5c809d1c0>
+  post_request: <function PostRequest.post_request at 0x74e5c809d260>
+  child_exit: <function ChildExit.child_exit at 0x74e5c809d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x74e5c809d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x74e5c809d620>
+  on_exit: <function OnExit.on_exit at 0x74e5c809d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x74e5c809d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:10:07 +0000] [2605] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:10:07 +0000] [2605] [DEBUG] Arbiter booted
+[2025-11-16 18:10:07 +0000] [2605] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2605)
+[2025-11-16 18:10:07 +0000] [2605] [INFO] Using worker: sync
+[2025-11-16 18:10:07 +0000] [2606] [INFO] Booting worker with pid: 2606
+[2025-11-16 18:10:07 +0000] [2607] [INFO] Booting worker with pid: 2607
+[2025-11-16 18:10:07 +0000] [2605] [DEBUG] 2 workers
+[2025-11-16 18:10:14 +0000] [2607] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:12:43 +0000] [2607] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:12:44 +0000] [2606] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:12:47 +0000] [2606] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:12:48 +0000] [2607] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:15:21 +0000] [2605] [INFO] Handling signal: term
+[2025-11-16 18:15:21 +0000] [2606] [INFO] Worker exiting (pid: 2606)
+[2025-11-16 18:15:21 +0000] [2607] [INFO] Worker exiting (pid: 2607)
+[2025-11-16 18:15:21 +0000] [2605] [INFO] Shutting down: Master
+[2025-11-16 18:15:22 +0000] [2699] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7fb803c385e0>
+  on_reload: <function OnReload.on_reload at 0x7fb803c38720>
+  when_ready: <function WhenReady.when_ready at 0x7fb803c38860>
+  pre_fork: <function Prefork.pre_fork at 0x7fb803c38a40>
+  post_fork: <function Postfork.post_fork at 0x7fb803c38b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7fb803c38cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7fb803c38e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7fb803c38f40>
+  pre_exec: <function PreExec.pre_exec at 0x7fb803c39080>
+  pre_request: <function PreRequest.pre_request at 0x7fb803c391c0>
+  post_request: <function PostRequest.post_request at 0x7fb803c39260>
+  child_exit: <function ChildExit.child_exit at 0x7fb803c393a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7fb803c394e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7fb803c39620>
+  on_exit: <function OnExit.on_exit at 0x7fb803c39760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7fb803c39940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:15:22 +0000] [2699] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:15:22 +0000] [2699] [DEBUG] Arbiter booted
+[2025-11-16 18:15:22 +0000] [2699] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2699)
+[2025-11-16 18:15:22 +0000] [2699] [INFO] Using worker: sync
+[2025-11-16 18:15:22 +0000] [2703] [INFO] Booting worker with pid: 2703
+[2025-11-16 18:15:22 +0000] [2704] [INFO] Booting worker with pid: 2704
+[2025-11-16 18:15:22 +0000] [2699] [DEBUG] 2 workers
+[2025-11-16 18:15:29 +0000] [2703] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:15:30 +0000] [2703] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:15:33 +0000] [2704] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:15:34 +0000] [2704] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:15:36 +0000] [2703] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:15:37 +0000] [2704] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:15:39 +0000] [2704] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:20:14 +0000] [2704] [DEBUG] GET /
+[2025-11-16 18:20:48 +0000] [2699] [INFO] Handling signal: term
+[2025-11-16 18:20:48 +0000] [2703] [INFO] Worker exiting (pid: 2703)
+[2025-11-16 18:20:48 +0000] [2704] [INFO] Worker exiting (pid: 2704)
+[2025-11-16 18:20:48 +0000] [2699] [INFO] Shutting down: Master
+[2025-11-16 18:20:48 +0000] [2856] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7d453b6cc5e0>
+  on_reload: <function OnReload.on_reload at 0x7d453b6cc720>
+  when_ready: <function WhenReady.when_ready at 0x7d453b6cc860>
+  pre_fork: <function Prefork.pre_fork at 0x7d453b6cca40>
+  post_fork: <function Postfork.post_fork at 0x7d453b6ccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7d453b6cccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7d453b6cce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7d453b6ccf40>
+  pre_exec: <function PreExec.pre_exec at 0x7d453b6cd080>
+  pre_request: <function PreRequest.pre_request at 0x7d453b6cd1c0>
+  post_request: <function PostRequest.post_request at 0x7d453b6cd260>
+  child_exit: <function ChildExit.child_exit at 0x7d453b6cd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7d453b6cd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7d453b6cd620>
+  on_exit: <function OnExit.on_exit at 0x7d453b6cd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7d453b6cd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:20:48 +0000] [2856] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:20:48 +0000] [2856] [DEBUG] Arbiter booted
+[2025-11-16 18:20:48 +0000] [2856] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (2856)
+[2025-11-16 18:20:48 +0000] [2856] [INFO] Using worker: sync
+[2025-11-16 18:20:48 +0000] [2860] [INFO] Booting worker with pid: 2860
+[2025-11-16 18:20:48 +0000] [2861] [INFO] Booting worker with pid: 2861
+[2025-11-16 18:20:49 +0000] [2856] [DEBUG] 2 workers
+[2025-11-16 18:21:02 +0000] [2860] [INFO] Worker exiting (pid: 2860)
+[2025-11-16 18:21:02 +0000] [2861] [INFO] Worker exiting (pid: 2861)
+[2025-11-16 18:21:02 +0000] [2856] [INFO] Handling signal: term
+[2025-11-16 18:21:02 +0000] [2856] [ERROR] Worker (pid:2860) was sent SIGTERM!
+[2025-11-16 18:21:02 +0000] [2856] [ERROR] Worker (pid:2861) was sent SIGTERM!
+[2025-11-16 18:21:02 +0000] [2856] [INFO] Shutting down: Master
+[2025-11-16 18:24:21 +0000] [3130] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7bccfa6c85e0>
+  on_reload: <function OnReload.on_reload at 0x7bccfa6c8720>
+  when_ready: <function WhenReady.when_ready at 0x7bccfa6c8860>
+  pre_fork: <function Prefork.pre_fork at 0x7bccfa6c8a40>
+  post_fork: <function Postfork.post_fork at 0x7bccfa6c8b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7bccfa6c8cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7bccfa6c8e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7bccfa6c8f40>
+  pre_exec: <function PreExec.pre_exec at 0x7bccfa6c9080>
+  pre_request: <function PreRequest.pre_request at 0x7bccfa6c91c0>
+  post_request: <function PostRequest.post_request at 0x7bccfa6c9260>
+  child_exit: <function ChildExit.child_exit at 0x7bccfa6c93a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7bccfa6c94e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7bccfa6c9620>
+  on_exit: <function OnExit.on_exit at 0x7bccfa6c9760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7bccfa6c9940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:24:21 +0000] [3130] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:24:21 +0000] [3130] [DEBUG] Arbiter booted
+[2025-11-16 18:24:21 +0000] [3130] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (3130)
+[2025-11-16 18:24:21 +0000] [3130] [INFO] Using worker: sync
+[2025-11-16 18:24:21 +0000] [3131] [INFO] Booting worker with pid: 3131
+[2025-11-16 18:24:21 +0000] [3132] [INFO] Booting worker with pid: 3132
+[2025-11-16 18:24:21 +0000] [3130] [DEBUG] 2 workers
+[2025-11-16 18:24:50 +0000] [3132] [DEBUG] GET /
+[2025-11-16 18:25:18 +0000] [3131] [DEBUG] GET /wiki
+[2025-11-16 18:26:51 +0000] [3132] [DEBUG] GET //admin/orders/serviceorder/add/
+[2025-11-16 18:26:58 +0000] [3131] [DEBUG] GET //admin/orders/serviceorder/ad
+[2025-11-16 18:27:04 +0000] [3131] [DEBUG] GET //admin
+[2025-11-16 18:27:30 +0000] [3132] [DEBUG] GET /admin/
+[2025-11-16 18:27:33 +0000] [3132] [DEBUG] GET /admin/
+[2025-11-16 18:27:36 +0000] [3131] [DEBUG] GET /admin/
+[2025-11-16 18:27:38 +0000] [3131] [DEBUG] GET /admin/
+[2025-11-16 18:27:41 +0000] [3132] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:27:41 +0000] [3132] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:27:43 +0000] [3131] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:27:45 +0000] [3132] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:27:46 +0000] [3132] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:27:48 +0000] [3131] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:27:50 +0000] [3131] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:31:03 +0000] [3131] [DEBUG] GET /aaa9
+[2025-11-16 18:31:10 +0000] [3132] [DEBUG] GET /aab8
+[2025-11-16 18:31:15 +0000] [3132] [DEBUG] GET /
+[2025-11-16 18:33:42 +0000] [3130] [INFO] Handling signal: term
+[2025-11-16 18:33:42 +0000] [3131] [INFO] Worker exiting (pid: 3131)
+[2025-11-16 18:33:42 +0000] [3132] [INFO] Worker exiting (pid: 3132)
+[2025-11-16 18:33:42 +0000] [3130] [INFO] Shutting down: Master
+[2025-11-16 18:33:42 +0000] [3390] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x71c98cd9c5e0>
+  on_reload: <function OnReload.on_reload at 0x71c98cd9c720>
+  when_ready: <function WhenReady.when_ready at 0x71c98cd9c860>
+  pre_fork: <function Prefork.pre_fork at 0x71c98cd9ca40>
+  post_fork: <function Postfork.post_fork at 0x71c98cd9cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x71c98cd9ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x71c98cd9ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x71c98cd9cf40>
+  pre_exec: <function PreExec.pre_exec at 0x71c98cd9d080>
+  pre_request: <function PreRequest.pre_request at 0x71c98cd9d1c0>
+  post_request: <function PostRequest.post_request at 0x71c98cd9d260>
+  child_exit: <function ChildExit.child_exit at 0x71c98cd9d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x71c98cd9d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x71c98cd9d620>
+  on_exit: <function OnExit.on_exit at 0x71c98cd9d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x71c98cd9d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:33:42 +0000] [3390] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:33:42 +0000] [3390] [DEBUG] Arbiter booted
+[2025-11-16 18:33:42 +0000] [3390] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (3390)
+[2025-11-16 18:33:42 +0000] [3390] [INFO] Using worker: sync
+[2025-11-16 18:33:42 +0000] [3392] [INFO] Booting worker with pid: 3392
+[2025-11-16 18:33:42 +0000] [3393] [INFO] Booting worker with pid: 3393
+[2025-11-16 18:33:43 +0000] [3390] [DEBUG] 2 workers
+[2025-11-16 18:33:51 +0000] [3393] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:33:53 +0000] [3392] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:33:56 +0000] [3392] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:33:56 +0000] [3393] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:33:58 +0000] [3393] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:33:58 +0000] [3392] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:34:04 +0000] [3392] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:34:06 +0000] [3393] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:34:09 +0000] [3393] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:38:29 +0000] [3390] [INFO] Handling signal: term
+[2025-11-16 18:38:29 +0000] [3392] [INFO] Worker exiting (pid: 3392)
+[2025-11-16 18:38:29 +0000] [3393] [INFO] Worker exiting (pid: 3393)
+[2025-11-16 18:38:30 +0000] [3390] [INFO] Shutting down: Master
+[2025-11-16 18:38:30 +0000] [3549] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7cc449c385e0>
+  on_reload: <function OnReload.on_reload at 0x7cc449c38720>
+  when_ready: <function WhenReady.when_ready at 0x7cc449c38860>
+  pre_fork: <function Prefork.pre_fork at 0x7cc449c38a40>
+  post_fork: <function Postfork.post_fork at 0x7cc449c38b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7cc449c38cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7cc449c38e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7cc449c38f40>
+  pre_exec: <function PreExec.pre_exec at 0x7cc449c39080>
+  pre_request: <function PreRequest.pre_request at 0x7cc449c391c0>
+  post_request: <function PostRequest.post_request at 0x7cc449c39260>
+  child_exit: <function ChildExit.child_exit at 0x7cc449c393a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7cc449c394e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7cc449c39620>
+  on_exit: <function OnExit.on_exit at 0x7cc449c39760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7cc449c39940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:38:30 +0000] [3549] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:38:30 +0000] [3549] [DEBUG] Arbiter booted
+[2025-11-16 18:38:30 +0000] [3549] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (3549)
+[2025-11-16 18:38:30 +0000] [3549] [INFO] Using worker: sync
+[2025-11-16 18:38:30 +0000] [3552] [INFO] Booting worker with pid: 3552
+[2025-11-16 18:38:30 +0000] [3553] [INFO] Booting worker with pid: 3553
+[2025-11-16 18:38:30 +0000] [3549] [DEBUG] 2 workers
+[2025-11-16 18:39:03 +0000] [3552] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:39:06 +0000] [3553] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:39:07 +0000] [3553] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:39:08 +0000] [3552] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:39:08 +0000] [3552] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:39:11 +0000] [3553] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:39:12 +0000] [3553] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:39:14 +0000] [3552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:39:16 +0000] [3552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:39:18 +0000] [3553] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:41:41 +0000] [3553] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:43:41 +0000] [3549] [INFO] Handling signal: term
+[2025-11-16 18:43:41 +0000] [3553] [INFO] Worker exiting (pid: 3553)
+[2025-11-16 18:43:41 +0000] [3552] [INFO] Worker exiting (pid: 3552)
+[2025-11-16 18:43:42 +0000] [3549] [INFO] Shutting down: Master
+[2025-11-16 18:43:42 +0000] [3710] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7572d12c85e0>
+  on_reload: <function OnReload.on_reload at 0x7572d12c8720>
+  when_ready: <function WhenReady.when_ready at 0x7572d12c8860>
+  pre_fork: <function Prefork.pre_fork at 0x7572d12c8a40>
+  post_fork: <function Postfork.post_fork at 0x7572d12c8b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7572d12c8cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7572d12c8e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7572d12c8f40>
+  pre_exec: <function PreExec.pre_exec at 0x7572d12c9080>
+  pre_request: <function PreRequest.pre_request at 0x7572d12c91c0>
+  post_request: <function PostRequest.post_request at 0x7572d12c9260>
+  child_exit: <function ChildExit.child_exit at 0x7572d12c93a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7572d12c94e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7572d12c9620>
+  on_exit: <function OnExit.on_exit at 0x7572d12c9760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7572d12c9940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:43:42 +0000] [3710] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:43:42 +0000] [3710] [DEBUG] Arbiter booted
+[2025-11-16 18:43:42 +0000] [3710] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (3710)
+[2025-11-16 18:43:42 +0000] [3710] [INFO] Using worker: sync
+[2025-11-16 18:43:42 +0000] [3711] [INFO] Booting worker with pid: 3711
+[2025-11-16 18:43:42 +0000] [3712] [INFO] Booting worker with pid: 3712
+[2025-11-16 18:43:42 +0000] [3710] [DEBUG] 2 workers
+[2025-11-16 18:43:50 +0000] [3711] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:43:53 +0000] [3711] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:46:13 +0000] [3710] [INFO] Handling signal: term
+[2025-11-16 18:46:13 +0000] [3711] [INFO] Worker exiting (pid: 3711)
+[2025-11-16 18:46:13 +0000] [3712] [INFO] Worker exiting (pid: 3712)
+[2025-11-16 18:46:13 +0000] [3710] [INFO] Shutting down: Master
+[2025-11-16 18:46:14 +0000] [3846] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x730e3a79c5e0>
+  on_reload: <function OnReload.on_reload at 0x730e3a79c720>
+  when_ready: <function WhenReady.when_ready at 0x730e3a79c860>
+  pre_fork: <function Prefork.pre_fork at 0x730e3a79ca40>
+  post_fork: <function Postfork.post_fork at 0x730e3a79cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x730e3a79ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x730e3a79ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x730e3a79cf40>
+  pre_exec: <function PreExec.pre_exec at 0x730e3a79d080>
+  pre_request: <function PreRequest.pre_request at 0x730e3a79d1c0>
+  post_request: <function PostRequest.post_request at 0x730e3a79d260>
+  child_exit: <function ChildExit.child_exit at 0x730e3a79d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x730e3a79d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x730e3a79d620>
+  on_exit: <function OnExit.on_exit at 0x730e3a79d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x730e3a79d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:46:14 +0000] [3846] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:46:14 +0000] [3846] [DEBUG] Arbiter booted
+[2025-11-16 18:46:14 +0000] [3846] [INFO] Listening at: unix:/home/ubuntu/truckmaster/my_iveco_crm/my_iveco_crm.sock (3846)
+[2025-11-16 18:46:14 +0000] [3846] [INFO] Using worker: sync
+[2025-11-16 18:46:14 +0000] [3850] [INFO] Booting worker with pid: 3850
+[2025-11-16 18:46:14 +0000] [3851] [INFO] Booting worker with pid: 3851
+[2025-11-16 18:46:14 +0000] [3846] [DEBUG] 2 workers
+[2025-11-16 18:46:36 +0000] [3850] [DEBUG] GET /admin
+[2025-11-16 18:46:36 +0000] [3851] [DEBUG] GET /admin/
+[2025-11-16 18:46:39 +0000] [3850] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 18:46:39 +0000] [3850] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:46:41 +0000] [3851] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:46:41 +0000] [3850] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:46:44 +0000] [3851] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:46:45 +0000] [3850] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:46:47 +0000] [3850] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:47:08 +0000] [3851] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:47:10 +0000] [3851] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:48:15 +0000] [3851] [DEBUG] GET /.env
+[2025-11-16 18:48:16 +0000] [3850] [DEBUG] GET /api/.env
+[2025-11-16 18:48:16 +0000] [3850] [DEBUG] GET /backend/.env
+[2025-11-16 18:48:16 +0000] [3851] [DEBUG] GET /admin/.env
+[2025-11-16 18:48:16 +0000] [3851] [DEBUG] GET /.env.example
+[2025-11-16 18:48:16 +0000] [3850] [DEBUG] GET /app_dev.php/_profiler/phpinfo
+[2025-11-16 18:48:18 +0000] [3850] [DEBUG] GET /
+[2025-11-16 18:48:18 +0000] [3851] [DEBUG] GET /back/.env
+[2025-11-16 18:48:18 +0000] [3850] [DEBUG] GET /security/.env
+[2025-11-16 18:48:19 +0000] [3851] [DEBUG] GET /admins/.env
+[2025-11-16 18:48:19 +0000] [3851] [DEBUG] GET /lib/.env
+[2025-11-16 18:48:19 +0000] [3850] [DEBUG] GET /shared/.env
+[2025-11-16 18:48:19 +0000] [3850] [DEBUG] GET /production/.env
+[2025-11-16 18:48:19 +0000] [3851] [DEBUG] GET /beta/.env
+[2025-11-16 18:48:20 +0000] [3851] [DEBUG] GET /alpha/.env
+[2025-11-16 18:48:20 +0000] [3850] [DEBUG] GET /cms/.env.prod
+[2025-11-16 18:48:20 +0000] [3850] [DEBUG] GET /credentials
+[2025-11-16 18:48:21 +0000] [3851] [DEBUG] GET /sample.env
+[2025-11-16 18:48:21 +0000] [3851] [DEBUG] GET /community/.env
+[2025-11-16 18:48:21 +0000] [3850] [DEBUG] GET /~admin/.env
+[2025-11-16 18:48:22 +0000] [3850] [DEBUG] GET /Core/.env
+[2025-11-16 18:48:22 +0000] [3851] [DEBUG] GET /pos/.env
+[2025-11-16 18:48:23 +0000] [3851] [DEBUG] GET /robots/.env
+[2025-11-16 18:48:24 +0000] [3850] [DEBUG] GET /app/config/.env
+[2025-11-16 18:48:24 +0000] [3850] [DEBUG] GET /base/.env
+[2025-11-16 18:48:25 +0000] [3851] [DEBUG] GET /django/.env
+[2025-11-16 18:48:25 +0000] [3851] [DEBUG] GET /awstats/.env
+[2025-11-16 18:48:25 +0000] [3850] [DEBUG] GET /profile/.env
+[2025-11-16 18:48:26 +0000] [3850] [DEBUG] GET /travis/.env
+[2025-11-16 18:48:26 +0000] [3851] [DEBUG] GET /novnc/.env
+[2025-11-16 18:54:44 +0000] [3846] [INFO] Handling signal: term
+[2025-11-16 18:54:44 +0000] [3850] [INFO] Worker exiting (pid: 3850)
+[2025-11-16 18:54:44 +0000] [3851] [INFO] Worker exiting (pid: 3851)
+[2025-11-16 18:54:44 +0000] [3846] [ERROR] Worker (pid:3850) was sent SIGTERM!
+[2025-11-16 18:54:44 +0000] [3846] [ERROR] Worker (pid:3851) was sent SIGTERM!
+[2025-11-16 18:54:44 +0000] [3846] [INFO] Shutting down: Master
+[2025-11-16 18:54:44 +0000] [4096] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/run/gunicorn/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7841a3bf45e0>
+  on_reload: <function OnReload.on_reload at 0x7841a3bf4720>
+  when_ready: <function WhenReady.when_ready at 0x7841a3bf4860>
+  pre_fork: <function Prefork.pre_fork at 0x7841a3bf4a40>
+  post_fork: <function Postfork.post_fork at 0x7841a3bf4b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7841a3bf4cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7841a3bf4e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7841a3bf4f40>
+  pre_exec: <function PreExec.pre_exec at 0x7841a3bf5080>
+  pre_request: <function PreRequest.pre_request at 0x7841a3bf51c0>
+  post_request: <function PostRequest.post_request at 0x7841a3bf5260>
+  child_exit: <function ChildExit.child_exit at 0x7841a3bf53a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7841a3bf54e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7841a3bf5620>
+  on_exit: <function OnExit.on_exit at 0x7841a3bf5760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7841a3bf5940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:54:44 +0000] [4096] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:54:44 +0000] [4096] [DEBUG] Arbiter booted
+[2025-11-16 18:54:44 +0000] [4096] [INFO] Listening at: unix:/run/gunicorn/my_iveco_crm.sock (4096)
+[2025-11-16 18:54:44 +0000] [4096] [INFO] Using worker: sync
+[2025-11-16 18:54:44 +0000] [4097] [INFO] Booting worker with pid: 4097
+[2025-11-16 18:54:44 +0000] [4098] [INFO] Booting worker with pid: 4098
+[2025-11-16 18:54:44 +0000] [4096] [DEBUG] 2 workers
+[2025-11-16 18:54:52 +0000] [4097] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:54:54 +0000] [4097] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:54:54 +0000] [4098] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:54:56 +0000] [4098] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:54:56 +0000] [4097] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:54:58 +0000] [4097] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:54:59 +0000] [4098] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:55:01 +0000] [4098] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:55:03 +0000] [4097] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:55:05 +0000] [4097] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 18:58:10 +0000] [4096] [INFO] Handling signal: term
+[2025-11-16 18:58:10 +0000] [4097] [INFO] Worker exiting (pid: 4097)
+[2025-11-16 18:58:10 +0000] [4098] [INFO] Worker exiting (pid: 4098)
+[2025-11-16 18:58:11 +0000] [4096] [INFO] Shutting down: Master
+[2025-11-16 18:58:11 +0000] [4249] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['unix:/run/gunicorn/my_iveco_crm.sock']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7e68a2ecc5e0>
+  on_reload: <function OnReload.on_reload at 0x7e68a2ecc720>
+  when_ready: <function WhenReady.when_ready at 0x7e68a2ecc860>
+  pre_fork: <function Prefork.pre_fork at 0x7e68a2ecca40>
+  post_fork: <function Postfork.post_fork at 0x7e68a2eccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7e68a2ecccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7e68a2ecce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7e68a2eccf40>
+  pre_exec: <function PreExec.pre_exec at 0x7e68a2ecd080>
+  pre_request: <function PreRequest.pre_request at 0x7e68a2ecd1c0>
+  post_request: <function PostRequest.post_request at 0x7e68a2ecd260>
+  child_exit: <function ChildExit.child_exit at 0x7e68a2ecd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7e68a2ecd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7e68a2ecd620>
+  on_exit: <function OnExit.on_exit at 0x7e68a2ecd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7e68a2ecd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 18:58:11 +0000] [4249] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 18:58:11 +0000] [4249] [DEBUG] Arbiter booted
+[2025-11-16 18:58:11 +0000] [4249] [INFO] Listening at: unix:/run/gunicorn/my_iveco_crm.sock (4249)
+[2025-11-16 18:58:11 +0000] [4249] [INFO] Using worker: sync
+[2025-11-16 18:58:11 +0000] [4252] [INFO] Booting worker with pid: 4252
+[2025-11-16 18:58:12 +0000] [4253] [INFO] Booting worker with pid: 4253
+[2025-11-16 18:58:12 +0000] [4249] [DEBUG] 2 workers
+[2025-11-16 18:58:39 +0000] [4252] [DEBUG] GET /
+[2025-11-16 18:58:46 +0000] [4253] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:58:48 +0000] [4253] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:58:48 +0000] [4252] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:58:50 +0000] [4252] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:58:50 +0000] [4253] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:58:51 +0000] [4253] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 18:58:51 +0000] [4252] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 18:58:54 +0000] [4252] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:58:55 +0000] [4253] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:58:57 +0000] [4253] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:58:59 +0000] [4252] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 18:59:01 +0000] [4252] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:04:14 +0000] [4252] [INFO] Worker exiting (pid: 4252)
+[2025-11-16 19:04:14 +0000] [4253] [INFO] Worker exiting (pid: 4253)
+[2025-11-16 19:04:14 +0000] [4249] [INFO] Handling signal: term
+[2025-11-16 19:04:14 +0000] [4249] [ERROR] Worker (pid:4253) was sent SIGTERM!
+[2025-11-16 19:04:14 +0000] [4249] [INFO] Shutting down: Master
+[2025-11-16 19:04:14 +0000] [4451] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7c90058185e0>
+  on_reload: <function OnReload.on_reload at 0x7c9005818720>
+  when_ready: <function WhenReady.when_ready at 0x7c9005818860>
+  pre_fork: <function Prefork.pre_fork at 0x7c9005818a40>
+  post_fork: <function Postfork.post_fork at 0x7c9005818b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7c9005818cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7c9005818e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7c9005818f40>
+  pre_exec: <function PreExec.pre_exec at 0x7c9005819080>
+  pre_request: <function PreRequest.pre_request at 0x7c90058191c0>
+  post_request: <function PostRequest.post_request at 0x7c9005819260>
+  child_exit: <function ChildExit.child_exit at 0x7c90058193a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7c90058194e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7c9005819620>
+  on_exit: <function OnExit.on_exit at 0x7c9005819760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7c9005819940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:04:14 +0000] [4451] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:04:14 +0000] [4451] [DEBUG] Arbiter booted
+[2025-11-16 19:04:14 +0000] [4451] [INFO] Listening at: http://127.0.0.1:8000 (4451)
+[2025-11-16 19:04:14 +0000] [4451] [INFO] Using worker: sync
+[2025-11-16 19:04:14 +0000] [4465] [INFO] Booting worker with pid: 4465
+[2025-11-16 19:04:14 +0000] [4466] [INFO] Booting worker with pid: 4466
+[2025-11-16 19:04:14 +0000] [4451] [DEBUG] 2 workers
+[2025-11-16 19:04:18 +0000] [4465] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:04:19 +0000] [4465] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 19:04:22 +0000] [4466] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 19:04:22 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:04:24 +0000] [4465] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 19:04:24 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:04:26 +0000] [4466] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:04:26 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:04:28 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:04:29 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:04:31 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:04:33 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:04:35 +0000] [4466] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:04:58 +0000] [4466] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:05:04 +0000] [4465] [DEBUG] GET /admin/orders/servicework/
+[2025-11-16 19:05:04 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:05:06 +0000] [4466] [DEBUG] GET /admin/orders/servicework/add/
+[2025-11-16 19:05:06 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:05:11 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:12 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:17 +0000] [4465] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:05:17 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:05:22 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:23 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:25 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:29 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:05:33 +0000] [4465] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:06:23 +0000] [4466] [DEBUG] GET /admin/orders/maintenancelog/
+[2025-11-16 19:06:23 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:28 +0000] [4465] [DEBUG] GET /admin/orders/workgroup/
+[2025-11-16 19:06:28 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:30 +0000] [4466] [DEBUG] GET /admin/orders/maintenancerule/
+[2025-11-16 19:06:30 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:34 +0000] [4465] [DEBUG] GET /admin/clients/truck/
+[2025-11-16 19:06:34 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:36 +0000] [4466] [DEBUG] GET /admin/clients/truck/add/
+[2025-11-16 19:06:36 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:41 +0000] [4465] [DEBUG] GET /admin/clients/client/
+[2025-11-16 19:06:41 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:42 +0000] [4466] [DEBUG] GET /admin/clients/client/add/
+[2025-11-16 19:06:42 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:45 +0000] [4465] [DEBUG] GET /admin/clients/truck/add/
+[2025-11-16 19:06:45 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:06:51 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:06:56 +0000] [4465] [DEBUG] GET /admin/clients/client/add/
+[2025-11-16 19:06:56 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:07:11 +0000] [4465] [DEBUG] POST /admin/clients/client/add/
+[2025-11-16 19:07:11 +0000] [4465] [DEBUG] GET /admin/clients/client/
+[2025-11-16 19:07:11 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:07:15 +0000] [4465] [DEBUG] GET /admin/clients/truck/add/
+[2025-11-16 19:07:15 +0000] [4466] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:07:16 +0000] [4466] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:07:18 +0000] [4465] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:07:33 +0000] [4466] [DEBUG] POST /admin/clients/truck/add/
+[2025-11-16 19:07:34 +0000] [4465] [DEBUG] GET /admin/clients/truck/
+[2025-11-16 19:07:34 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:07:36 +0000] [4466] [DEBUG] GET /admin/clients/truck/22/change/
+[2025-11-16 19:07:36 +0000] [4465] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:08:58 +0000] [4465] [DEBUG] GET /
+[2025-11-16 19:09:51 +0000] [4451] [INFO] Handling signal: term
+[2025-11-16 19:09:51 +0000] [4465] [INFO] Worker exiting (pid: 4465)
+[2025-11-16 19:09:51 +0000] [4466] [INFO] Worker exiting (pid: 4466)
+[2025-11-16 19:09:51 +0000] [4451] [INFO] Shutting down: Master
+[2025-11-16 19:09:52 +0000] [4550] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7f1819b705e0>
+  on_reload: <function OnReload.on_reload at 0x7f1819b70720>
+  when_ready: <function WhenReady.when_ready at 0x7f1819b70860>
+  pre_fork: <function Prefork.pre_fork at 0x7f1819b70a40>
+  post_fork: <function Postfork.post_fork at 0x7f1819b70b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7f1819b70cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7f1819b70e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7f1819b70f40>
+  pre_exec: <function PreExec.pre_exec at 0x7f1819b71080>
+  pre_request: <function PreRequest.pre_request at 0x7f1819b711c0>
+  post_request: <function PostRequest.post_request at 0x7f1819b71260>
+  child_exit: <function ChildExit.child_exit at 0x7f1819b713a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7f1819b714e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7f1819b71620>
+  on_exit: <function OnExit.on_exit at 0x7f1819b71760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7f1819b71940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:09:52 +0000] [4550] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:09:52 +0000] [4550] [DEBUG] Arbiter booted
+[2025-11-16 19:09:52 +0000] [4550] [INFO] Listening at: http://127.0.0.1:8000 (4550)
+[2025-11-16 19:09:52 +0000] [4550] [INFO] Using worker: sync
+[2025-11-16 19:09:52 +0000] [4552] [INFO] Booting worker with pid: 4552
+[2025-11-16 19:09:52 +0000] [4553] [INFO] Booting worker with pid: 4553
+[2025-11-16 19:09:52 +0000] [4550] [DEBUG] 2 workers
+[2025-11-16 19:09:56 +0000] [4553] [DEBUG] POST /admin/clients/truck/22/change/
+[2025-11-16 19:09:56 +0000] [4552] [DEBUG] GET /admin/clients/truck/
+[2025-11-16 19:09:57 +0000] [4552] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:09:59 +0000] [4553] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:10:00 +0000] [4553] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:10:02 +0000] [4552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:03 +0000] [4552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:07 +0000] [4553] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:08 +0000] [4553] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:13 +0000] [4552] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:16 +0000] [4553] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:10:18 +0000] [4553] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:14:40 +0000] [4553] [DEBUG] GET /
+[2025-11-16 19:21:30 +0000] [4550] [INFO] Handling signal: term
+[2025-11-16 19:21:30 +0000] [4552] [INFO] Worker exiting (pid: 4552)
+[2025-11-16 19:21:30 +0000] [4553] [INFO] Worker exiting (pid: 4553)
+[2025-11-16 19:21:30 +0000] [4550] [INFO] Shutting down: Master
+[2025-11-16 19:21:31 +0000] [4725] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7db3883c85e0>
+  on_reload: <function OnReload.on_reload at 0x7db3883c8720>
+  when_ready: <function WhenReady.when_ready at 0x7db3883c8860>
+  pre_fork: <function Prefork.pre_fork at 0x7db3883c8a40>
+  post_fork: <function Postfork.post_fork at 0x7db3883c8b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7db3883c8cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7db3883c8e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7db3883c8f40>
+  pre_exec: <function PreExec.pre_exec at 0x7db3883c9080>
+  pre_request: <function PreRequest.pre_request at 0x7db3883c91c0>
+  post_request: <function PostRequest.post_request at 0x7db3883c9260>
+  child_exit: <function ChildExit.child_exit at 0x7db3883c93a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7db3883c94e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7db3883c9620>
+  on_exit: <function OnExit.on_exit at 0x7db3883c9760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7db3883c9940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:21:31 +0000] [4725] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:21:31 +0000] [4725] [DEBUG] Arbiter booted
+[2025-11-16 19:21:31 +0000] [4725] [INFO] Listening at: http://127.0.0.1:8000 (4725)
+[2025-11-16 19:21:31 +0000] [4725] [INFO] Using worker: sync
+[2025-11-16 19:21:31 +0000] [4729] [INFO] Booting worker with pid: 4729
+[2025-11-16 19:21:31 +0000] [4730] [INFO] Booting worker with pid: 4730
+[2025-11-16 19:21:31 +0000] [4725] [DEBUG] 2 workers
+[2025-11-16 19:21:45 +0000] [4730] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:21:47 +0000] [4729] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:21:48 +0000] [4729] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:21:49 +0000] [4730] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:21:49 +0000] [4730] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:21:54 +0000] [4729] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:21:55 +0000] [4729] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:21:57 +0000] [4730] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:21:58 +0000] [4729] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:22:00 +0000] [4730] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:41:06 +0000] [4730] [DEBUG] GET /.env
+[2025-11-16 19:41:06 +0000] [4729] [DEBUG] GET /api/.env
+[2025-11-16 19:41:06 +0000] [4730] [DEBUG] GET /backend/.env
+[2025-11-16 19:41:06 +0000] [4730] [DEBUG] GET /admin/.env
+[2025-11-16 19:41:06 +0000] [4729] [DEBUG] GET /.env.example
+[2025-11-16 19:41:06 +0000] [4730] [DEBUG] GET /app_dev.php/_profiler/phpinfo
+[2025-11-16 19:41:07 +0000] [4729] [DEBUG] GET /
+[2025-11-16 19:41:07 +0000] [4729] [DEBUG] GET /debug/default/view
+[2025-11-16 19:41:07 +0000] [4730] [DEBUG] GET /images/.env
+[2025-11-16 19:41:07 +0000] [4729] [DEBUG] GET /.env.save.1
+[2025-11-16 19:41:07 +0000] [4729] [DEBUG] GET /.json
+[2025-11-16 19:41:07 +0000] [4730] [DEBUG] GET /library/.env
+[2025-11-16 19:41:07 +0000] [4729] [DEBUG] GET /API/.env
+[2025-11-16 19:41:07 +0000] [4730] [DEBUG] GET /client/.env
+[2025-11-16 19:41:07 +0000] [4730] [DEBUG] GET /blogs/.env
+[2025-11-16 19:41:08 +0000] [4729] [DEBUG] GET /settings/.env
+[2025-11-16 19:41:08 +0000] [4729] [DEBUG] GET /.env.prod
+[2025-11-16 19:41:08 +0000] [4730] [DEBUG] GET /html/.env
+[2025-11-16 19:41:08 +0000] [4730] [DEBUG] GET /aws.yml
+[2025-11-16 19:41:08 +0000] [4729] [DEBUG] GET /apis/.env
+[2025-11-16 19:41:08 +0000] [4729] [DEBUG] GET /stage/.env
+[2025-11-16 19:41:08 +0000] [4730] [DEBUG] GET /auth/.env
+[2025-11-16 19:41:08 +0000] [4730] [DEBUG] GET /env.txt
+[2025-11-16 19:41:09 +0000] [4729] [DEBUG] GET /test.php
+[2025-11-16 19:41:09 +0000] [4730] [DEBUG] GET /platform/.env
+[2025-11-16 19:41:09 +0000] [4729] [DEBUG] GET /data/.env
+[2025-11-16 19:41:09 +0000] [4729] [DEBUG] GET /www/.env
+[2025-11-16 19:41:09 +0000] [4730] [DEBUG] GET /developer/.env
+[2025-11-16 19:41:09 +0000] [4729] [DEBUG] GET /home/.env
+[2025-11-16 19:45:47 +0000] [4725] [INFO] Handling signal: term
+[2025-11-16 19:45:47 +0000] [4730] [INFO] Worker exiting (pid: 4730)
+[2025-11-16 19:45:47 +0000] [4729] [INFO] Worker exiting (pid: 4729)
+[2025-11-16 19:45:48 +0000] [4725] [INFO] Shutting down: Master
+[2025-11-16 19:45:48 +0000] [5113] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7a853e6605e0>
+  on_reload: <function OnReload.on_reload at 0x7a853e660720>
+  when_ready: <function WhenReady.when_ready at 0x7a853e660860>
+  pre_fork: <function Prefork.pre_fork at 0x7a853e660a40>
+  post_fork: <function Postfork.post_fork at 0x7a853e660b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7a853e660cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7a853e660e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7a853e660f40>
+  pre_exec: <function PreExec.pre_exec at 0x7a853e661080>
+  pre_request: <function PreRequest.pre_request at 0x7a853e6611c0>
+  post_request: <function PostRequest.post_request at 0x7a853e661260>
+  child_exit: <function ChildExit.child_exit at 0x7a853e6613a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7a853e6614e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7a853e661620>
+  on_exit: <function OnExit.on_exit at 0x7a853e661760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7a853e661940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:45:48 +0000] [5113] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:45:48 +0000] [5113] [DEBUG] Arbiter booted
+[2025-11-16 19:45:48 +0000] [5113] [INFO] Listening at: http://127.0.0.1:8000 (5113)
+[2025-11-16 19:45:48 +0000] [5113] [INFO] Using worker: sync
+[2025-11-16 19:45:48 +0000] [5119] [INFO] Booting worker with pid: 5119
+[2025-11-16 19:45:48 +0000] [5113] [DEBUG] 2 workers
+[2025-11-16 19:45:48 +0000] [5120] [INFO] Booting worker with pid: 5120
+[2025-11-16 19:46:00 +0000] [5119] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:49:32 +0000] [5119] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:49:34 +0000] [5120] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:49:35 +0000] [5120] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:49:37 +0000] [5119] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:49:39 +0000] [5120] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 19:53:03 +0000] [5120] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:53:05 +0000] [5119] [DEBUG] GET /admin/clients/truck/
+[2025-11-16 19:53:05 +0000] [5119] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:55:09 +0000] [5119] [DEBUG] GET /
+[2025-11-16 19:55:16 +0000] [5113] [INFO] Handling signal: term
+[2025-11-16 19:55:16 +0000] [5120] [INFO] Worker exiting (pid: 5120)
+[2025-11-16 19:55:16 +0000] [5119] [INFO] Worker exiting (pid: 5119)
+[2025-11-16 19:55:17 +0000] [5113] [INFO] Shutting down: Master
+[2025-11-16 19:55:17 +0000] [5264] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x74b6cd57c5e0>
+  on_reload: <function OnReload.on_reload at 0x74b6cd57c720>
+  when_ready: <function WhenReady.when_ready at 0x74b6cd57c860>
+  pre_fork: <function Prefork.pre_fork at 0x74b6cd57ca40>
+  post_fork: <function Postfork.post_fork at 0x74b6cd57cb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x74b6cd57ccc0>
+  worker_int: <function WorkerInt.worker_int at 0x74b6cd57ce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x74b6cd57cf40>
+  pre_exec: <function PreExec.pre_exec at 0x74b6cd57d080>
+  pre_request: <function PreRequest.pre_request at 0x74b6cd57d1c0>
+  post_request: <function PostRequest.post_request at 0x74b6cd57d260>
+  child_exit: <function ChildExit.child_exit at 0x74b6cd57d3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x74b6cd57d4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x74b6cd57d620>
+  on_exit: <function OnExit.on_exit at 0x74b6cd57d760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x74b6cd57d940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:55:17 +0000] [5264] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:55:17 +0000] [5264] [DEBUG] Arbiter booted
+[2025-11-16 19:55:17 +0000] [5264] [INFO] Listening at: http://127.0.0.1:8000 (5264)
+[2025-11-16 19:55:17 +0000] [5264] [INFO] Using worker: sync
+[2025-11-16 19:55:17 +0000] [5267] [INFO] Booting worker with pid: 5267
+[2025-11-16 19:55:17 +0000] [5268] [INFO] Booting worker with pid: 5268
+[2025-11-16 19:55:17 +0000] [5264] [DEBUG] 2 workers
+[2025-11-16 19:55:58 +0000] [5267] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 19:55:58 +0000] [5268] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 19:56:23 +0000] [5264] [INFO] Handling signal: term
+[2025-11-16 19:56:23 +0000] [5268] [INFO] Worker exiting (pid: 5268)
+[2025-11-16 19:56:23 +0000] [5267] [INFO] Worker exiting (pid: 5267)
+[2025-11-16 19:56:24 +0000] [5264] [INFO] Shutting down: Master
+[2025-11-16 19:56:24 +0000] [5332] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7075894385e0>
+  on_reload: <function OnReload.on_reload at 0x707589438720>
+  when_ready: <function WhenReady.when_ready at 0x707589438860>
+  pre_fork: <function Prefork.pre_fork at 0x707589438a40>
+  post_fork: <function Postfork.post_fork at 0x707589438b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x707589438cc0>
+  worker_int: <function WorkerInt.worker_int at 0x707589438e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x707589438f40>
+  pre_exec: <function PreExec.pre_exec at 0x707589439080>
+  pre_request: <function PreRequest.pre_request at 0x7075894391c0>
+  post_request: <function PostRequest.post_request at 0x707589439260>
+  child_exit: <function ChildExit.child_exit at 0x7075894393a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7075894394e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x707589439620>
+  on_exit: <function OnExit.on_exit at 0x707589439760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x707589439940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 19:56:24 +0000] [5332] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 19:56:24 +0000] [5332] [DEBUG] Arbiter booted
+[2025-11-16 19:56:24 +0000] [5332] [INFO] Listening at: http://127.0.0.1:8000 (5332)
+[2025-11-16 19:56:24 +0000] [5332] [INFO] Using worker: sync
+[2025-11-16 19:56:24 +0000] [5333] [INFO] Booting worker with pid: 5333
+[2025-11-16 19:56:24 +0000] [5334] [INFO] Booting worker with pid: 5334
+[2025-11-16 19:56:24 +0000] [5332] [DEBUG] 2 workers
+[2025-11-16 19:57:29 +0000] [5334] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:57:30 +0000] [5333] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:57:33 +0000] [5333] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:57:35 +0000] [5334] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 19:57:37 +0000] [5333] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 20:00:06 +0000] [5333] [INFO] Worker exiting (pid: 5333)
+[2025-11-16 20:00:06 +0000] [5334] [INFO] Worker exiting (pid: 5334)
+[2025-11-16 20:00:06 +0000] [5332] [INFO] Handling signal: term
+[2025-11-16 20:00:06 +0000] [5332] [ERROR] Worker (pid:5334) was sent SIGTERM!
+[2025-11-16 20:00:06 +0000] [5332] [ERROR] Worker (pid:5333) was sent SIGTERM!
+[2025-11-16 20:00:06 +0000] [5332] [INFO] Shutting down: Master
+[2025-11-16 20:04:11 +0000] [5549] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x72e472fec5e0>
+  on_reload: <function OnReload.on_reload at 0x72e472fec720>
+  when_ready: <function WhenReady.when_ready at 0x72e472fec860>
+  pre_fork: <function Prefork.pre_fork at 0x72e472feca40>
+  post_fork: <function Postfork.post_fork at 0x72e472fecb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x72e472feccc0>
+  worker_int: <function WorkerInt.worker_int at 0x72e472fece00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x72e472fecf40>
+  pre_exec: <function PreExec.pre_exec at 0x72e472fed080>
+  pre_request: <function PreRequest.pre_request at 0x72e472fed1c0>
+  post_request: <function PostRequest.post_request at 0x72e472fed260>
+  child_exit: <function ChildExit.child_exit at 0x72e472fed3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x72e472fed4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x72e472fed620>
+  on_exit: <function OnExit.on_exit at 0x72e472fed760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x72e472fed940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 20:04:11 +0000] [5549] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 20:04:11 +0000] [5549] [DEBUG] Arbiter booted
+[2025-11-16 20:04:11 +0000] [5549] [INFO] Listening at: http://127.0.0.1:8000 (5549)
+[2025-11-16 20:04:11 +0000] [5549] [INFO] Using worker: sync
+[2025-11-16 20:04:11 +0000] [5552] [INFO] Booting worker with pid: 5552
+[2025-11-16 20:04:12 +0000] [5553] [INFO] Booting worker with pid: 5553
+[2025-11-16 20:04:12 +0000] [5549] [DEBUG] 2 workers
+[2025-11-16 20:05:08 +0000] [5549] [INFO] Handling signal: term
+[2025-11-16 20:05:08 +0000] [5552] [INFO] Worker exiting (pid: 5552)
+[2025-11-16 20:05:08 +0000] [5553] [INFO] Worker exiting (pid: 5553)
+[2025-11-16 20:05:08 +0000] [5549] [INFO] Shutting down: Master
+[2025-11-16 20:31:32 +0000] [6663] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7d82080cc5e0>
+  on_reload: <function OnReload.on_reload at 0x7d82080cc720>
+  when_ready: <function WhenReady.when_ready at 0x7d82080cc860>
+  pre_fork: <function Prefork.pre_fork at 0x7d82080cca40>
+  post_fork: <function Postfork.post_fork at 0x7d82080ccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7d82080cccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7d82080cce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7d82080ccf40>
+  pre_exec: <function PreExec.pre_exec at 0x7d82080cd080>
+  pre_request: <function PreRequest.pre_request at 0x7d82080cd1c0>
+  post_request: <function PostRequest.post_request at 0x7d82080cd260>
+  child_exit: <function ChildExit.child_exit at 0x7d82080cd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7d82080cd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7d82080cd620>
+  on_exit: <function OnExit.on_exit at 0x7d82080cd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7d82080cd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 20:31:32 +0000] [6663] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 20:31:32 +0000] [6663] [DEBUG] Arbiter booted
+[2025-11-16 20:31:32 +0000] [6663] [INFO] Listening at: http://127.0.0.1:8000 (6663)
+[2025-11-16 20:31:32 +0000] [6663] [INFO] Using worker: sync
+[2025-11-16 20:31:32 +0000] [6664] [INFO] Booting worker with pid: 6664
+[2025-11-16 20:31:32 +0000] [6665] [INFO] Booting worker with pid: 6665
+[2025-11-16 20:31:32 +0000] [6663] [DEBUG] 2 workers
+[2025-11-16 20:32:47 +0000] [6663] [INFO] Handling signal: term
+[2025-11-16 20:32:47 +0000] [6665] [INFO] Worker exiting (pid: 6665)
+[2025-11-16 20:32:47 +0000] [6664] [INFO] Worker exiting (pid: 6664)
+[2025-11-16 20:32:48 +0000] [6663] [INFO] Shutting down: Master
+[2025-11-16 21:03:28 +0000] [7225] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7da8851c85e0>
+  on_reload: <function OnReload.on_reload at 0x7da8851c8720>
+  when_ready: <function WhenReady.when_ready at 0x7da8851c8860>
+  pre_fork: <function Prefork.pre_fork at 0x7da8851c8a40>
+  post_fork: <function Postfork.post_fork at 0x7da8851c8b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7da8851c8cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7da8851c8e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7da8851c8f40>
+  pre_exec: <function PreExec.pre_exec at 0x7da8851c9080>
+  pre_request: <function PreRequest.pre_request at 0x7da8851c91c0>
+  post_request: <function PostRequest.post_request at 0x7da8851c9260>
+  child_exit: <function ChildExit.child_exit at 0x7da8851c93a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7da8851c94e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7da8851c9620>
+  on_exit: <function OnExit.on_exit at 0x7da8851c9760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7da8851c9940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:03:28 +0000] [7225] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:03:28 +0000] [7225] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:03:28 +0000] [7225] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:03:28 +0000] [7225] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:03:29 +0000] [7225] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:03:29 +0000] [7225] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:03:29 +0000] [7225] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:03:30 +0000] [7225] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:03:30 +0000] [7225] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:03:30 +0000] [7225] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:03:31 +0000] [7225] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:03:31 +0000] [7225] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:03:31 +0000] [7225] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:03:32 +0000] [7225] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:03:32 +0000] [7225] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:03:32 +0000] [7225] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:03:33 +0000] [7225] [ERROR] Can't connect to ('127.0.0.1', 8000)
+[2025-11-16 21:07:06 +0000] [7307] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 2
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x70bae01f45e0>
+  on_reload: <function OnReload.on_reload at 0x70bae01f4720>
+  when_ready: <function WhenReady.when_ready at 0x70bae01f4860>
+  pre_fork: <function Prefork.pre_fork at 0x70bae01f4a40>
+  post_fork: <function Postfork.post_fork at 0x70bae01f4b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x70bae01f4cc0>
+  worker_int: <function WorkerInt.worker_int at 0x70bae01f4e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x70bae01f4f40>
+  pre_exec: <function PreExec.pre_exec at 0x70bae01f5080>
+  pre_request: <function PreRequest.pre_request at 0x70bae01f51c0>
+  post_request: <function PostRequest.post_request at 0x70bae01f5260>
+  child_exit: <function ChildExit.child_exit at 0x70bae01f53a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x70bae01f54e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x70bae01f5620>
+  on_exit: <function OnExit.on_exit at 0x70bae01f5760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x70bae01f5940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:07:06 +0000] [7307] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:07:06 +0000] [7307] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:07:06 +0000] [7307] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:07:06 +0000] [7307] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:07:07 +0000] [7307] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:07:07 +0000] [7307] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:07:07 +0000] [7307] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:07:08 +0000] [7307] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:07:08 +0000] [7307] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:07:08 +0000] [7307] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:07:09 +0000] [7307] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:07:09 +0000] [7307] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:07:09 +0000] [7307] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:07:10 +0000] [7307] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:07:10 +0000] [7307] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:07:10 +0000] [7307] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:07:11 +0000] [7307] [ERROR] Can't connect to ('127.0.0.1', 8000)
+[2025-11-16 21:09:49 +0000] [7422] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7ef3327f45e0>
+  on_reload: <function OnReload.on_reload at 0x7ef3327f4720>
+  when_ready: <function WhenReady.when_ready at 0x7ef3327f4860>
+  pre_fork: <function Prefork.pre_fork at 0x7ef3327f4a40>
+  post_fork: <function Postfork.post_fork at 0x7ef3327f4b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7ef3327f4cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7ef3327f4e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7ef3327f4f40>
+  pre_exec: <function PreExec.pre_exec at 0x7ef3327f5080>
+  pre_request: <function PreRequest.pre_request at 0x7ef3327f51c0>
+  post_request: <function PostRequest.post_request at 0x7ef3327f5260>
+  child_exit: <function ChildExit.child_exit at 0x7ef3327f53a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7ef3327f54e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7ef3327f5620>
+  on_exit: <function OnExit.on_exit at 0x7ef3327f5760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7ef3327f5940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:09:49 +0000] [7422] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:09:49 +0000] [7422] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:09:49 +0000] [7422] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:09:49 +0000] [7422] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:09:50 +0000] [7422] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:09:50 +0000] [7422] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:09:50 +0000] [7422] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:09:51 +0000] [7422] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:09:51 +0000] [7422] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:09:51 +0000] [7422] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:09:52 +0000] [7422] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:09:52 +0000] [7422] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:09:52 +0000] [7422] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:09:53 +0000] [7422] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:09:53 +0000] [7422] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:09:53 +0000] [7422] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:09:54 +0000] [7422] [ERROR] Can't connect to ('127.0.0.1', 8000)
+[2025-11-16 21:12:01 +0000] [7468] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7791107905e0>
+  on_reload: <function OnReload.on_reload at 0x779110790720>
+  when_ready: <function WhenReady.when_ready at 0x779110790860>
+  pre_fork: <function Prefork.pre_fork at 0x779110790a40>
+  post_fork: <function Postfork.post_fork at 0x779110790b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x779110790cc0>
+  worker_int: <function WorkerInt.worker_int at 0x779110790e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x779110790f40>
+  pre_exec: <function PreExec.pre_exec at 0x779110791080>
+  pre_request: <function PreRequest.pre_request at 0x7791107911c0>
+  post_request: <function PostRequest.post_request at 0x779110791260>
+  child_exit: <function ChildExit.child_exit at 0x7791107913a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7791107914e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x779110791620>
+  on_exit: <function OnExit.on_exit at 0x779110791760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x779110791940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:12:01 +0000] [7468] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:12:01 +0000] [7468] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:12:01 +0000] [7468] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:12:01 +0000] [7468] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:12:02 +0000] [7468] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:12:02 +0000] [7468] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:12:02 +0000] [7468] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:12:03 +0000] [7468] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:12:03 +0000] [7468] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:12:03 +0000] [7468] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:12:04 +0000] [7468] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:12:04 +0000] [7468] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:12:04 +0000] [7468] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:12:05 +0000] [7468] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:12:05 +0000] [7468] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:12:05 +0000] [7468] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:12:06 +0000] [7468] [ERROR] Can't connect to ('127.0.0.1', 8000)
+[2025-11-16 21:13:55 +0000] [7580] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7e9b17e185e0>
+  on_reload: <function OnReload.on_reload at 0x7e9b17e18720>
+  when_ready: <function WhenReady.when_ready at 0x7e9b17e18860>
+  pre_fork: <function Prefork.pre_fork at 0x7e9b17e18a40>
+  post_fork: <function Postfork.post_fork at 0x7e9b17e18b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7e9b17e18cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7e9b17e18e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7e9b17e18f40>
+  pre_exec: <function PreExec.pre_exec at 0x7e9b17e19080>
+  pre_request: <function PreRequest.pre_request at 0x7e9b17e191c0>
+  post_request: <function PostRequest.post_request at 0x7e9b17e19260>
+  child_exit: <function ChildExit.child_exit at 0x7e9b17e193a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7e9b17e194e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7e9b17e19620>
+  on_exit: <function OnExit.on_exit at 0x7e9b17e19760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7e9b17e19940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:13:55 +0000] [7580] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:13:55 +0000] [7580] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:13:55 +0000] [7580] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:13:55 +0000] [7580] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:13:56 +0000] [7580] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:13:56 +0000] [7580] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:13:56 +0000] [7580] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:13:57 +0000] [7580] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:13:57 +0000] [7580] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:13:57 +0000] [7580] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:13:58 +0000] [7580] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:13:58 +0000] [7580] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:13:58 +0000] [7580] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:13:59 +0000] [7580] [ERROR] Connection in use: ('127.0.0.1', 8000)
+[2025-11-16 21:13:59 +0000] [7580] [ERROR] connection to ('127.0.0.1', 8000) failed: [Errno 98] Address already in use
+[2025-11-16 21:13:59 +0000] [7580] [DEBUG] Retrying in 1 second.
+[2025-11-16 21:14:00 +0000] [7580] [ERROR] Can't connect to ('127.0.0.1', 8000)
+[2025-11-16 21:23:19 +0000] [7814] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7100dfccc5e0>
+  on_reload: <function OnReload.on_reload at 0x7100dfccc720>
+  when_ready: <function WhenReady.when_ready at 0x7100dfccc860>
+  pre_fork: <function Prefork.pre_fork at 0x7100dfccca40>
+  post_fork: <function Postfork.post_fork at 0x7100dfcccb80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7100dfccccc0>
+  worker_int: <function WorkerInt.worker_int at 0x7100dfccce00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7100dfcccf40>
+  pre_exec: <function PreExec.pre_exec at 0x7100dfccd080>
+  pre_request: <function PreRequest.pre_request at 0x7100dfccd1c0>
+  post_request: <function PostRequest.post_request at 0x7100dfccd260>
+  child_exit: <function ChildExit.child_exit at 0x7100dfccd3a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7100dfccd4e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7100dfccd620>
+  on_exit: <function OnExit.on_exit at 0x7100dfccd760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7100dfccd940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:23:19 +0000] [7814] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:23:19 +0000] [7814] [DEBUG] Arbiter booted
+[2025-11-16 21:23:19 +0000] [7814] [INFO] Listening at: http://127.0.0.1:8000 (7814)
+[2025-11-16 21:23:19 +0000] [7814] [INFO] Using worker: sync
+[2025-11-16 21:23:19 +0000] [7817] [INFO] Booting worker with pid: 7817
+[2025-11-16 21:23:19 +0000] [7818] [INFO] Booting worker with pid: 7818
+[2025-11-16 21:23:20 +0000] [7819] [INFO] Booting worker with pid: 7819
+[2025-11-16 21:23:20 +0000] [7814] [DEBUG] 3 workers
+[2025-11-16 21:24:20 +0000] [7818] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 21:24:24 +0000] [7819] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 21:24:24 +0000] [7817] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 21:24:28 +0000] [7818] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:24:30 +0000] [7818] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:24:32 +0000] [7817] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:24:34 +0000] [7819] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:24:36 +0000] [7818] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 21:24:36 +0000] [7818] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 21:24:36 +0000] [7819] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 21:25:35 +0000] [7814] [INFO] Handling signal: term
+[2025-11-16 21:25:35 +0000] [7817] [INFO] Worker exiting (pid: 7817)
+[2025-11-16 21:25:35 +0000] [7818] [INFO] Worker exiting (pid: 7818)
+[2025-11-16 21:25:35 +0000] [7819] [INFO] Worker exiting (pid: 7819)
+[2025-11-16 21:25:36 +0000] [7814] [INFO] Shutting down: Master
+[2025-11-16 21:25:37 +0000] [7936] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x76399e3c85e0>
+  on_reload: <function OnReload.on_reload at 0x76399e3c8720>
+  when_ready: <function WhenReady.when_ready at 0x76399e3c8860>
+  pre_fork: <function Prefork.pre_fork at 0x76399e3c8a40>
+  post_fork: <function Postfork.post_fork at 0x76399e3c8b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x76399e3c8cc0>
+  worker_int: <function WorkerInt.worker_int at 0x76399e3c8e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x76399e3c8f40>
+  pre_exec: <function PreExec.pre_exec at 0x76399e3c9080>
+  pre_request: <function PreRequest.pre_request at 0x76399e3c91c0>
+  post_request: <function PostRequest.post_request at 0x76399e3c9260>
+  child_exit: <function ChildExit.child_exit at 0x76399e3c93a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x76399e3c94e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x76399e3c9620>
+  on_exit: <function OnExit.on_exit at 0x76399e3c9760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x76399e3c9940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-16 21:25:37 +0000] [7936] [INFO] Starting gunicorn 23.0.0
+[2025-11-16 21:25:37 +0000] [7936] [DEBUG] Arbiter booted
+[2025-11-16 21:25:37 +0000] [7936] [INFO] Listening at: http://127.0.0.1:8000 (7936)
+[2025-11-16 21:25:37 +0000] [7936] [INFO] Using worker: sync
+[2025-11-16 21:25:37 +0000] [7939] [INFO] Booting worker with pid: 7939
+[2025-11-16 21:25:37 +0000] [7940] [INFO] Booting worker with pid: 7940
+[2025-11-16 21:25:37 +0000] [7936] [DEBUG] 3 workers
+[2025-11-16 21:25:37 +0000] [7941] [INFO] Booting worker with pid: 7941
+[2025-11-16 21:25:46 +0000] [7939] [DEBUG] GET /admin/orders/serviceorder/add/
+[2025-11-16 21:25:46 +0000] [7940] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 21:25:51 +0000] [7941] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:25:52 +0000] [7941] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:25:54 +0000] [7940] [DEBUG] GET /admin/autocomplete/
+[2025-11-16 21:25:56 +0000] [7939] [DEBUG] POST /admin/orders/serviceorder/add/
+[2025-11-16 21:25:56 +0000] [7939] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-16 21:25:56 +0000] [7940] [DEBUG] GET /admin/jsi18n/
+[2025-11-16 21:50:41 +0000] [7940] [DEBUG] GET /.git/config
+[2025-11-16 21:51:03 +0000] [7939] [DEBUG] GET /
+[2025-11-16 21:54:54 +0000] [7941] [DEBUG] GET /
+[2025-11-16 21:57:52 +0000] [7940] [DEBUG] GET /
+[2025-11-16 22:37:34 +0000] [7939] [DEBUG] GET /
+[2025-11-16 22:53:06 +0000] [7941] [DEBUG] GET /
+[2025-11-16 23:02:48 +0000] [7939] [DEBUG] GET /
+[2025-11-16 23:24:32 +0000] [7941] [DEBUG] GET /
+[2025-11-16 23:25:16 +0000] [7940] [DEBUG] GET /
+[2025-11-16 23:50:14 +0000] [7939] [DEBUG] GET /
+[2025-11-16 23:53:22 +0000] [7940] [DEBUG] GET /
+[2025-11-16 23:53:38 +0000] [7939] [DEBUG] GET /
+[2025-11-17 00:33:54 +0000] [7939] [DEBUG] GET /
+[2025-11-17 00:37:13 +0000] [7939] [DEBUG] GET /
+[2025-11-17 00:40:10 +0000] [7941] [DEBUG] GET /actuator/health
+[2025-11-17 00:41:28 +0000] [7940] [DEBUG] GET /.env
+[2025-11-17 00:41:28 +0000] [7941] [DEBUG] GET /.git/config
+[2025-11-17 00:49:07 +0000] [7941] [DEBUG] GET /
+[2025-11-17 00:51:24 +0000] [7939] [DEBUG] GET /
+[2025-11-17 00:56:53 +0000] [7940] [DEBUG] GET /shell
+[2025-11-17 01:15:09 +0000] [7941] [DEBUG] GET /shell
+[2025-11-17 01:54:48 +0000] [7939] [DEBUG] GET /
+[2025-11-17 02:11:11 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:21:43 +0000] [7941] [DEBUG] GET /.env
+[2025-11-17 02:21:43 +0000] [7939] [DEBUG] GET /api/.env
+[2025-11-17 02:21:43 +0000] [7940] [DEBUG] GET /backend/.env
+[2025-11-17 02:21:44 +0000] [7941] [DEBUG] GET /admin/.env
+[2025-11-17 02:21:44 +0000] [7939] [DEBUG] GET /.env.example
+[2025-11-17 02:21:45 +0000] [7940] [DEBUG] GET /app_dev.php/_profiler/phpinfo
+[2025-11-17 02:21:46 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:21:46 +0000] [7939] [DEBUG] GET /data/.env
+[2025-11-17 02:21:48 +0000] [7940] [DEBUG] GET /www/.env
+[2025-11-17 02:21:48 +0000] [7941] [DEBUG] GET /developer/.env
+[2025-11-17 02:21:48 +0000] [7939] [DEBUG] GET /home/.env
+[2025-11-17 02:21:48 +0000] [7939] [DEBUG] GET /docs/.env
+[2025-11-17 02:21:48 +0000] [7941] [DEBUG] GET /old/.env
+[2025-11-17 02:21:48 +0000] [7940] [DEBUG] GET /.env.local
+[2025-11-17 02:21:48 +0000] [7939] [DEBUG] GET /cms/.env
+[2025-11-17 02:21:49 +0000] [7941] [DEBUG] GET /config.js
+[2025-11-17 02:31:06 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:34:18 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:36:33 +0000] [7941] [DEBUG] GET /.env
+[2025-11-17 02:36:33 +0000] [7940] [DEBUG] GET /api/.env
+[2025-11-17 02:36:33 +0000] [7939] [DEBUG] GET /backend/.env
+[2025-11-17 02:36:33 +0000] [7941] [DEBUG] GET /admin/.env
+[2025-11-17 02:36:33 +0000] [7940] [DEBUG] GET /.env.example
+[2025-11-17 02:36:33 +0000] [7939] [DEBUG] GET /app_dev.php/_profiler/phpinfo
+[2025-11-17 02:36:33 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:36:33 +0000] [7940] [DEBUG] GET /config.yaml
+[2025-11-17 02:36:34 +0000] [7939] [DEBUG] GET /env.example
+[2025-11-17 02:36:34 +0000] [7941] [DEBUG] GET /config.ini
+[2025-11-17 02:36:35 +0000] [7940] [DEBUG] GET /test1.php
+[2025-11-17 02:36:35 +0000] [7939] [DEBUG] GET /admin/infophp.php
+[2025-11-17 02:36:35 +0000] [7941] [DEBUG] GET /settings.inc.php
+[2025-11-17 02:36:35 +0000] [7940] [DEBUG] GET /settings.cfg
+[2025-11-17 02:36:35 +0000] [7939] [DEBUG] GET /staging2/.env
+[2025-11-17 02:36:35 +0000] [7941] [DEBUG] GET /robomongo.json
+[2025-11-17 02:36:36 +0000] [7940] [DEBUG] GET /config/config.js
+[2025-11-17 02:36:36 +0000] [7939] [DEBUG] GET /settings.py
+[2025-11-17 02:36:36 +0000] [7941] [DEBUG] GET /Admin/test
+[2025-11-17 02:36:36 +0000] [7940] [DEBUG] GET /v1/test
+[2025-11-17 02:36:36 +0000] [7939] [DEBUG] GET /en/test
+[2025-11-17 02:36:36 +0000] [7941] [DEBUG] GET /st/test
+[2025-11-17 02:36:36 +0000] [7940] [DEBUG] GET /Crm
+[2025-11-17 02:36:57 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:47:27 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:52:48 +0000] [7940] [DEBUG] GET /
+[2025-11-17 02:52:49 +0000] [7941] [DEBUG] POST /cgi-bin/login
+[2025-11-17 02:54:37 +0000] [7941] [DEBUG] GET /
+[2025-11-17 02:54:37 +0000] [7940] [DEBUG] GET /form.html
+[2025-11-17 02:54:37 +0000] [7941] [DEBUG] GET /upl.php
+[2025-11-17 02:54:37 +0000] [7939] [DEBUG] GET /t4
+[2025-11-17 02:54:38 +0000] [7940] [DEBUG] GET /geoip/
+[2025-11-17 02:54:38 +0000] [7941] [DEBUG] GET /1.php
+[2025-11-17 02:54:38 +0000] [7940] [DEBUG] GET /systembc/password.php
+[2025-11-17 02:54:38 +0000] [7939] [DEBUG] GET /password.php
+[2025-11-17 03:21:43 +0000] [7939] [DEBUG] HEAD /
+[2025-11-17 03:39:34 +0000] [7939] [DEBUG] GET /
+[2025-11-17 03:50:05 +0000] [7940] [DEBUG] GET /
+[2025-11-17 04:10:52 +0000] [7941] [DEBUG] GET /.env
+[2025-11-17 04:10:52 +0000] [7940] [DEBUG] GET /.env_storage
+[2025-11-17 04:10:52 +0000] [7941] [DEBUG] GET /.env_workers
+[2025-11-17 04:10:52 +0000] [7939] [DEBUG] GET /angular/.env
+[2025-11-17 04:10:52 +0000] [7940] [DEBUG] GET /bot/.env.dev
+[2025-11-17 04:10:53 +0000] [7941] [DEBUG] GET /bot/.env.bak
+[2025-11-17 04:10:53 +0000] [7939] [DEBUG] GET /.github/.env
+[2025-11-17 04:10:53 +0000] [7941] [DEBUG] GET /app/.env.tmp
+[2025-11-17 04:10:53 +0000] [7940] [DEBUG] GET /.gitlab/.env
+[2025-11-17 04:10:53 +0000] [7941] [DEBUG] GET /app/.env.pem
+[2025-11-17 04:19:45 +0000] [7941] [DEBUG] GET /
+[2025-11-17 04:20:17 +0000] [7940] [DEBUG] GET /
+[2025-11-17 04:21:33 +0000] [7940] [DEBUG] GET /login
+[2025-11-17 04:29:15 +0000] [7939] [DEBUG] GET /
+[2025-11-17 04:45:51 +0000] [7941] [DEBUG] GET /
+[2025-11-17 05:03:24 +0000] [7939] [DEBUG] GET /
+[2025-11-17 05:37:27 +0000] [7939] [DEBUG] GET /shell
+[2025-11-17 05:53:28 +0000] [7939] [DEBUG] GET /
+[2025-11-17 06:06:19 +0000] [7941] [DEBUG] GET /
+[2025-11-17 06:28:17 +0000] [7940] [DEBUG] GET /
+[2025-11-17 06:49:32 +0000] [7939] [DEBUG] GET /
+[2025-11-17 06:53:46 +0000] [7939] [DEBUG] GET /shell
+[2025-11-17 06:55:38 +0000] [7941] [DEBUG] GET /
+[2025-11-17 07:01:06 +0000] [7939] [DEBUG] GET /
+[2025-11-17 07:17:41 +0000] [7941] [DEBUG] GET /cgi-bin/luci/;stok=/locale
+[2025-11-17 07:48:23 +0000] [7940] [DEBUG] GET /
+[2025-11-17 07:52:32 +0000] [7940] [DEBUG] GET /
+[2025-11-17 08:46:51 +0000] [7941] [DEBUG] GET /
+[2025-11-17 08:54:41 +0000] [7940] [DEBUG] GET /
+[2025-11-17 08:55:06 +0000] [7939] [DEBUG] GET /webui/
+[2025-11-17 08:57:03 +0000] [7941] [DEBUG] GET /geoserver/web/
+[2025-11-17 08:58:31 +0000] [7939] [DEBUG] GET /.env
+[2025-11-17 08:58:32 +0000] [7940] [DEBUG] GET /api/.env
+[2025-11-17 08:58:32 +0000] [7939] [DEBUG] GET /env/.env
+[2025-11-17 09:09:42 +0000] [7939] [DEBUG] GET /
+[2025-11-17 09:16:32 +0000] [7941] [DEBUG] GET /
+[2025-11-17 09:21:12 +0000] [7939] [DEBUG] GET /shell
+[2025-11-17 09:43:18 +0000] [7939] [DEBUG] GET /logon.htm
+[2025-11-17 09:48:30 +0000] [7939] [DEBUG] GET /
+[2025-11-17 09:56:58 +0000] [7940] [DEBUG] GET /
+[2025-11-17 09:58:21 +0000] [7940] [DEBUG] OPTIONS /
+[2025-11-17 10:06:02 +0000] [7941] [DEBUG] GET /boaform/admin/formLogin
+[2025-11-17 10:28:55 +0000] [7939] [DEBUG] GET /
+[2025-11-17 10:30:55 +0000] [7940] [DEBUG] GET /cgi-bin/luci/;stok=/locale
+[2025-11-17 10:48:05 +0000] [7941] [DEBUG] GET /
+[2025-11-17 10:48:25 +0000] [7940] [DEBUG] GET /
+[2025-11-17 10:58:42 +0000] [7940] [DEBUG] GET /.env
+[2025-11-17 10:58:42 +0000] [7939] [DEBUG] GET /api/.env
+[2025-11-17 10:58:43 +0000] [7940] [DEBUG] GET /env/.env
+[2025-11-17 11:21:09 +0000] [7941] [DEBUG] GET /login.rsp
+[2025-11-17 11:27:05 +0000] [7940] [DEBUG] GET /shell
+[2025-11-17 11:50:23 +0000] [7941] [DEBUG] GET /
+[2025-11-17 12:00:28 +0000] [7941] [DEBUG] GET /.env
+[2025-11-17 12:00:28 +0000] [7939] [DEBUG] GET /.env.%7B%7BSD%7D%7D
+[2025-11-17 12:02:30 +0000] [7939] [DEBUG] GET /
+[2025-11-17 12:02:34 +0000] [7940] [DEBUG] GET /.well-known/security.txt
+[2025-11-17 12:04:41 +0000] [7940] [DEBUG] GET /
+[2025-11-17 12:09:32 +0000] [7939] [DEBUG] GET /
+[2025-11-17 12:41:04 +0000] [7940] [DEBUG] GET /
+[2025-11-17 12:41:41 +0000] [7939] [DEBUG] GET /
+[2025-11-17 12:51:15 +0000] [7940] [DEBUG] GET /
+[2025-11-17 13:05:54 +0000] [7939] [DEBUG] GET /cgi-bin/luci/;stok=/locale
+[2025-11-17 13:24:58 +0000] [7939] [DEBUG] GET /
+[2025-11-17 13:50:56 +0000] [7941] [DEBUG] GET /
+[2025-11-17 13:54:26 +0000] [7940] [DEBUG] GET /
+[2025-11-17 13:55:57 +0000] [7941] [DEBUG] GET /
+[2025-11-17 13:57:27 +0000] [7940] [DEBUG] GET /
+[2025-11-17 14:01:53 +0000] [7940] [DEBUG] GET /
+[2025-11-17 14:06:31 +0000] [7939] [DEBUG] POST /FD873AC4-CF86-4FED-84EC-4BD59C6F17A7
+[2025-11-17 14:06:31 +0000] [7940] [DEBUG] POST /index.htm
+[2025-11-17 14:50:44 +0000] [7940] [DEBUG] GET /
+[2025-11-17 14:55:43 +0000] [7939] [DEBUG] GET /
+[2025-11-17 15:04:10 +0000] [7941] [DEBUG] GET /
+[2025-11-17 15:12:58 +0000] [7940] [DEBUG] GET /shell
+[2025-11-17 15:21:54 +0000] [7939] [DEBUG] GET /
+[2025-11-17 15:46:00 +0000] [7940] [DEBUG] GET /shell
+[2025-11-17 15:52:32 +0000] [7941] [DEBUG] GET /
+[2025-11-17 16:16:13 +0000] [7940] [DEBUG] GET /
+[2025-11-17 16:49:01 +0000] [7939] [DEBUG] GET /developmentserver/metadatauploader
+[2025-11-17 16:51:16 +0000] [7940] [DEBUG] GET /
+[2025-11-17 17:06:37 +0000] [7941] [DEBUG] GET /
+[2025-11-17 17:10:26 +0000] [7940] [DEBUG] GET /
+[2025-11-17 17:10:55 +0000] [7939] [DEBUG] GET /
+[2025-11-17 17:36:26 +0000] [7939] [DEBUG] GET /
+[2025-11-17 17:43:21 +0000] [7941] [DEBUG] GET /
+[2025-11-17 17:53:24 +0000] [7941] [DEBUG] GET /
+[2025-11-17 17:56:35 +0000] [7940] [DEBUG] GET /
+[2025-11-17 18:05:35 +0000] [7939] [DEBUG] GET /
+[2025-11-17 18:37:48 +0000] [7940] [DEBUG] GET /json/
+[2025-11-17 18:43:02 +0000] [7940] [DEBUG] GET /actuator/gateway/routes
+[2025-11-17 18:48:01 +0000] [7939] [DEBUG] GET /
+[2025-11-17 19:06:30 +0000] [7941] [DEBUG] GET /
+[2025-11-17 19:23:34 +0000] [7941] [DEBUG] GET /
+[2025-11-17 19:27:23 +0000] [7940] [DEBUG] GET /cgi-bin/luci/;stok=/locale
+[2025-11-17 19:34:57 +0000] [7941] [DEBUG] GET /admin/orders/serviceorder/
+[2025-11-17 19:34:57 +0000] [7939] [DEBUG] GET /admin/login/
+[2025-11-17 19:47:13 +0000] [7939] [DEBUG] GET /
+[2025-11-17 20:00:28 +0000] [7940] [DEBUG] GET /
+[2025-11-17 20:01:38 +0000] [7941] [INFO] Worker exiting (pid: 7941)
+[2025-11-17 20:01:38 +0000] [7939] [INFO] Worker exiting (pid: 7939)
+[2025-11-17 20:01:38 +0000] [7936] [INFO] Handling signal: term
+[2025-11-17 20:01:38 +0000] [7940] [INFO] Worker exiting (pid: 7940)
+[2025-11-17 20:01:38 +0000] [7936] [ERROR] Worker (pid:7941) was sent SIGTERM!
+[2025-11-17 20:01:39 +0000] [7936] [INFO] Shutting down: Master
+[2025-11-17 20:01:39 +0000] [22269] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['127.0.0.1:8000']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /home/ubuntu/truckmaster/my_iveco_crm
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 1000
+  group: 33
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /home/ubuntu/truckmaster/my_iveco_crm/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: my_iveco_crm.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7041c42385e0>
+  on_reload: <function OnReload.on_reload at 0x7041c4238720>
+  when_ready: <function WhenReady.when_ready at 0x7041c4238860>
+  pre_fork: <function Prefork.pre_fork at 0x7041c4238a40>
+  post_fork: <function Postfork.post_fork at 0x7041c4238b80>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7041c4238cc0>
+  worker_int: <function WorkerInt.worker_int at 0x7041c4238e00>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7041c4238f40>
+  pre_exec: <function PreExec.pre_exec at 0x7041c4239080>
+  pre_request: <function PreRequest.pre_request at 0x7041c42391c0>
+  post_request: <function PostRequest.post_request at 0x7041c4239260>
+  child_exit: <function ChildExit.child_exit at 0x7041c42393a0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7041c42394e0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7041c4239620>
+  on_exit: <function OnExit.on_exit at 0x7041c4239760>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7041c4239940>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-11-17 20:01:39 +0000] [22269] [INFO] Starting gunicorn 23.0.0
+[2025-11-17 20:01:39 +0000] [22269] [DEBUG] Arbiter booted
+[2025-11-17 20:01:39 +0000] [22269] [INFO] Listening at: http://127.0.0.1:8000 (22269)
+[2025-11-17 20:01:39 +0000] [22269] [INFO] Using worker: sync
+[2025-11-17 20:01:39 +0000] [22270] [INFO] Booting worker with pid: 22270
+[2025-11-17 20:01:39 +0000] [22271] [INFO] Booting worker with pid: 22271
+[2025-11-17 20:01:39 +0000] [22272] [INFO] Booting worker with pid: 22272
+[2025-11-17 20:01:39 +0000] [22269] [DEBUG] 3 workers
+[2025-11-17 20:04:23 +0000] [22272] [DEBUG] POST /admin/login/
+[2025-11-17 20:15:17 +0000] [22269] [INFO] Handling signal: term
+[2025-11-17 20:15:17 +0000] [22270] [INFO] Worker exiting (pid: 22270)
+[2025-11-17 20:15:17 +0000] [22271] [INFO] Worker exiting (pid: 22271)
+[2025-11-17 20:15:17 +0000] [22272] [INFO] Worker exiting (pid: 22272)
+[2025-11-17 20:15:18 +0000] [22269] [INFO] Shutting down: Master

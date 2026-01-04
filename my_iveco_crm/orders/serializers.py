@@ -20,24 +20,8 @@ class TruckSerializerForOrder(serializers.Serializer):
     last_seven_vin = serializers.CharField(allow_blank=True, allow_null=True)
 
 
-class ServiceWorkWriteSerializer(serializers.ModelSerializer):
-    """Серіалізатор для створення/оновлення робіт"""
-    
-    class Meta:
-        model = ServiceWork
-        fields = [
-            'id',
-            'service_order',
-            'work',
-            'description',
-            'hours_spent',
-            'hourly_rate',
-        ]
-        read_only_fields = ['id']
-
-
 class ServiceWorkSerializer(serializers.ModelSerializer):
-    """Серіалізатор для робіт у замовленні (читання)"""
+    """Серіалізатор для робіт у замовленні"""
     work_name = serializers.CharField(source='work.name', read_only=True, allow_null=True)
     work_group_name = serializers.CharField(source='work.work_group.name', read_only=True, allow_null=True)
     
@@ -135,4 +119,3 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceLog
         fields = '__all__'
-        
