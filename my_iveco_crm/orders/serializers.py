@@ -1,134 +1,76 @@
+# orders/serializers.py
+
 from rest_framework import serializers
-from .models import (
-    ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog
-)
-from clients.models import Client, Truck
-from inventory.models import UsedPart
-
-# ----- Серіалізатори для Клієнтів та Вантажівок (для відображення в замовленнях) -----
-class ClientSerializerForOrder(serializers.ModelSerializer):
-    class Meta:
-        model = Client
-        fields = ['id', 'name', 'phone']
-
-class TruckSerializerForOrder(serializers.ModelSerializer):
-    class Meta:
-        model = Truck
-        fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin']
-
-# ----- Серіалізатори для додатку Orders -----
-
-class EmployeeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Employee
-        fields = '__all__'
-
-class WorkGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WorkGroup
-        fields = '__all__'
-
-class WorkPriceSerializer(serializers.ModelSerializer):
-    """Серіалізатор для робіт з прайсу"""
-    
-    # Додаємо розраховані поля
-    price = serializers.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        read_only=True,
-        source='get_calculated_price'
-    )
-    hourly_rate = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        read_only=True,
-        source='work_group.hourly_rate'
-    )
-    work_group_name = serializers.CharField(
-        read_only=True,
-        source='work_group.name'
-    )
-    
-    class Meta:
-        model = WorkPrice
-        fields = [
-            'id',
-            'work_group',
-            'work_group_name',
-            'name',
-            'standard_hours',
-            'hourly_rate',
-            'price',  # Розрахункове поле
-        ]
-        read_only_fields = ['price', 'hourly_rate', 'work_group_name']
+from .models import ServiceOrder, ServiceWork, RepairPhoto, MaintenanceRule, MaintenanceLog
 
 
-# Якщо потрібен окремий serializer для створення/оновлення
-class WorkPriceWriteSerializer(serializers.ModelSerializer):
-    """Серіалізатор для створення/оновлення робіт"""
-    
-    class Meta:
-        model = WorkPrice
-        fields = ['work_group', 'name', 'standard_hours']
+class ClientSerializerForOrder(serializers.Serializer):
+    """Мінімальна інформація про клієнта для відображення в замовленнях"""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    last_name = serializers.CharField(allow_blank=True, allow_null=True)
+    phone = serializers.CharField(allow_blank=True, allow_null=True)
 
-class UsedPartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UsedPart
-        fields = '__all__'
 
-# --- Серіалізатори Виконаних Робіт (ServiceWork) ---
+class TruckSerializerForOrder(serializers.Serializer):
+    """Мінімальна інформація про вантажівку для відображення в замовленнях"""
+    id = serializers.IntegerField()
+    license_plate = serializers.CharField()
+    specific_model_name = serializers.CharField()
+    last_seven_vin = serializers.CharField(allow_blank=True, allow_null=True)
+
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
-    """
-    Серіалізатор для ЧИТАННЯ робіт (з деталями).
-    """
-    # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
-    work = WorkPriceSerializer(read_only=True)
-    employee = EmployeeSerializer(read_only=True)
-    used_parts = UsedPartSerializer(many=True, read_only=True)
-
+    """Серіалізатор для робіт у замовленні"""
+    work_name = serializers.CharField(source='work.name', read_only=True, allow_null=True)
+    work_group_name = serializers.CharField(source='work.work_group.name', read_only=True, allow_null=True)
+    
     class Meta:
         model = ServiceWork
-        fields = '__all__'
-
-class ServiceWorkWriteSerializer(serializers.ModelSerializer):
-    """
-    Серіалізатор для СТВОРЕННЯ/ОНОВЛЕННЯ робіт.
-    Приймає ID для пов'язаних полів.
-    """
-    class Meta:
-        model = ServiceWork
-        # 👇 ОНОВЛЕНО: 'work_group' замінено на 'work' 👇
         fields = [
-            'service_order', 
-            'work', 
-            'description', 
-            'employee', 
-            'hours_spent'
+            'id',
+            'service_order',
+            'work',
+            'work_name',
+            'work_group_name',
+            'description',
+            'hours_spent',
+            'hourly_rate',
+            'total_cost',
+            'created_at'
         ]
+        read_only_fields = ['total_cost', 'created_at']
+
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
+    """Серіалізатор для фото ремонту"""
+    
     class Meta:
         model = RepairPhoto
-        fields = '__all__'
+        fields = ['id', 'service_order', 'photo', 'photo_type', 'uploaded_at']
+        read_only_fields = ['uploaded_at']
 
-# --- Серіалізатори Замовлень (ServiceOrder) ---
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     """
-    Простий серіалізатор для СТВОРЕННЯ та ОНОВЛЕННЯ замовлень.
+    Серіалізатор для СТВОРЕННЯ та ОНОВЛЕННЯ замовлень з підтримкою фото.
     """
     class Meta:
         model = ServiceOrder
         fields = [
-            'order_number', 
+            'id',
+            'order_number',
             'client',
             'truck',
             'current_mileage',
-            'problem_description', 
-            'status'
+            'problem_description',
+            'status',
+            'car_photo',
+            'odometer_photo',
+            'dashboard_photo',
         ]
+        read_only_fields = ['id', 'order_number']
+
 
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     """
@@ -136,15 +78,16 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
     """
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
-
+    
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 
+            'id', 'order_number', 'client', 'truck',
             'status', 'created_at', 'problem_description'
         ]
 
-class ServiceOrderDetailSerializer(serializers.ModelSerializer): 
+
+class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     """
     Повний серіалізатор для ДЕТАЛЕЙ одного замовлення (тільки читання).
     """
@@ -152,15 +95,17 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     truck = TruckSerializerForOrder(read_only=True)
     works = ServiceWorkSerializer(many=True, read_only=True)
     photos = RepairPhotoSerializer(many=True, read_only=True)
-
+    
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 
-            'current_mileage', 'problem_description', 
+            'id', 'order_number', 'client', 'truck',
+            'current_mileage', 'problem_description',
             'status', 'created_at', 'updated_at',
-            'works', 'photos', 'total_cost'
+            'works', 'photos', 'total_cost',
+            'car_photo', 'odometer_photo', 'dashboard_photo',
         ]
+
 
 # --- Серіалізатори Регламентів ---
 
@@ -168,6 +113,7 @@ class MaintenanceRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceRule
         fields = '__all__'
+
 
 class MaintenanceLogSerializer(serializers.ModelSerializer):
     class Meta:
