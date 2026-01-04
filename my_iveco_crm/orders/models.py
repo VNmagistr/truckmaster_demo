@@ -75,6 +75,26 @@ class ServiceOrder(models.Model):
         verbose_name="Опис проблеми (зі слів клієнта)"
     )
     
+    # Фото при прийомі автомобіля
+    car_photo = models.ImageField(
+        upload_to='order_photos/cars/',
+        verbose_name='Фото держномера',
+        blank=True,
+        null=True
+    )
+    odometer_photo = models.ImageField(
+        upload_to='order_photos/odometers/',
+        verbose_name='Фото одометра',
+        blank=True,
+        null=True
+    )
+    dashboard_photo = models.ImageField(
+        upload_to='order_photos/dashboards/',
+        verbose_name='Фото панелі приладів',
+        blank=True,
+        null=True
+    )
+    
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
