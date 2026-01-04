@@ -52,9 +52,7 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
             'description',
             'hours_spent',
             'employee',
-            'created_at'
         ]
-        read_only_fields = ['created_at']
 
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
