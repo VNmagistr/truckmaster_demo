@@ -87,7 +87,7 @@ class WorkPriceViewSet(viewsets.ReadOnlyModelViewSet):
             'work_group_name': obj.work_group.name if obj.work_group else None,
             'name': obj.name,
             'standard_hours': str(obj.standard_hours) if obj.standard_hours else None,
-            'hourly_rate': str(obj.hourly_rate) if obj.hourly_rate else None,
+            'hourly_rate': str(obj.work_group.hourly_rate) if obj.work_group else None,
             'price': str(obj.price) if obj.price else None,
         } for obj in queryset]
         return Response(data)
@@ -182,4 +182,3 @@ class DashboardOrderStatsView(APIView):
             'this_year': this_year,
             'compare_year': compare_year,
         })
-    
