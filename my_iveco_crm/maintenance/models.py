@@ -143,7 +143,7 @@ class FluidChangeRecord(models.Model):
         4. НОВИЙ: Створення нагадування про наступну заміну
         """
         
-        is_new = self.pk is None  # ← ВАЖЛИВО: перевіряємо ДО save()
+        is_new = self.pk is None
         
         # 1. Розрахунок наступної заміни за пробігом
         if self.mileage and not self.next_change_mileage:
@@ -164,7 +164,7 @@ class FluidChangeRecord(models.Model):
         super().save(*args, **kwargs)
         
         # 4. Автоматичне створення нагадування (тільки для нових записів)
-        if is_new:  # ← ВАЖЛИВО: викликаємо ПІСЛЯ save()
+        if is_new:
             self._create_reminder()
     
     def _create_reminder(self):
