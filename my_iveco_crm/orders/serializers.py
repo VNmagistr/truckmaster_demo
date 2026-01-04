@@ -69,7 +69,7 @@ class RepairPhotoSerializer(serializers.ModelSerializer):
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     """
-    Серіалізатор для СТВОРЕННЯ та ОНОВЛЕННЯ замовлень з підтримкою фото.
+    Серіалізатор для СТВОРЕННЯ та ОНОВЛЕННЯ замовлень.
     """
     class Meta:
         model = ServiceOrder
@@ -81,9 +81,6 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'current_mileage',
             'problem_description',
             'status',
-            'car_photo',
-            'odometer_photo',
-            'dashboard_photo',
         ]
         read_only_fields = ['id', 'order_number']
 
@@ -119,7 +116,6 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'current_mileage', 'problem_description',
             'status', 'created_at', 'updated_at',
             'works', 'photos', 'total_cost',
-            'car_photo', 'odometer_photo', 'dashboard_photo',
         ]
 
 
