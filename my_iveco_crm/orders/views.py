@@ -1,3 +1,5 @@
+# orders/views.py
+
 from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -14,22 +16,20 @@ from .serializers import (
     ServiceOrderWriteSerializer,
     ServiceWorkSerializer,
     ServiceWorkWriteSerializer,
-    EmployeeSerializer,
-    WorkGroupSerializer,
-    WorkPriceSerializer,
     RepairPhotoSerializer,
     MaintenanceRuleSerializer,
     MaintenanceLogSerializer
 )
 
-# Визначаємо права доступу (наприклад, тільки для адмінів або залогінених)
-# Для простоти поки що - тільки для залогінених
+
+# Визначаємо права доступу
 class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
+
 # --- ViewSet для Замовлень-Нарядів ---
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    queryset = ServiceOrder.objects.all().order_by('-created_at')
+    queryset = ServiceOrder.objects.all().select_related('client', 'truck').order_by('-created_at')
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
@@ -42,9 +42,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         # Для перегляду одного об'єкта - повний серіалізатор
         return ServiceOrderDetailSerializer
 
+
 # --- ViewSet для Виконаних Робіт ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
-    queryset = ServiceWork.objects.all()
+    queryset = ServiceWork.objects.all().select_related('service_order', 'work')
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
@@ -52,36 +53,63 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
+
 # --- Інші ViewSets ---
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
+    serializer_class = ServiceWorkSerializer  # Тимчасово, поки не створимо правильний serializer
     permission_classes = [IsAuthenticated]
 
-class WorkGroupViewSet(viewsets.ModelViewSet):
-    queryset = WorkGroup.objects.all()
-    serializer_class = WorkGroupSerializer
-    permission_classes = [IsAuthenticated]
 
-class WorkPriceViewSet(viewsets.ModelViewSet):
-    queryset = WorkPrice.objects.all()
-    serializer_class = WorkPriceSerializer
+class WorkGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = WorkGroup.objects.all().order_by('name')
     permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        data = [{
+            'id': obj.id,
+            'name': obj.name,
+            'hourly_rate': str(obj.hourly_rate),
+        } for obj in queryset]
+        return Response(data)
+
+
+class WorkPriceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = WorkPrice.objects.all().select_related('work_group').order_by('name')
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        data = [{
+            'id': obj.id,
+            'work_group': obj.work_group_id,
+            'work_group_name': obj.work_group.name if obj.work_group else None,
+            'name': obj.name,
+            'standard_hours': str(obj.standard_hours) if obj.standard_hours else None,
+            'hourly_rate': str(obj.hourly_rate) if obj.hourly_rate else None,
+            'price': str(obj.price) if obj.price else None,
+        } for obj in queryset]
+        return Response(data)
+
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
     queryset = RepairPhoto.objects.all()
     serializer_class = RepairPhotoSerializer
     permission_classes = [IsAuthenticated]
 
+
 class MaintenanceRuleViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRule.objects.all()
     serializer_class = MaintenanceRuleSerializer
     permission_classes = [IsAuthenticated]
 
+
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceLog.objects.all()
     serializer_class = MaintenanceLogSerializer
     permission_classes = [IsAuthenticated]
+
 
 # --- View для останніх замовлень ---
 class RecentOrdersView(APIView):
@@ -89,9 +117,10 @@ class RecentOrdersView(APIView):
     
     def get(self, request):
         # Отримуємо 10 останніх замовлень
-        recent_orders = ServiceOrder.objects.all().order_by('-created_at')[:10]
+        recent_orders = ServiceOrder.objects.all().select_related('client', 'truck').order_by('-created_at')[:10]
         serializer = ServiceOrderListSerializer(recent_orders, many=True)
         return Response(serializer.data)
+
 
 # --- View для статистики dashboard ---
 class DashboardOrderStatsView(APIView):
