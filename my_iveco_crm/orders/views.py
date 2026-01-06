@@ -1,7 +1,6 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
 from .models import (
     ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
     RepairPhoto, MaintenanceRule, MaintenanceLog
@@ -20,8 +19,10 @@ from .serializers import (
     MaintenanceLogSerializer
 )
 from inventory.models import UsedPart
+from inventory.serializers import UsedPartSerializer
 
-# Визначаємо права доступу
+# Визначаємо права доступу (наприклад, тільки для адмінів або залогінених)
+# Для простоти поки що - тільки для залогінених
 class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
@@ -31,93 +32,114 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
+        # Для списку - простий серіалізатор
         if self.action == 'list':
             return ServiceOrderListSerializer
+        # Для створення/оновлення - серіалізатор для запису
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
+        # Для перегляду одного об'єкта - повний серіалізатор
         return ServiceOrderDetailSerializer
 
-    @action(detail=False, methods=['get'], url_path='previous-parts')
-    def previous_parts(self, request):
+    @action(detail=True, methods=['get'])
+    def previous_maintenance(self, request, pk=None):
         """
-        Отримати запчастини з попередніх замовлень для конкретної вантажівки та типу робіт.
-        
-        Query параметри:
-        - truck_id: ID вантажівки (обов'язковий)
-        - work_group_id: ID категорії робіт (опціонально, для фільтрації)
-        - work_id: ID конкретної роботи (опціонально, для більш точного пошуку)
+        Повертає запчастини з попереднього ТО для цієї вантажівки.
+        Фільтрує по категорії робіт (олива, фільтри).
         """
-        truck_id = request.query_params.get('truck_id')
-        work_group_id = request.query_params.get('work_group_id')
-        work_id = request.query_params.get('work_id')
-        
-        if not truck_id:
-            return Response(
-                {'error': 'truck_id є обов\'язковим параметром'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Шукаємо попередні замовлення для цієї вантажівки
-        previous_orders = ServiceOrder.objects.filter(
-            truck_id=truck_id,
-            status__in=['CLOSED', 'IN_PROGRESS']  # Тільки закриті або в роботі
-        ).order_by('-created_at')
-        
-        if not previous_orders.exists():
+        try:
+            current_order = self.get_object()
+            
+            if not current_order.truck:
+                return Response(
+                    {'detail': 'Вантажівка не вказана в цьому замовленні'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Знаходимо попередні замовлення для цієї вантажівки
+            previous_orders = ServiceOrder.objects.filter(
+                truck=current_order.truck,
+                status__in=['CLOSED', 'IN_PROGRESS']
+            ).exclude(
+                id=current_order.id
+            ).order_by('-created_at')[:5]  # Останні 5 замовлень
+            
+            if not previous_orders.exists():
+                return Response({
+                    'has_previous': False,
+                    'message': 'Для цієї вантажівки немає попередніх замовлень'
+                })
+            
+            # Збираємо інформацію про попередні ТО
+            maintenance_history = []
+            
+            for order in previous_orders:
+                # Знаходимо всі роботи пов'язані з ТО
+                maintenance_works = ServiceWork.objects.filter(
+                    service_order=order,
+                    work__work_group__name__icontains='ТО'  # Фільтруємо по категорії
+                ) | ServiceWork.objects.filter(
+                    service_order=order,
+                    work__name__icontains='олив'  # Або по назві роботи
+                ) | ServiceWork.objects.filter(
+                    service_order=order,
+                    work__name__icontains='фільтр'
+                )
+                
+                maintenance_works = maintenance_works.distinct()
+                
+                if maintenance_works.exists():
+                    # Збираємо запчастини з цих робіт
+                    used_parts = UsedPart.objects.filter(
+                        service_work__in=maintenance_works
+                    ).select_related('part', 'part__subcategory')
+                    
+                    if used_parts.exists():
+                        parts_data = []
+                        for used_part in used_parts:
+                            parts_data.append({
+                                'id': used_part.part.id,
+                                'name': used_part.part.name,
+                                'sku_code': used_part.part.sku_code,
+                                'quantity': used_part.quantity,
+                                'subcategory': used_part.part.subcategory.name if used_part.part.subcategory else None,
+                                'unit': used_part.part.unit,
+                                'selling_price': float(used_part.part.selling_price),
+                            })
+                        
+                        maintenance_history.append({
+                            'order_id': order.id,
+                            'order_number': order.order_number,
+                            'created_at': order.created_at,
+                            'current_mileage': order.current_mileage,
+                            'parts': parts_data,
+                            'works': [{
+                                'name': work.work.name if work.work else work.description,
+                                'description': work.description,
+                            } for work in maintenance_works]
+                        })
+            
+            if not maintenance_history:
+                return Response({
+                    'has_previous': False,
+                    'message': 'Для цієї вантажівки немає попередніх робіт по ТО'
+                })
+            
             return Response({
-                'message': 'Попередніх замовлень не знайдено',
-                'parts': []
+                'has_previous': True,
+                'truck': {
+                    'id': current_order.truck.id,
+                    'license_plate': current_order.truck.license_plate,
+                    'specific_model_name': current_order.truck.specific_model_name,
+                },
+                'maintenance_history': maintenance_history
             })
-        
-        # Фільтруємо роботи за типом, якщо вказано
-        works_filter = Q()
-        if work_id:
-            works_filter = Q(work_id=work_id)
-        elif work_group_id:
-            works_filter = Q(work__work_group_id=work_group_id)
-        
-        # Збираємо запчастини з попередніх робіт
-        used_parts = UsedPart.objects.filter(
-            service_work__service_order__in=previous_orders
-        ).filter(works_filter).select_related(
-            'part',
-            'part__subcategory',
-            'service_work',
-            'service_work__work',
-            'service_work__service_order'
-        ).order_by('-service_work__service_order__created_at')
-        
-        # Групуємо запчастини та беремо найостанніше використання кожної
-        parts_dict = {}
-        for used_part in used_parts:
-            part_id = used_part.part.id
-            if part_id not in parts_dict:
-                parts_dict[part_id] = {
-                    'part_id': part_id,
-                    'part_name': used_part.part.name,
-                    'part_sku': used_part.part.sku_code,
-                    'part_brand': used_part.part.brand,
-                    'subcategory': used_part.part.subcategory.name if used_part.part.subcategory else None,
-                    'quantity': used_part.quantity,
-                    'current_price': float(used_part.part.selling_price),
-                    'current_stock': used_part.part.current_stock,
-                    'last_used_date': used_part.service_work.service_order.created_at.isoformat(),
-                    'last_order_number': used_part.service_work.service_order.order_number,
-                    'work_name': used_part.service_work.work.name if used_part.service_work.work else None,
-                }
-        
-        parts_list = list(parts_dict.values())
-        
-        return Response({
-            'truck_id': truck_id,
-            'previous_orders_count': previous_orders.count(),
-            'last_order': {
-                'order_number': previous_orders.first().order_number,
-                'date': previous_orders.first().created_at.isoformat(),
-            } if previous_orders.exists() else None,
-            'parts': parts_list,
-            'total_parts': len(parts_list)
-        })
+            
+        except Exception as e:
+            return Response(
+                {'detail': f'Помилка: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # --- ViewSet для Виконаних Робіт ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
@@ -159,4 +181,3 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceLog.objects.all()
     serializer_class = MaintenanceLogSerializer
     permission_classes = [IsAuthenticated]
-    
