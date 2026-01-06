@@ -5,6 +5,7 @@ Django settings for my_iveco_crm project.
 from pathlib import Path
 import os
 from decouple import config, Csv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "users",
     "clients",
@@ -39,6 +41,7 @@ INSTALLED_APPS = [
     "bot",
     "maintenance",
 ]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -93,7 +96,7 @@ else:
             'HOST': config('DB_HOST'),
             'PORT': config('DB_PORT'),
             'OPTIONS': {
-                'sslmode': 'require',  # <-- ДОДАЙТЕ ЦЕ!
+                'sslmode': 'require',
             },
         }
     }
@@ -131,6 +134,13 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Session settings
+SESSION_COOKIE_AGE = 604800  # 7 днів в секундах
+SESSION_SAVE_EVERY_REQUEST = True  # Оновлювати сесію при кожному запиті
+SESSION_COOKIE_SECURE = not DEBUG  # True на продакшені
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -166,6 +176,31 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'my_iveco_crm.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 50,
+}
+
+# JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),  # Токен доступу дійсний 5 годин
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Refresh токен дійсний 7 днів
+    'ROTATE_REFRESH_TOKENS': True,  # Оновлювати refresh token при кожному використанні
+    'BLACKLIST_AFTER_ROTATION': True,  # Додавати старі токени в чорний список
+    'UPDATE_LAST_LOGIN': True,  # Оновлювати last_login при кожному токені
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    
+    'JTI_CLAIM': 'jti',
 }
 
 # Налаштування для медіафайлів (завантажених користувачами)
