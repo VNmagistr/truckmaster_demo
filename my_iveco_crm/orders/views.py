@@ -1,11 +1,7 @@
-# orders/views.py
-
-from rest_framework import viewsets, permissions
-from rest_framework.views import APIView
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Count
-from datetime import datetime, timedelta
-from django.utils import timezone
+from django.db.models import Q
 from .models import (
     ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
     RepairPhoto, MaintenanceRule, MaintenanceLog
@@ -16,36 +12,116 @@ from .serializers import (
     ServiceOrderWriteSerializer,
     ServiceWorkSerializer,
     ServiceWorkWriteSerializer,
+    EmployeeSerializer,
+    WorkGroupSerializer,
+    WorkPriceSerializer,
     RepairPhotoSerializer,
     MaintenanceRuleSerializer,
     MaintenanceLogSerializer
 )
-
+from inventory.models import UsedPart
 
 # Визначаємо права доступу
 class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
-
 # --- ViewSet для Замовлень-Нарядів ---
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    queryset = ServiceOrder.objects.all().select_related('client', 'truck').order_by('-created_at')
+    queryset = ServiceOrder.objects.all().order_by('-created_at')
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
-        # Для списку - простий серіалізатор
         if self.action == 'list':
             return ServiceOrderListSerializer
-        # Для створення/оновлення - серіалізатор для запису
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
-        # Для перегляду одного об'єкта - повний серіалізатор
         return ServiceOrderDetailSerializer
 
+    @action(detail=False, methods=['get'], url_path='previous-parts')
+    def previous_parts(self, request):
+        """
+        Отримати запчастини з попередніх замовлень для конкретної вантажівки та типу робіт.
+        
+        Query параметри:
+        - truck_id: ID вантажівки (обов'язковий)
+        - work_group_id: ID категорії робіт (опціонально, для фільтрації)
+        - work_id: ID конкретної роботи (опціонально, для більш точного пошуку)
+        """
+        truck_id = request.query_params.get('truck_id')
+        work_group_id = request.query_params.get('work_group_id')
+        work_id = request.query_params.get('work_id')
+        
+        if not truck_id:
+            return Response(
+                {'error': 'truck_id є обов\'язковим параметром'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Шукаємо попередні замовлення для цієї вантажівки
+        previous_orders = ServiceOrder.objects.filter(
+            truck_id=truck_id,
+            status__in=['CLOSED', 'IN_PROGRESS']  # Тільки закриті або в роботі
+        ).order_by('-created_at')
+        
+        if not previous_orders.exists():
+            return Response({
+                'message': 'Попередніх замовлень не знайдено',
+                'parts': []
+            })
+        
+        # Фільтруємо роботи за типом, якщо вказано
+        works_filter = Q()
+        if work_id:
+            works_filter = Q(work_id=work_id)
+        elif work_group_id:
+            works_filter = Q(work__work_group_id=work_group_id)
+        
+        # Збираємо запчастини з попередніх робіт
+        used_parts = UsedPart.objects.filter(
+            service_work__service_order__in=previous_orders
+        ).filter(works_filter).select_related(
+            'part',
+            'part__subcategory',
+            'service_work',
+            'service_work__work',
+            'service_work__service_order'
+        ).order_by('-service_work__service_order__created_at')
+        
+        # Групуємо запчастини та беремо найостанніше використання кожної
+        parts_dict = {}
+        for used_part in used_parts:
+            part_id = used_part.part.id
+            if part_id not in parts_dict:
+                parts_dict[part_id] = {
+                    'part_id': part_id,
+                    'part_name': used_part.part.name,
+                    'part_sku': used_part.part.sku_code,
+                    'part_brand': used_part.part.brand,
+                    'subcategory': used_part.part.subcategory.name if used_part.part.subcategory else None,
+                    'quantity': used_part.quantity,
+                    'current_price': float(used_part.part.selling_price),
+                    'current_stock': used_part.part.current_stock,
+                    'last_used_date': used_part.service_work.service_order.created_at.isoformat(),
+                    'last_order_number': used_part.service_work.service_order.order_number,
+                    'work_name': used_part.service_work.work.name if used_part.service_work.work else None,
+                }
+        
+        parts_list = list(parts_dict.values())
+        
+        return Response({
+            'truck_id': truck_id,
+            'previous_orders_count': previous_orders.count(),
+            'last_order': {
+                'order_number': previous_orders.first().order_number,
+                'date': previous_orders.first().created_at.isoformat(),
+            } if previous_orders.exists() else None,
+            'parts': parts_list,
+            'total_parts': len(parts_list)
+        })
 
 # --- ViewSet для Виконаних Робіт ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
-    queryset = ServiceWork.objects.all().select_related('service_order', 'work')
+    queryset = ServiceWork.objects.all()
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
@@ -53,132 +129,34 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
-
 # --- Інші ViewSets ---
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
-    serializer_class = ServiceWorkSerializer  # Тимчасово, поки не створимо правильний serializer
+    serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated]
 
-
-class WorkGroupViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = WorkGroup.objects.all().order_by('name')
+class WorkGroupViewSet(viewsets.ModelViewSet):
+    queryset = WorkGroup.objects.all()
+    serializer_class = WorkGroupSerializer
     permission_classes = [IsAuthenticated]
-    
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        data = [{
-            'id': obj.id,
-            'name': obj.name,
-            'hourly_rate': str(obj.hourly_rate),
-        } for obj in queryset]
-        return Response(data)
 
-
-class WorkPriceViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = WorkPrice.objects.all().select_related('work_group').order_by('name')
+class WorkPriceViewSet(viewsets.ModelViewSet):
+    queryset = WorkPrice.objects.all()
+    serializer_class = WorkPriceSerializer
     permission_classes = [IsAuthenticated]
-    
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        data = [{
-            'id': obj.id,
-            'work_group': obj.work_group_id,
-            'work_group_name': obj.work_group.name if obj.work_group else None,
-            'name': obj.name,
-            'standard_hours': str(obj.standard_hours) if obj.standard_hours else None,
-            'hourly_rate': str(obj.work_group.hourly_rate) if obj.work_group else None,
-            'price': str(obj.price) if obj.price else None,
-        } for obj in queryset]
-        return Response(data)
-
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
     queryset = RepairPhoto.objects.all()
     serializer_class = RepairPhotoSerializer
     permission_classes = [IsAuthenticated]
 
-
 class MaintenanceRuleViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRule.objects.all()
     serializer_class = MaintenanceRuleSerializer
     permission_classes = [IsAuthenticated]
 
-
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceLog.objects.all()
     serializer_class = MaintenanceLogSerializer
     permission_classes = [IsAuthenticated]
-
-
-# --- View для останніх замовлень ---
-class RecentOrdersView(APIView):
-    permission_classes = [IsAuthenticated]
     
-    def get(self, request):
-        # Отримуємо 10 останніх замовлень
-        recent_orders = ServiceOrder.objects.all().select_related('client', 'truck').order_by('-created_at')[:10]
-        serializer = ServiceOrderListSerializer(recent_orders, many=True)
-        return Response(serializer.data)
-
-
-# --- View для статистики dashboard ---
-class DashboardOrderStatsView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        now = timezone.now()
-        
-        # Поточний тиждень
-        week_start = now - timedelta(days=now.weekday())
-        week_end = week_start + timedelta(days=7)
-        this_week = ServiceOrder.objects.filter(
-            created_at__gte=week_start,
-            created_at__lt=week_end
-        ).count()
-        
-        # Минулий тиждень (для порівняння)
-        prev_week_start = week_start - timedelta(days=7)
-        prev_week_end = week_start
-        compare_week = ServiceOrder.objects.filter(
-            created_at__gte=prev_week_start,
-            created_at__lt=prev_week_end
-        ).count()
-        
-        # Поточний місяць
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        this_month = ServiceOrder.objects.filter(
-            created_at__gte=month_start
-        ).count()
-        
-        # Минулий місяць
-        if month_start.month == 1:
-            prev_month_start = month_start.replace(year=month_start.year - 1, month=12)
-        else:
-            prev_month_start = month_start.replace(month=month_start.month - 1)
-        compare_month = ServiceOrder.objects.filter(
-            created_at__gte=prev_month_start,
-            created_at__lt=month_start
-        ).count()
-        
-        # Поточний рік
-        year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-        this_year = ServiceOrder.objects.filter(
-            created_at__gte=year_start
-        ).count()
-        
-        # Минулий рік
-        prev_year_start = year_start.replace(year=year_start.year - 1)
-        compare_year = ServiceOrder.objects.filter(
-            created_at__gte=prev_year_start,
-            created_at__lt=year_start
-        ).count()
-        
-        return Response({
-            'this_week': this_week,
-            'compare_week': compare_week,
-            'this_month': this_month,
-            'compare_month': compare_month,
-            'this_year': this_year,
-            'compare_year': compare_year,
-        })
