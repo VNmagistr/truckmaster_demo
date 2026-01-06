@@ -8,15 +8,12 @@ from .views import (
     WorkPriceViewSet,
     RepairPhotoViewSet,
     MaintenanceRuleViewSet,
-    MaintenanceLogViewSet,
-    RecentOrdersView,
-    DashboardOrderStatsView,
+    MaintenanceLogViewSet
 )
 
 # Створюємо роутер для автоматичної генерації URL
 router = DefaultRouter()
 router.register(r'service-orders', ServiceOrderViewSet, basename='serviceorder')
-router.register(r'orders', ServiceOrderViewSet, basename='order')
 router.register(r'service-works', ServiceWorkViewSet, basename='servicework')
 router.register(r'employees', EmployeeViewSet, basename='employee')
 router.register(r'work-groups', WorkGroupViewSet, basename='workgroup')
@@ -28,6 +25,4 @@ router.register(r'maintenance-logs', MaintenanceLogViewSet, basename='maintenanc
 # Головний список URL-адрес
 urlpatterns = [
     path('', include(router.urls)),
-    path('recent-orders/', RecentOrdersView.as_view(), name='recent-orders'),
-    path('dashboard-order-stats/', DashboardOrderStatsView.as_view(), name='dashboard-order-stats'),
 ]
