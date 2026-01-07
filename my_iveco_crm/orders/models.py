@@ -109,7 +109,28 @@ class ServiceOrder(models.Model):
         default=0, 
         verbose_name="Загальна вартість"
     )
-
+    marked_for_deletion = models.BooleanField(
+        default=False,
+        verbose_name="Позначено на видалення"
+    )
+    marked_for_deletion_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders_marked_for_deletion',
+        verbose_name="Позначив на видалення"
+    )
+    marked_for_deletion_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата позначення"
+    )
+    deletion_reason = models.TextField(
+        blank=True,
+        verbose_name="Причина видалення"
+    )
+    
     class Meta:
         verbose_name = "Замовлення-наряд"
         verbose_name_plural = "Замовлення-наряди"

@@ -1,4 +1,8 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
 from .models import Client, Truck, IvecoBaseModel
 from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSerializer, IvecoBaseModelSerializer
 from django_filters.rest_framework import DjangoFilterBackend
@@ -6,6 +10,39 @@ from django_filters.rest_framework import DjangoFilterBackend
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
+    
+    @action(detail=True, methods=['post'])
+    def mark_for_deletion(self, request, pk=None):
+        """Позначити клієнта на видалення"""
+        client = self.get_object()
+        reason = request.data.get('reason', '')
+        
+        client.marked_for_deletion = True
+        client.marked_for_deletion_by = request.user
+        client.marked_for_deletion_at = timezone.now()
+        client.deletion_reason = reason
+        client.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Клієнта позначено на видалення'
+        })
+    
+    @action(detail=True, methods=['post'])
+    def unmark_for_deletion(self, request, pk=None):
+        """Зняти позначку на видалення"""
+        client = self.get_object()
+        
+        client.marked_for_deletion = False
+        client.marked_for_deletion_by = None
+        client.marked_for_deletion_at = None
+        client.deletion_reason = ''
+        client.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Позначку на видалення знято'
+        })
 
 class IvecoBaseModelViewSet(viewsets.ModelViewSet):
     queryset = IvecoBaseModel.objects.all()
@@ -22,17 +59,43 @@ class TruckViewSet(viewsets.ModelViewSet):
         return TruckDetailSerializer
     
     def get_queryset(self):
-        """
-        Фільтрація вантажівок ТІЛЬКИ по держномеру (license_plate)
-        """
+        queryset = Truck.objects.all()
+        search = self.request.query_params.get('search', None)
         
-        queryset = super().get_queryset()
-        
-        # Пошук по номеру з частковим співпадінням
-        license_plate = self.request.query_params.get('license_plate', None)
-        if license_plate:
-            # Часткове співпадіння в номері, без урахування регістру
-            queryset = queryset.filter(license_plate__icontains=license_plate)
+        if search:
+            queryset = queryset.filter(license_plate__icontains=search)
         
         return queryset
     
+    @action(detail=True, methods=['post'])
+    def mark_for_deletion(self, request, pk=None):
+        """Позначити вантажівку на видалення"""
+        truck = self.get_object()
+        reason = request.data.get('reason', '')
+        
+        truck.marked_for_deletion = True
+        truck.marked_for_deletion_by = request.user
+        truck.marked_for_deletion_at = timezone.now()
+        truck.deletion_reason = reason
+        truck.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Вантажівку позначено на видалення'
+        })
+    
+    @action(detail=True, methods=['post'])
+    def unmark_for_deletion(self, request, pk=None):
+        """Зняти позначку на видалення"""
+        truck = self.get_object()
+        
+        truck.marked_for_deletion = False
+        truck.marked_for_deletion_by = None
+        truck.marked_for_deletion_at = None
+        truck.deletion_reason = ''
+        truck.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Позначку на видалення знято'
+        })
