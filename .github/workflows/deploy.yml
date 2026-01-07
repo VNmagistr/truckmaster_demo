@@ -21,44 +21,50 @@ jobs:
       env:
         SSHPASS: ${{ secrets.DO_PASSWORD }}
       run: |
-        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << EOF
-          set -e
-
-          echo "📦 Starting deployment..."
-
-          cd /home/ubuntu/truckmaster/my_iveco_crm
+        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+          set -e  # Зупинити при помилці
           
-          # Оновлюємо код з токеном
-          echo "🔄 Pulling latest code..."
-          git pull https://${{ secrets.GH_TOKEN }}@github.com/VNmagistr/truckmaster.git main
+          echo "📦 Starting deployment..."
+          
+          cd /home/ubuntu/truckmaster/my_iveco_crm
 
-          # Активуємо venv
+          # 1. Оновлюємо код
+          echo "🔄 Pulling latest code..."
+          git fetch origin
+          
+          # Видаляємо untracked файли міграцій, які можуть конфліктувати
+          echo "🧹 Cleaning untracked migration files..."
+          git clean -fd */migrations/
+          
+          git reset --hard origin/main
+
+          # 2. Активуємо venv
           echo "🐍 Activating virtual environment..."
           source venv/bin/activate
 
-          # Оновлюємо залежності
+          # 3. Оновлюємо залежності
           echo "📚 Installing dependencies..."
           pip install -r requirements.txt
 
-          # Запускаємо міграції
+          # 4. Запускаємо міграції
           echo "🗄️  Running migrations..."
           python manage.py migrate --noinput
 
-          # Збираємо статику
+          # 5. Збираємо статику
           echo "🎨 Collecting static files..."
           python manage.py collectstatic --noinput
 
-          # Перевірка системи
+          # 6. Перевірка системи
           echo "✅ Running system check..."
           python manage.py check --deploy
 
-          # Перезапускаємо сервіси
+          # 7. Перезапускаємо сервіси
           echo "🔄 Restarting services..."
           sudo systemctl restart gunicorn
           sudo systemctl restart telegram_bot
           sudo systemctl reload nginx
 
-          # Перевірка статусу
+          # 8. Перевірка статусу
           echo "📊 Checking service status..."
           sudo systemctl is-active gunicorn
           sudo systemctl is-active telegram_bot
