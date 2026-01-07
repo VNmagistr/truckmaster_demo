@@ -27,7 +27,12 @@ class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    queryset = ServiceOrder.objects.select_related('client', 'truck', 'truck__base_model').all().order_by('-created_at')
+    queryset = ServiceOrder.objects.select_related(
+        'client', 
+        'truck', 
+        'truck__base_model',
+        'marked_for_deletion_by'
+    ).all().order_by('-created_at')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
