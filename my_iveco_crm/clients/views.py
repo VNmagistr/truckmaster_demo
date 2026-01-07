@@ -2,7 +2,6 @@ from rest_framework import viewsets
 from .models import Client, Truck, IvecoBaseModel
 from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSerializer, IvecoBaseModelSerializer
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
@@ -14,9 +13,8 @@ class IvecoBaseModelViewSet(viewsets.ModelViewSet):
 
 class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend]
     filterset_fields = ['client']
-    search_fields = ['license_plate', 'last_seven_vin']
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -25,15 +23,15 @@ class TruckViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Фільтрація вантажівок з точним співпадінням по номеру
+        Фільтрація вантажівок ТІЛЬКИ по держномеру (license_plate)
         """
         queryset = super().get_queryset()
         
-        # Точний пошук по номеру (license_plate)
+        # Пошук по номеру з частковим співпадінням
         license_plate = self.request.query_params.get('license_plate', None)
         if license_plate:
-            # Точне співпадіння, без урахування регістру
-            queryset = queryset.filter(license_plate__iexact=license_plate)
+            # Часткове співпадіння в номері, без урахування регістру
+            queryset = queryset.filter(license_plate__icontains=license_plate)
         
         return queryset
-
+    
