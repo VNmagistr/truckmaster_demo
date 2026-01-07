@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Client(models.Model):
     name = models.CharField(max_length=255, verbose_name="Ім'я")
@@ -7,7 +8,28 @@ class Client(models.Model):
     address = models.CharField(max_length=255, blank=True, null=True)
     telegram_chat_id = models.BigIntegerField(unique=True, blank=True, null=True, db_index=True, verbose_name="ID чату Telegram")
     is_admin = models.BooleanField(default=False, verbose_name="Адміністратор бота")
-    
+    # Поля для м'якого видалення
+    marked_for_deletion = models.BooleanField(
+        default=False, 
+        verbose_name="Позначено на видалення"
+    )
+    marked_for_deletion_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='clients_marked_for_deletion',
+        verbose_name="Позначив на видалення"
+    )
+    marked_for_deletion_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата позначення"
+    )
+    deletion_reason = models.TextField(
+        blank=True,
+        verbose_name="Причина видалення"
+    )
     class Meta:
         verbose_name = "Клієнт"
         verbose_name_plural = "Клієнти"
@@ -42,6 +64,28 @@ class Truck(models.Model):
     last_seven_vin = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="Останні 7 символів VIN", editable=False)
     license_plate = models.CharField(max_length=20, verbose_name="Номерний знак", db_index=True)
     euro_standard = models.CharField(max_length=10, choices=EURO_STANDARD_CHOICES, blank=True, null=True, verbose_name="Євростандарт викидів")
+    # Поля для м'якого видалення
+    marked_for_deletion = models.BooleanField(
+        default=False, 
+        verbose_name="Позначено на видалення"
+    )
+    marked_for_deletion_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='trucks_marked_for_deletion',
+        verbose_name="Позначив на видалення"
+    )
+    marked_for_deletion_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата позначення"
+    )
+    deletion_reason = models.TextField(
+        blank=True,
+        verbose_name="Причина видалення"
+    )
     
     class Meta:
         verbose_name = "Вантажівка"
