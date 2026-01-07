@@ -264,3 +264,17 @@ CELERY_TIMEZONE = 'Europe/Kiev'
 INSTALLED_APPS += [
     'django_celery_beat',
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://157.230.114.19',
+    'http://ital-truck.com.ua',
+    'https://ital-truck.com.ua',
+    'http://www.ital-truck.com.ua',
+    'https://www.ital-truck.com.ua',
+]
+
+# Session settings
+SESSION_COOKIE_SECURE = False  # True тільки для HTTPS
+CSRF_COOKIE_SECURE = False     # True тільки для HTTPS
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
