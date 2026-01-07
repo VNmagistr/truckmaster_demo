@@ -1,9 +1,12 @@
+# inventory/views.py
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, F
+from django.utils import timezone
 
 from .models import (
     ProductCategory,
@@ -129,6 +132,39 @@ class PartViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(products, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def mark_for_deletion(self, request, pk=None):
+        """Позначити товар на видалення"""
+        part = self.get_object()
+        reason = request.data.get('reason', '')
+        
+        part.marked_for_deletion = True
+        part.marked_for_deletion_by = request.user
+        part.marked_for_deletion_at = timezone.now()
+        part.deletion_reason = reason
+        part.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Товар позначено на видалення'
+        })
+    
+    @action(detail=True, methods=['post'])
+    def unmark_for_deletion(self, request, pk=None):
+        """Зняти позначку на видалення"""
+        part = self.get_object()
+        
+        part.marked_for_deletion = False
+        part.marked_for_deletion_by = None
+        part.marked_for_deletion_at = None
+        part.deletion_reason = ''
+        part.save()
+        
+        return Response({
+            'status': 'success',
+            'message': 'Позначку на видалення знято'
+        })
 
 
 class StockViewSet(viewsets.ModelViewSet):
@@ -151,6 +187,7 @@ class StockViewSet(viewsets.ModelViewSet):
         # Фільтр по низькому залишку
         low_stock = self.request.query_params.get('low_stock')
         if low_stock == 'true':
+            # Фільтруємо в Python, бо is_low_stock - це property
             ids = [s.id for s in queryset if s.is_low_stock]
             queryset = queryset.filter(id__in=ids)
         
