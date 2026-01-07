@@ -22,6 +22,9 @@ router.register(r'repair-photos', RepairPhotoViewSet, basename='repairphoto')
 router.register(r'maintenance-rules', MaintenanceRuleViewSet, basename='maintenancerule')
 router.register(r'maintenance-logs', MaintenanceLogViewSet, basename='maintenancelog')
 
+# Додаємо алієс /orders/ для зворотної сумісності з фронтендом
+router.register(r'orders', ServiceOrderViewSet, basename='order')
+
 # Головний список URL-адрес
 urlpatterns = [
     path('', include(router.urls)),
