@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from django.db.models import Q
+from datetime import timedelta
 from .models import (
     ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
     RepairPhoto, MaintenanceRule, MaintenanceLog
@@ -64,6 +65,74 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
         
         return queryset
+    
+    @action(detail=False, methods=['get'], url_path='recent')
+    def recent_orders(self, request):
+        """Останні 10 замовлень для Dashboard"""
+        recent = self.get_queryset()[:10]
+        
+        data = []
+        for order in recent:
+            data.append({
+                'id': order.id,
+                'order_number': order.order_number or f"#{order.id}",
+                'client': order.client.name if order.client else 'Н/Д',
+                'truck': order.truck.license_plate if order.truck else 'Н/Д',
+                'status': order.get_status_display(),
+                'start_date': order.created_at.isoformat() if order.created_at else None,
+            })
+        
+        return Response(data)
+    
+    @action(detail=False, methods=['get'], url_path='dashboard-stats')
+    def dashboard_stats(self, request):
+        """Статистика замовлень для Dashboard"""
+        now = timezone.now()
+        
+        # Поточний тиждень
+        week_start = now - timedelta(days=now.weekday())
+        this_week = ServiceOrder.objects.filter(created_at__gte=week_start).count()
+        
+        # Минулий тиждень (для порівняння)
+        last_week_start = week_start - timedelta(days=7)
+        compare_week = ServiceOrder.objects.filter(
+            created_at__gte=last_week_start,
+            created_at__lt=week_start
+        ).count()
+        
+        # Поточний місяць
+        month_start = now.replace(day=1)
+        this_month = ServiceOrder.objects.filter(created_at__gte=month_start).count()
+        
+        # Минулий місяць (для порівняння)
+        if month_start.month == 1:
+            last_month_start = month_start.replace(year=month_start.year - 1, month=12)
+        else:
+            last_month_start = month_start.replace(month=month_start.month - 1)
+        compare_month = ServiceOrder.objects.filter(
+            created_at__gte=last_month_start,
+            created_at__lt=month_start
+        ).count()
+        
+        # Поточний рік
+        year_start = now.replace(month=1, day=1)
+        this_year = ServiceOrder.objects.filter(created_at__gte=year_start).count()
+        
+        # Минулий рік (для порівняння)
+        last_year_start = year_start.replace(year=year_start.year - 1)
+        compare_year = ServiceOrder.objects.filter(
+            created_at__gte=last_year_start,
+            created_at__lt=year_start
+        ).count()
+        
+        return Response({
+            'this_week': this_week,
+            'compare_week': compare_week,
+            'this_month': this_month,
+            'compare_month': compare_month,
+            'this_year': this_year,
+            'compare_year': compare_year,
+        })
     
     @action(detail=True, methods=['get'])
     def previous_maintenance(self, request, pk=None):
