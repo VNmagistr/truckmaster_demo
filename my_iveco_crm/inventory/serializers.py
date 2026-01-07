@@ -1,3 +1,5 @@
+# inventory/serializers.py
+
 from rest_framework import serializers
 from .models import (
     ProductCategory, 
@@ -95,6 +97,10 @@ class PartSerializer(serializers.ModelSerializer):
     total_stock = serializers.ReadOnlyField()
     is_oil = serializers.ReadOnlyField()
     is_filter = serializers.ReadOnlyField()
+    marked_for_deletion_by_name = serializers.CharField(
+        source='marked_for_deletion_by.get_full_name',
+        read_only=True
+    )
     
     class Meta:
         model = Part
@@ -126,8 +132,21 @@ class PartSerializer(serializers.ModelSerializer):
             'is_filter',
             'created_at',
             'updated_at',
+            'marked_for_deletion',
+            'marked_for_deletion_by',
+            'marked_for_deletion_by_name',
+            'marked_for_deletion_at',
+            'deletion_reason',
         ]
-        read_only_fields = ['created_at', 'updated_at', 'price_per_liter']
+        read_only_fields = [
+            'created_at', 
+            'updated_at', 
+            'price_per_liter',
+            'marked_for_deletion',
+            'marked_for_deletion_by',
+            'marked_for_deletion_at',
+            'deletion_reason',
+        ]
 
 
 class PartListSerializer(serializers.ModelSerializer):
@@ -152,6 +171,7 @@ class PartListSerializer(serializers.ModelSerializer):
             'current_stock',
             'min_stock_level',
             'is_active',
+            'marked_for_deletion',
         ]
 
 

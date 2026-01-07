@@ -30,14 +30,9 @@ class WorkGroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class WorkPriceSerializer(serializers.ModelSerializer):
-    calculated_price = serializers.SerializerMethodField()
-    
     class Meta:
         model = WorkPrice
         fields = '__all__'
-    
-    def get_calculated_price(self, obj):
-        return float(obj.get_calculated_price())
 
 class UsedPartSerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,7 +86,10 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'client',
             'truck',
             'problem_description', 
-            'status'
+            'status',
+            'car_photo',
+            'odometer_photo',
+            'dashboard_photo',
         ]
 
 class ServiceOrderListSerializer(serializers.ModelSerializer):
@@ -104,8 +102,14 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 
-            'status', 'created_at', 'problem_description', 'total_cost'
+            'id', 
+            'order_number', 
+            'client', 
+            'truck', 
+            'status', 
+            'created_at', 
+            'problem_description',
+            'marked_for_deletion',
         ]
 
 class ServiceOrderDetailSerializer(serializers.ModelSerializer): 
@@ -116,13 +120,33 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     truck = TruckSerializerForOrder(read_only=True)
     works = ServiceWorkSerializer(many=True, read_only=True)
     photos = RepairPhotoSerializer(many=True, read_only=True)
+    marked_for_deletion_by_name = serializers.CharField(
+        source='marked_for_deletion_by.get_full_name',
+        read_only=True
+    )
 
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 'order_number', 'client', 'truck', 
-            'problem_description', 'status', 'created_at', 'updated_at',
-            'total_cost', 'works', 'photos'
+            'id', 
+            'order_number', 
+            'client', 
+            'truck', 
+            'problem_description', 
+            'status', 
+            'created_at', 
+            'updated_at',
+            'total_cost',
+            'car_photo',
+            'odometer_photo',
+            'dashboard_photo',
+            'works', 
+            'photos',
+            'marked_for_deletion',
+            'marked_for_deletion_by',
+            'marked_for_deletion_by_name',
+            'marked_for_deletion_at',
+            'deletion_reason',
         ]
 
 # --- Серіалізатори Регламентів ---
