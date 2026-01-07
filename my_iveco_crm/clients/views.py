@@ -25,6 +25,7 @@ class TruckViewSet(viewsets.ModelViewSet):
         """
         Фільтрація вантажівок ТІЛЬКИ по держномеру (license_plate)
         """
+        
         queryset = super().get_queryset()
         
         # Пошук по номеру з частковим співпадінням
