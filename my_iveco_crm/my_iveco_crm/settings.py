@@ -158,6 +158,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 CORS_ALLOWED_ORIGINS = [
+    "https://ad07fa04-5b80-44f6-b374-7f256b94f7cf.lovableproject.com",
     "http://localhost:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
     "http://157.230.114.19",
