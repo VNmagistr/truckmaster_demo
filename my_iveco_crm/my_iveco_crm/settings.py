@@ -161,6 +161,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
     "http://157.230.114.19",
+    "https://your-project-id.lovable.app",
 ]
 
 REST_FRAMEWORK = {
