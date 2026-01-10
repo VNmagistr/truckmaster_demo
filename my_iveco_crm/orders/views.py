@@ -20,31 +20,23 @@ from .serializers import (
     MaintenanceLogSerializer
 )
 
-# Визначаємо права доступу (наприклад, тільки для адмінів або залогінених)
-# Для простоти поки що - тільки для залогінених
 class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
-# --- ViewSet для Замовлень-Нарядів ---
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     queryset = ServiceOrder.objects.all()
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
-        # Для списку - простий серіалізатор
         if self.action == 'list':
             return ServiceOrderListSerializer
-        # Для створення/оновлення - серіалізатор для запису
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
-        # Для перегляду одного об'єкта - повний серіалізатор
         return ServiceOrderDetailSerializer
     
     def get_queryset(self):
         """
-        Фільтруємо soft-deleted замовлення за замовчуванням.
-        Оптимізуємо запити через select_related.
-        Зберігаємо функціонал пошуку.
+        ТИМЧАСОВО БЕЗ ФІЛЬТРА для дебагу
         """
         queryset = ServiceOrder.objects.select_related(
             'client', 
@@ -52,11 +44,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'truck__base_model'
         ).order_by('-created_at')
         
-        # Перевіряємо чи потрібно показати видалених
-        show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
-        
-        if not show_deleted:
-            queryset = queryset.filter(marked_for_deletion=False)
+        # ЗАКОМЕНТОВАНО фільтр
+        # show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
+        # if not show_deleted:
+        #     queryset = queryset.filter(marked_for_deletion=False)
         
         # Глобальний пошук
         search = self.request.query_params.get('search', None)
@@ -88,7 +79,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'closed': closed,
         })
 
-# --- ViewSet для Виконаних Робіт ---
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
     permission_classes = [IsAuthenticated]
@@ -98,7 +88,6 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
-# --- Інші ViewSets ---
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
