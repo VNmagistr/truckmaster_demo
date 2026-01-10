@@ -9,16 +9,14 @@ class ClientViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Фільтруємо soft-deleted клієнтів за замовчуванням.
-        Якщо явно передано show_deleted=true, показуємо всіх.
+        ТИМЧАСОВО БЕЗ ФІЛЬТРА для дебагу
         """
-        queryset = Client.objects.select_related().order_by('name')
+        queryset = Client.objects.all().order_by('name')
         
-        # Перевіряємо чи потрібно показати видалених
-        show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
-        
-        if not show_deleted:
-            queryset = queryset.filter(marked_for_deletion=False)
+        # ЗАКОМЕНТОВАНО фільтр
+        # show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
+        # if not show_deleted:
+        #     queryset = queryset.filter(marked_for_deletion=False)
         
         return queryset
 
@@ -40,16 +38,14 @@ class TruckViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Фільтруємо soft-deleted вантажівки за замовчуванням.
-        Оптимізуємо запити через select_related.
+        ТИМЧАСОВО БЕЗ ФІЛЬТРА для дебагу
         """
         queryset = Truck.objects.select_related('client', 'base_model').order_by('license_plate')
         
-        # Перевіряємо чи потрібно показати видалених
-        show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
-        
-        if not show_deleted:
-            queryset = queryset.filter(marked_for_deletion=False)
+        # ЗАКОМЕНТОВАНО фільтр
+        # show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
+        # if not show_deleted:
+        #     queryset = queryset.filter(marked_for_deletion=False)
         
         return queryset
     
