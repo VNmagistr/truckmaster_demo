@@ -158,18 +158,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 CORS_ALLOWED_ORIGINS = [
-    "https://ad07fa04-5b80-44f6-b374-7f256b94f7cf.lovableproject.com",
     "http://localhost:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
     "http://157.230.114.19",
-    "https://lovable.dev",
-    "https://truckmaster.lovable.app",
 ]
-
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-CORS_ALLOW_HEADERS = ['*']
 
 
 REST_FRAMEWORK = {
