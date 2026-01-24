@@ -6,7 +6,8 @@ from .views import (
     ServiceTypeViewSet,
     FluidChangeRecordViewSet,
     ServiceReminderViewSet,
-    TruckFluidSpecViewSet
+    TruckFluidSpecViewSet,
+    CheckRegulationsView  # <-- 1. Додаємо імпорт
 )
 
 router = DefaultRouter()
@@ -17,4 +18,5 @@ router.register(r'fluid-specs', TruckFluidSpecViewSet, basename='fluid-spec')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('check-regulations/', CheckRegulationsView.as_view(), name='check-regulations'),
 ]
