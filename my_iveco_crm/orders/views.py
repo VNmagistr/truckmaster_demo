@@ -26,19 +26,24 @@ class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
+    # Оптимізований запит без truck__base_model
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
-        'truck__base_model',
         'marked_for_deletion_by'
     ).all().order_by('-created_at')
+    
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    # Виправлений пошук: шукаємо тільки по полях бази даних
     search_fields = [
         'order_number',
-        'truck__full_vin',
-        'truck__license_plate',
+        'truck__license_plate', 
         'client__name',
+        # Якщо у Truck є поле vin, розкоментуй рядок нижче. 
+        # Якщо vin це property (last_seven_vin), по ньому шукати через ORM не можна.
+        # 'truck__vin', 
     ]
     ordering_fields = ['created_at', 'order_number', 'status']
     ordering = ['-created_at']
@@ -55,9 +60,9 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         global_search = self.request.query_params.get('global_search', None)
         
         if global_search:
+            # Тут теж прибрали пошук по property, залишили надійні поля
             queryset = queryset.filter(
                 Q(order_number__icontains=global_search) |
-                Q(truck__full_vin__icontains=global_search) |
                 Q(truck__license_plate__icontains=global_search) |
                 Q(client__name__icontains=global_search)
             )
@@ -170,8 +175,6 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
-
-# EmployeeViewSet ВИДАЛЕНО
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
     queryset = WorkGroup.objects.all()

@@ -11,7 +11,15 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'orders', ServiceOrderViewSet)
+
+# 1. Основний маршрут для нових функцій
+router.register(r'orders', ServiceOrderViewSet, basename='orders')
+
+# 2. ВАЖЛИВО: Маршрут для сумісності зі старим Дашбордом
+# Саме його не вистачає для виправлення помилки 404
+router.register(r'service-orders', ServiceOrderViewSet, basename='service-orders')
+
+# 3. Інші маршрути
 router.register(r'service-works', ServiceWorkViewSet)
 router.register(r'work-groups', WorkGroupViewSet)
 router.register(r'work-prices', WorkPriceViewSet)
