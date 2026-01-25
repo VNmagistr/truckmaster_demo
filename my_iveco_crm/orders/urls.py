@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ServiceOrderViewSet,
     ServiceWorkViewSet,
-    EmployeeViewSet,
     WorkGroupViewSet,
     WorkPriceViewSet,
     RepairPhotoViewSet,
@@ -11,21 +10,15 @@ from .views import (
     MaintenanceLogViewSet
 )
 
-# Створюємо роутер для автоматичної генерації URL
 router = DefaultRouter()
-router.register(r'service-orders', ServiceOrderViewSet, basename='serviceorder')
-router.register(r'service-works', ServiceWorkViewSet, basename='servicework')
-router.register(r'employees', EmployeeViewSet, basename='employee')
-router.register(r'work-groups', WorkGroupViewSet, basename='workgroup')
-router.register(r'work-prices', WorkPriceViewSet, basename='workprice')
-router.register(r'repair-photos', RepairPhotoViewSet, basename='repairphoto')
-router.register(r'maintenance-rules', MaintenanceRuleViewSet, basename='maintenancerule')
-router.register(r'maintenance-logs', MaintenanceLogViewSet, basename='maintenancelog')
+router.register(r'orders', ServiceOrderViewSet)
+router.register(r'service-works', ServiceWorkViewSet)
+router.register(r'work-groups', WorkGroupViewSet)
+router.register(r'work-prices', WorkPriceViewSet)
+router.register(r'repair-photos', RepairPhotoViewSet)
+router.register(r'maintenance-rules', MaintenanceRuleViewSet)
+router.register(r'maintenance-logs', MaintenanceLogViewSet)
 
-# Додаємо алієс /orders/ для зворотної сумісності з фронтендом
-router.register(r'orders', ServiceOrderViewSet, basename='order')
-
-# Головний список URL-адрес
 urlpatterns = [
     path('', include(router.urls)),
 ]

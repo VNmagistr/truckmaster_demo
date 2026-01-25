@@ -1,12 +1,15 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from .models import (
-    ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
+    ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
     RepairPhoto, MaintenanceRule, MaintenanceLog
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
 
-# ----- Серіалізатори для Клієнтів та Вантажівок (для відображення в замовленнях) -----
+User = get_user_model()
+
+# ----- Серіалізатори для Клієнтів та Вантажівок -----
 class ClientSerializerForOrder(serializers.ModelSerializer):
     class Meta:
         model = Client
@@ -17,12 +20,18 @@ class TruckSerializerForOrder(serializers.ModelSerializer):
         model = Truck
         fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin']
 
-# ----- Серіалізатори для додатку Orders -----
+# ----- Серіалізатор для Механіка (User) -----
+class MechanicSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
 
-class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Employee
-        fields = '__all__'
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'full_name']
+        
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+# ----- Серіалізатори для додатку Orders -----
 
 class WorkGroupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,7 +55,7 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
     Серіалізатор для ЧИТАННЯ робіт (з деталями).
     """
     work = WorkPriceSerializer(read_only=True)
-    employee = EmployeeSerializer(read_only=True)
+    mechanic = MechanicSerializer(read_only=True)  # Замінили employee на mechanic
     used_parts = UsedPartSerializer(many=True, read_only=True)
 
     class Meta:
@@ -64,7 +73,7 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
             'service_order', 
             'work', 
             'description', 
-            'employee', 
+            'mechanic',  # Замінили employee на mechanic
             'hours_spent'
         ]
 
@@ -76,16 +85,14 @@ class RepairPhotoSerializer(serializers.ModelSerializer):
 # --- Серіалізатори Замовлень (ServiceOrder) ---
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
-    """
-    Простий серіалізатор для СТВОРЕННЯ та ОНОВЛЕННЯ замовлень.
-    """
     class Meta:
         model = ServiceOrder
         fields = [
             'order_number', 
             'client',
             'truck',
-            'problem_description', 
+            'problem_description',
+            'current_mileage', # Додано нове поле
             'status',
             'car_photo',
             'odometer_photo',
@@ -93,9 +100,6 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
         ]
 
 class ServiceOrderListSerializer(serializers.ModelSerializer):
-    """
-    Спрощений серіалізатор для СПИСКУ замовлень (тільки читання).
-    """
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
 
@@ -113,9 +117,6 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
         ]
 
 class ServiceOrderDetailSerializer(serializers.ModelSerializer): 
-    """
-    Повний серіалізатор для ДЕТАЛЕЙ одного замовлення (тільки читання).
-    """
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
     works = ServiceWorkSerializer(many=True, read_only=True)
@@ -132,7 +133,8 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'order_number', 
             'client', 
             'truck', 
-            'problem_description', 
+            'problem_description',
+            'current_mileage',
             'status', 
             'created_at', 
             'updated_at',
@@ -160,4 +162,3 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceLog
         fields = '__all__'
-        
