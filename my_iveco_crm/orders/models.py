@@ -1,16 +1,18 @@
 from django.db import models
 from django.conf import settings
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Max
 from decimal import Decimal
 from django.utils import timezone
 
 # Імпорти з інших додатків
 from clients.models import Client, Truck, IvecoBaseModel
-from inventory.models import UsedPart, Warehouse, Stock
+from inventory.models import UsedPart, Warehouse, Stock, Part
 
 # Функція для шляхів фото
 def get_repair_photo_path(instance, filename):
     return f'repair_photos/{instance.service_order.id}/{filename}'
+
+# --- МЕНЕДЖЕРИ ---
 
 class ServiceOrderManager(models.Manager):
     def active(self):
@@ -85,7 +87,7 @@ class ServiceOrder(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка")
     
     # Прийомка (Фото + Пробіг)
-    current_mileage = models.PositiveIntegerField(verbose_name="Пробіг при заїзді (км)")
+    current_mileage = models.PositiveIntegerField(verbose_name="Пробіг при заїзді (км)", null=True, blank=True)
     problem_description = models.TextField(blank=True, verbose_name="Скарги клієнта")
     
     car_photo = models.ImageField(upload_to='order_photos/cars/', verbose_name='Фото авто/номера', blank=True, null=True)
@@ -102,6 +104,15 @@ class ServiceOrder(models.Model):
     # М'яке видалення
     marked_for_deletion = models.BooleanField(default=False, verbose_name="Видалити?")
     deletion_reason = models.TextField(blank=True, verbose_name="Причина видалення")
+    marked_for_deletion_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders_marked_for_deletion',
+        verbose_name="Позначив на видалення"
+    )
+    marked_for_deletion_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата позначення")
 
     objects = ServiceOrderManager()
 
@@ -119,7 +130,11 @@ class ServiceOrder(models.Model):
             today = timezone.now()
             prefix = f"SO-{today.strftime('%Y%m%d')}"
             last_order = ServiceOrder.objects.filter(order_number__startswith=prefix).order_by('-order_number').first()
-            new_num = int(last_order.order_number.split('-')[-1]) + 1 if last_order else 1
+            if last_order and last_order.order_number:
+                last_num = int(last_order.order_number.split('-')[-1])
+                new_num = last_num + 1
+            else:
+                new_num = 1
             self.order_number = f"{prefix}-{new_num:04d}"
         
         # 2. Оновлення пробігу вантажівки (якщо вказано новий і він більший)
@@ -157,7 +172,7 @@ class ServiceWork(models.Model):
     
     # ВАЖЛИВО: Прив'язка до реального користувача (система ролей)
     mechanic = models.ForeignKey(
-        settings.AUTH_USER_MODEL, # Це зв'яже з твоєю моделлю User/UserProfile
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
@@ -176,11 +191,9 @@ class ServiceWork(models.Model):
         return self.price_at_moment * self.hours_spent
 
     def save(self, *args, **kwargs):
-        # Якщо ціна не зафіксована, беремо з прайсу
         if not self.price_at_moment and self.work:
             self.price_at_moment = self.work.get_calculated_price()
         super().save(*args, **kwargs)
-        # Оновлюємо загальну суму замовлення
         self.service_order.update_total_cost()
 
 
@@ -188,4 +201,100 @@ class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos')
     image = models.ImageField(upload_to='repair_photos/')
     description = models.CharField(max_length=255, blank=True)
+
+# --- МОДЕЛІ РЕГЛАМЕНТІВ І КОМПЛЕКТАЦІЇ (Відновлені) ---
+
+class MaintenanceRule(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Назва правила")
+    description = models.TextField(verbose_name="Опис", blank=True)
+    applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовується до моделей")
     
+    km_interval = models.PositiveIntegerField(
+        verbose_name="Інтервал (км)",
+        help_text="Через яку кількість кілометрів потрібно виконувати це правило"
+    )
+
+    class Meta:
+        verbose_name = "Правило регламенту"
+        verbose_name_plural = "Правила регламентів"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} (кожні {self.km_interval} км)"
+
+class MaintenanceLog(models.Model):
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
+    rule = models.ForeignKey(MaintenanceRule, on_delete=models.CASCADE, verbose_name="Правило регламенту")
+    date_performed = models.DateField(verbose_name="Дата виконання")
+    notes = models.TextField(blank=True, verbose_name="Примітки")
+
+    class Meta:
+        verbose_name = "Журнал регламентних робіт"
+        verbose_name_plural = "Журнал регламентних робіт"
+        ordering = ['-date_performed']
+
+class FilterType(models.Model):
+    EURO_STANDARD_CHOICES = [
+        ('EURO3', 'Євро-3'),
+        ('EURO4', 'Євро-4'),
+        ('EURO5', 'Євро-5'),
+        ('EURO6', 'Євро-6'),
+    ]
+    name = models.CharField(max_length=100, verbose_name="Назва типу фільтра")
+    description = models.TextField(blank=True, verbose_name="Опис")
+    applicable_models = models.ManyToManyField(IvecoBaseModel, blank=True, verbose_name="Застосовується до моделей")
+    euro_standard = models.CharField(max_length=10, choices=EURO_STANDARD_CHOICES, blank=True, null=True, verbose_name="Євростандарт")
+    replacement_interval_km = models.PositiveIntegerField(default=20000, verbose_name="Інтервал заміни (км)")
+    
+    class Meta:
+        verbose_name = "Тип фільтра"
+        verbose_name_plural = "Типи фільтрів"
+        ordering = ['name']
+    
+    def __str__(self):
+        res = self.name
+        if self.euro_standard: res += f" ({self.get_euro_standard_display()})"
+        return res
+
+class MaintenanceKit(models.Model):
+    truck = models.OneToOneField(Truck, on_delete=models.CASCADE, related_name='maintenance_kit', verbose_name="Вантажівка (по VIN)")
+    oil = models.ForeignKey(Part, on_delete=models.PROTECT, related_name='oil_for_trucks', verbose_name="Моторна олива")
+    oil_quantity = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Кількість оливи (л)")
+    oil_replacement_interval = models.PositiveIntegerField(default=30000, verbose_name="Інтервал заміни оливи (км)")
+    notes = models.TextField(blank=True, verbose_name="Примітки")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Набір для ТО"
+        verbose_name_plural = "Набори для ТО"
+    
+    def __str__(self):
+        return f"Набір ТО для VIN: {self.truck.last_seven_vin}"
+    
+    def check_availability(self, warehouse=None):
+        if warehouse: warehouses = [warehouse]
+        else: warehouses = Warehouse.objects.filter(is_active=True)
+        missing = []
+        oil_available = Stock.objects.filter(product=self.oil, warehouse__in=warehouses).aggregate(total=Sum('quantity'))['total'] or 0
+        if oil_available < self.oil_quantity: missing.append(f"{self.oil.name}: потрібно {self.oil_quantity}л, є {oil_available}л")
+        for kit_filter in self.filters.all():
+            available = Stock.objects.filter(product=kit_filter.part, warehouse__in=warehouses).aggregate(total=Sum('quantity'))['total'] or 0
+            if available < kit_filter.quantity: missing.append(f"{kit_filter.part.name}: потрібно {kit_filter.quantity}шт, є {available}шт")
+        return {'available': len(missing) == 0, 'missing': missing}
+
+class MaintenanceKitFilter(models.Model):
+    maintenance_kit = models.ForeignKey(MaintenanceKit, on_delete=models.CASCADE, related_name='filters', verbose_name="Набір ТО")
+    filter_type = models.ForeignKey(FilterType, on_delete=models.PROTECT, verbose_name="Тип фільтра")
+    part = models.ForeignKey(Part, on_delete=models.PROTECT, verbose_name="Запчастина (фільтр)")
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+    custom_interval_km = models.PositiveIntegerField(null=True, blank=True, verbose_name="Індивідуальний інтервал (км)")
+    notes = models.CharField(max_length=255, blank=True, verbose_name="Примітка")
+    
+    class Meta:
+        verbose_name = "Фільтр у наборі"
+        verbose_name_plural = "Фільтри у наборі"
+        ordering = ['filter_type__name']
+    
+    def __str__(self):
+        return f"{self.filter_type.name}: {self.part.name}"

@@ -3,9 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from django.db.models import Q, Count
+from django.db.models import Q
 from .models import (
-    ServiceOrder, ServiceWork, Employee, WorkGroup, WorkPrice, 
+    ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
     RepairPhoto, MaintenanceRule, MaintenanceLog
 )
 from .serializers import (
@@ -14,7 +14,6 @@ from .serializers import (
     ServiceOrderWriteSerializer,
     ServiceWorkSerializer,
     ServiceWorkWriteSerializer,
-    EmployeeSerializer,
     WorkGroupSerializer,
     WorkPriceSerializer,
     RepairPhotoSerializer,
@@ -140,7 +139,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
-        """Позначити наряд на видалення"""
         order = self.get_object()
         reason = request.data.get('reason', '')
         
@@ -150,14 +148,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.deletion_reason = reason
         order.save()
         
-        return Response({
-            'status': 'success',
-            'message': 'Наряд-замовлення позначено на видалення'
-        })
+        return Response({'status': 'success', 'message': 'Наряд-замовлення позначено на видалення'})
     
     @action(detail=True, methods=['post'])
     def unmark_for_deletion(self, request, pk=None):
-        """Зняти позначку на видалення"""
         order = self.get_object()
         
         order.marked_for_deletion = False
@@ -166,10 +160,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.deletion_reason = ''
         order.save()
         
-        return Response({
-            'status': 'success',
-            'message': 'Позначку на видалення знято'
-        })
+        return Response({'status': 'success', 'message': 'Позначку на видалення знято'})
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
@@ -180,10 +171,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
-class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated]
+# EmployeeViewSet ВИДАЛЕНО
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
     queryset = WorkGroup.objects.all()

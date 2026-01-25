@@ -1,21 +1,22 @@
-# orders/admin.py - ОНОВЛЕННЯ
+# orders/admin.py
 
 from inventory.models import UsedPart
 from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
+# 1. Прибрали Employee з імпортів
 from .models import (
-    Employee, WorkGroup, ServiceOrder, ServiceWork, 
+    WorkGroup, ServiceOrder, ServiceWork, 
     RepairPhoto, MaintenanceRule, MaintenanceLog, WorkPrice, MaintenanceKit,
     FilterType, MaintenanceKitFilter
 )
 
-# Вбудовані адмінки для зручного редагування
+# --- INLINES ---
 
 class UsedPartInline(admin.TabularInline):
     """Запчастини прив'язані до роботи"""
     model = UsedPart
-    fk_name = 'service_work'  # Явно вказуємо зв'язок
+    fk_name = 'service_work'
     autocomplete_fields = ['part', 'warehouse']
     extra = 1
     verbose_name = "Запчастина до роботи"
@@ -25,9 +26,9 @@ class UsedPartInline(admin.TabularInline):
 
 
 class DirectUsedPartInline(admin.TabularInline):
-    """Запчастини додані напряму до замовлення (без прив'язки до роботи)"""
+    """Запчастини додані напряму до замовлення"""
     model = UsedPart
-    fk_name = 'service_order'  # Явно вказуємо зв'язок
+    fk_name = 'service_order'
     autocomplete_fields = ['part', 'warehouse']
     extra = 1
     verbose_name = "Запчастина (пряме додавання)"
@@ -38,9 +39,11 @@ class DirectUsedPartInline(admin.TabularInline):
 
 class ServiceWorkInline(admin.TabularInline):
     model = ServiceWork
-    autocomplete_fields = ['work', 'employee'] 
-    extra = 1
-    fields = ('work', 'employee', 'hours_spent', 'description')
+    # 2. Замінили employee на mechanic
+    autocomplete_fields = ['work', 'mechanic'] 
+    extra = 0 # Щоб не займало багато місця
+    # 3. Оновили список полів
+    fields = ('work', 'mechanic', 'hours_spent', 'description')
 
 
 class RepairPhotoInline(admin.TabularInline):
@@ -48,7 +51,8 @@ class RepairPhotoInline(admin.TabularInline):
     extra = 1
 
 
-# Головна адмінка для Замовлення-наряду
+# --- GOVNO ADMINS (Main) ---
+
 @admin.register(ServiceOrder)
 class ServiceOrderAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'client', 'truck', 'status', 'total_cost', 'created_at')
@@ -61,6 +65,9 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         ('Основна інформація', {
             'fields': ('order_number', 'client', 'truck', 'status')
         }),
+        ('Прийомка (Фото та Пробіг)', {
+            'fields': ('current_mileage', 'car_photo', 'odometer_photo', 'dashboard_photo')
+        }),
         ('Опис проблеми (від клієнта)', {
             'classes': ('collapse',), 
             'fields': ('problem_description',)
@@ -71,6 +78,10 @@ class ServiceOrderAdmin(admin.ModelAdmin):
         ('Використані запчастини', {
             'fields': ('get_all_parts_display',),
             'description': 'Автоматично підтягуються з виконаних робіт та прямо доданих запчастин'
+        }),
+        ('Службова інформація', {
+             'classes': ('collapse',),
+             'fields': ('marked_for_deletion', 'deletion_reason')
         }),
     )
 
@@ -89,9 +100,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     def get_trucks_by_client(self, request):
         """API endpoint для отримання вантажівок по клієнту"""
         from clients.models import Truck
-        
         client_id = request.GET.get('client_id')
-        
         if not client_id:
             return JsonResponse({'trucks': []})
         
@@ -106,34 +115,23 @@ class ServiceOrderAdmin(admin.ModelAdmin):
             }
             for t in trucks
         ]
-        
         return JsonResponse({'trucks': trucks_list})
 
     def get_cost_breakdown(self, obj):
-        """Детальна розбивка вартості"""
-        if not obj.pk:
-            return "Спочатку збережіть замовлення"
-        
+        if not obj.pk: return "Спочатку збережіть замовлення"
         from django.utils.html import format_html
         from decimal import Decimal
         
-        # Вартість робіт
+        # Роботи
         works = obj.works.select_related('work__work_group').filter(work__isnull=False)
         total_work_cost = sum(
             work.work.get_calculated_price() * (work.hours_spent or Decimal('1'))
             for work in works
         )
         
-        # Запчастини через роботи
-        parts_via_works = UsedPart.objects.filter(
-            service_work__service_order=obj
-        )
-        parts_via_works_cost = sum(p.total_price for p in parts_via_works)
-        
-        # Запчастини додані напряму
-        direct_parts = obj.direct_parts.all()
-        direct_parts_cost = sum(p.total_price for p in direct_parts)
-        
+        # Запчастини
+        parts_via_works_cost = sum(p.total_price for p in UsedPart.objects.filter(service_work__service_order=obj))
+        direct_parts_cost = sum(p.total_price for p in obj.direct_parts.all())
         total_parts_cost = parts_via_works_cost + direct_parts_cost
         
         html = f"""
@@ -146,14 +144,6 @@ class ServiceOrderAdmin(admin.ModelAdmin):
                 <td style='padding: 8px; font-weight: bold;'>Запчастини (всього)</td>
                 <td style='padding: 8px; text-align: right;'>{total_parts_cost:.2f} грн</td>
             </tr>
-            <tr style='background: #f0f0f0;'>
-                <td style='padding: 8px; padding-left: 24px;'>— через роботи</td>
-                <td style='padding: 8px; text-align: right;'>{parts_via_works_cost:.2f} грн</td>
-            </tr>
-            <tr style='background: #f0f0f0;'>
-                <td style='padding: 8px; padding-left: 24px;'>— пряме додавання</td>
-                <td style='padding: 8px; text-align: right;'>{direct_parts_cost:.2f} грн</td>
-            </tr>
             <tr style='background: #e3f2fd; font-weight: bold; font-size: 1.1em;'>
                 <td style='padding: 10px;'>РАЗОМ</td>
                 <td style='padding: 10px; text-align: right;'>{obj.total_cost:.2f} грн</td>
@@ -165,106 +155,42 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     get_cost_breakdown.short_description = 'Розбивка вартості'
 
     def get_all_parts_display(self, obj):
-        """Показує всі запчастини (через роботи + прямі)"""
-        if not obj.pk:
-            return "Спочатку збережіть замовлення"
-        
+        if not obj.pk: return "Спочатку збережіть замовлення"
         from django.utils.html import format_html
         
-        # Запчастини через роботи
-        parts_via_works = UsedPart.objects.filter(
-            service_work__service_order=obj
-        ).select_related('part', 'service_work__work')
-        
-        # Запчастини додані напряму
+        parts_via_works = UsedPart.objects.filter(service_work__service_order=obj).select_related('part', 'service_work__work')
         direct_parts = obj.direct_parts.select_related('part')
         
         if not parts_via_works and not direct_parts:
             return "Запчастини не додано"
         
         rows = []
-        
-        # Спочатку запчастини через роботи
         for p in parts_via_works:
-            work_name = p.service_work.work.name if p.service_work.work else "—"
-            
-            part_name_lower = p.part.name.lower()
-            is_filter = 'фільтр' in part_name_lower or 'filter' in part_name_lower
-            is_oil_liquid = ('олив' in part_name_lower or 'масло' in part_name_lower or 'oil' in part_name_lower)
-            
-            if is_oil_liquid and not is_filter:
-                quantity_display = f"{p.quantity} л"
-            else:
-                quantity_display = f"{p.quantity} {p.part.unit}"
-            
             rows.append(
-                f"<tr>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{p.part.sku_code}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{p.part.name}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd; text-align: center;'>{quantity_display}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{work_name}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd; text-align: right;'>{p.total_price:.2f} грн</td>"
-                f"</tr>"
+                f"<tr><td style='padding:5px; border-bottom:1px solid #ddd;'>{p.part.name}</td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd;'>{p.quantity} {p.part.unit}</td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd;'>{p.service_work.work.name if p.service_work.work else '-'}</td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd; text-align:right;'>{p.total_price:.2f}</td></tr>"
             )
-        
-        # Потім прямі запчастини
         for p in direct_parts:
-            part_name_lower = p.part.name.lower()
-            is_filter = 'фільтр' in part_name_lower or 'filter' in part_name_lower
-            is_oil_liquid = ('олив' in part_name_lower or 'масло' in part_name_lower or 'oil' in part_name_lower)
-            
-            if is_oil_liquid and not is_filter:
-                quantity_display = f"{p.quantity} л"
-            else:
-                quantity_display = f"{p.quantity} {p.part.unit}"
-            
             rows.append(
-                f"<tr style='background: #fff3cd;'>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{p.part.sku_code}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'>{p.part.name}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd; text-align: center;'>{quantity_display}</td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd;'><em>пряме додавання</em></td>"
-                f"<td style='padding: 5px; border-bottom: 1px solid #ddd; text-align: right;'>{p.total_price:.2f} грн</td>"
-                f"</tr>"
+                f"<tr style='background:#fff3cd;'><td style='padding:5px; border-bottom:1px solid #ddd;'>{p.part.name}</td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd;'>{p.quantity} {p.part.unit}</td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd;'><em>пряме</em></td>"
+                f"<td style='padding:5px; border-bottom:1px solid #ddd; text-align:right;'>{p.total_price:.2f}</td></tr>"
             )
-        
-        table = f"""
-        <table style='width: 100%; border-collapse: collapse;'>
-            <thead>
-                <tr style='background: #f0f0f0;'>
-                    <th style='padding: 8px; text-align: left;'>Артикул</th>
-                    <th style='padding: 8px; text-align: left;'>Запчастина</th>
-                    <th style='padding: 8px; text-align: center;'>Кількість</th>
-                    <th style='padding: 8px; text-align: left;'>Прив'язка</th>
-                    <th style='padding: 8px; text-align: right;'>Вартість</th>
-                </tr>
-            </thead>
-            <tbody>
-            {''.join(rows)}
-            </tbody>
-        </table>
-        <p style='margin-top: 10px; font-size: 0.9em; color: #666;'>
-            <strong>Жовтим</strong> виділені запчастини, додані напряму (без прив'язки до роботи)
-        </p>
-        """
-        return format_html(table)
+            
+        return format_html(f"<table style='width:100%'>{''.join(rows)}</table>")
 
     get_all_parts_display.short_description = 'Перелік запчастин'
 
     def save_formset(self, request, form, formset, change):
         super().save_formset(request, form, formset, change)
-        # Оновлюємо вартість після збереження будь-якого formset
         if form.instance.pk:
             form.instance.update_total_cost()
 
 
-# Решта адмін-панелей
-@admin.register(Employee)
-class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'position')
-    search_fields = ('name',)
-    ordering = ['name'] 
-
+# 4. Видалили EmployeeAdmin, бо моделі вже немає
 
 @admin.register(WorkGroup)
 class WorkGroupAdmin(admin.ModelAdmin):
@@ -282,15 +208,25 @@ class WorkPriceAdmin(admin.ModelAdmin):
     ordering = ['name']
     
     def get_calculated_price(self, obj):
-        """Показує розраховану ціну"""
         return f"{obj.get_calculated_price():.2f} грн"
     get_calculated_price.short_description = 'Розрахункова ціна'
 
 
 @admin.register(ServiceWork)
 class ServiceWorkAdmin(admin.ModelAdmin):
-    list_display = ('service_order', 'work', 'employee', 'hours_spent')
-    autocomplete_fields = ('service_order', 'work', 'employee')
+    # 5. Замінили employee на mechanic
+    list_display = ('service_order', 'work', 'mechanic', 'hours_spent')
+    autocomplete_fields = ('service_order', 'work', 'mechanic')
     inlines = [UsedPartInline]
     search_fields = ['description', 'service_order__order_number', 'work__name']
     ordering = ['-service_order']
+
+# Реєструємо інші моделі, якщо вони існують у models.py
+try:
+    @admin.register(MaintenanceRule)
+    class MaintenanceRuleAdmin(admin.ModelAdmin):
+        list_display = ['name', 'km_interval']
+        search_fields = ['name']
+        filter_horizontal = ['applicable_models']
+except ImportError:
+    pass
