@@ -16,9 +16,13 @@ class ClientSerializerForOrder(serializers.ModelSerializer):
         fields = ['id', 'name', 'phone']
 
 class TruckSerializerForOrder(serializers.ModelSerializer):
+    # Додаємо дані клієнта, щоб фронтенд міг їх "підтягнути" автоматично
+    client_name = serializers.CharField(source='client.name', read_only=True)
+    client_id = serializers.PrimaryKeyRelatedField(source='client', read_only=True)
+
     class Meta:
         model = Truck
-        fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin']
+        fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin', 'client_id', 'client_name']
 
 # ----- Серіалізатор для Механіка (User) -----
 class MechanicSerializer(serializers.ModelSerializer):
@@ -51,11 +55,8 @@ class UsedPartSerializer(serializers.ModelSerializer):
 # --- Серіалізатори Виконаних Робіт (ServiceWork) ---
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
-    """
-    Серіалізатор для ЧИТАННЯ робіт (з деталями).
-    """
     work = WorkPriceSerializer(read_only=True)
-    mechanic = MechanicSerializer(read_only=True)  # Замінили employee на mechanic
+    mechanic = MechanicSerializer(read_only=True)
     used_parts = UsedPartSerializer(many=True, read_only=True)
 
     class Meta:
@@ -63,17 +64,13 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
-    """
-    Серіалізатор для СТВОРЕННЯ/ОНОВЛЕННЯ робіт.
-    Приймає ID для пов'язаних полів.
-    """
     class Meta:
         model = ServiceWork
         fields = [
             'service_order', 
             'work', 
             'description', 
-            'mechanic',  # Замінили employee на mechanic
+            'mechanic',
             'hours_spent'
         ]
 
@@ -92,12 +89,28 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'client',
             'truck',
             'problem_description',
-            'current_mileage', # Додано нове поле
+            'current_mileage',  # <-- ПОВЕРНУЛИ ПРОБІГ
             'status',
             'car_photo',
             'odometer_photo',
             'dashboard_photo',
         ]
+
+    def validate(self, data):
+        """
+        Автоматична бізнес-логіка:
+        Якщо вказано Вантажівку, але не вказано Клієнта -> підтягуємо власника авто.
+        """
+        truck = data.get('truck')
+        client = data.get('client')
+
+        if truck and not client:
+            if truck.client:
+                data['client'] = truck.client
+            else:
+                raise serializers.ValidationError({"client": "У цієї вантажівки немає власника. Будь ласка, оберіть клієнта вручну."})
+        
+        return data
 
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = ClientSerializerForOrder(read_only=True)
