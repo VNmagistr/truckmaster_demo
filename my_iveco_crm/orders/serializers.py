@@ -16,7 +16,7 @@ class ClientSerializerForOrder(serializers.ModelSerializer):
         fields = ['id', 'name', 'phone']
 
 class TruckSerializerForOrder(serializers.ModelSerializer):
-    # Додаємо дані клієнта, щоб фронтенд міг їх "підтягнути" автоматично
+    # Додаємо дані власника, щоб фронтенд міг їх використати
     client_name = serializers.CharField(source='client.name', read_only=True)
     client_id = serializers.PrimaryKeyRelatedField(source='client', read_only=True)
 
@@ -55,6 +55,9 @@ class UsedPartSerializer(serializers.ModelSerializer):
 # --- Серіалізатори Виконаних Робіт (ServiceWork) ---
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
+    """
+    Серіалізатор для ЧИТАННЯ робіт (з деталями).
+    """
     work = WorkPriceSerializer(read_only=True)
     mechanic = MechanicSerializer(read_only=True)
     used_parts = UsedPartSerializer(many=True, read_only=True)
@@ -64,6 +67,9 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
+    """
+    Серіалізатор для СТВОРЕННЯ/ОНОВЛЕННЯ робіт.
+    """
     class Meta:
         model = ServiceWork
         fields = [
@@ -89,7 +95,7 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'client',
             'truck',
             'problem_description',
-            'current_mileage',  # <-- ПОВЕРНУЛИ ПРОБІГ
+            'current_mileage',
             'status',
             'car_photo',
             'odometer_photo',
@@ -98,16 +104,17 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Автоматична бізнес-логіка:
-        Якщо вказано Вантажівку, але не вказано Клієнта -> підтягуємо власника авто.
+        Автоматичне підтягування клієнта при збереженні.
         """
         truck = data.get('truck')
         client = data.get('client')
 
+        # Якщо є авто, але немає клієнта - беремо власника авто
         if truck and not client:
             if truck.client:
                 data['client'] = truck.client
             else:
+                # Опціонально: можна кинути помилку або залишити поле пустим
                 raise serializers.ValidationError({"client": "У цієї вантажівки немає власника. Будь ласка, оберіть клієнта вручну."})
         
         return data
@@ -146,7 +153,7 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'order_number', 
             'client', 
             'truck', 
-            'problem_description',
+            'problem_description', 
             'current_mileage',
             'status', 
             'created_at', 

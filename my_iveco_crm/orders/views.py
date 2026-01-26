@@ -26,24 +26,21 @@ class IsAuthenticated(permissions.IsAuthenticated):
     pass
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # Оптимізований запит без truck__base_model
+    # ОПТИМІЗАЦІЯ: Завантажуємо все одразу, щоб не гальмувало (N+1 problem)
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
+        'truck__client',          # <--- Ключове для швидкості відображення власника
         'marked_for_deletion_by'
     ).all().order_by('-created_at')
     
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
-    # Виправлений пошук: шукаємо тільки по полях бази даних
     search_fields = [
         'order_number',
         'truck__license_plate', 
         'client__name',
-        # Якщо у Truck є поле vin, розкоментуй рядок нижче. 
-        # Якщо vin це property (last_seven_vin), по ньому шукати через ORM не можна.
-        # 'truck__vin', 
     ]
     ordering_fields = ['created_at', 'order_number', 'status']
     ordering = ['-created_at']
@@ -57,10 +54,21 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Для детального перегляду підвантажуємо пов'язані роботи та фото
+        if self.action == 'retrieve':
+            queryset = queryset.prefetch_related(
+                'works',
+                'works__work',
+                'works__mechanic',
+                'works__used_parts',
+                'works__used_parts__part',
+                'photos'
+            )
+            
         global_search = self.request.query_params.get('global_search', None)
         
         if global_search:
-            # Тут теж прибрали пошук по property, залишили надійні поля
             queryset = queryset.filter(
                 Q(order_number__icontains=global_search) |
                 Q(truck__license_plate__icontains=global_search) |
@@ -79,7 +87,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Отримати статистику для Dashboard"""
-        queryset = self.get_queryset()
+        # Використовуємо чистий queryset для швидкості підрахунку
+        queryset = ServiceOrder.objects.all()
         
         stats = {
             'total_orders': queryset.count(),
