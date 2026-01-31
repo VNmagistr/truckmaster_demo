@@ -217,6 +217,7 @@ CORS_ALLOW_METHODS = [
     "PUT",
 ]
 
+
 # Дозволяємо заголовки, які шле браузер
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -229,3 +230,4 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
