@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from .models import Client, Truck, IvecoBaseModel
 from .serializers import ClientSerializer, TruckListSerializer, TruckDetailSerializer, IvecoBaseModelSerializer
 from django_filters.rest_framework import DjangoFilterBackend
@@ -6,6 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
+    
+    # 🔥 ДОДАНО: Підключаємо пошук
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    # Вказуємо поля, по яких шукати (можна частковий збіг)
+    search_fields = ['name', 'phone', 'email', 'address'] 
     
     def get_queryset(self):
         """
@@ -27,8 +32,12 @@ class IvecoBaseModelViewSet(viewsets.ModelViewSet):
 
 class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
-    filter_backends = [DjangoFilterBackend]
+    
+    # 🔥 ОНОВЛЕНО: Додано SearchFilter до списку фільтрів
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['client']
+    # Вказуємо поля для пошуку вантажівок
+    search_fields = ['license_plate', 'full_vin', 'last_seven_vin', 'specific_model_name']
 
     # Ця функція дозволяє нам вибирати серіалізатор в залежності від дії
     def get_serializer_class(self):
@@ -48,4 +57,3 @@ class TruckViewSet(viewsets.ModelViewSet):
         #     queryset = queryset.filter(marked_for_deletion=False)
         
         return queryset
-    
