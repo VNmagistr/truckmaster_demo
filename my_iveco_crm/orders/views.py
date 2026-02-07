@@ -1,12 +1,13 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
 from django.utils import timezone
 from django.db.models import Q, Max
+from django_filters.rest_framework import DjangoFilterBackend
+
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit
 )
 from clients.models import Truck
 from .serializers import (
@@ -19,12 +20,12 @@ from .serializers import (
     WorkPriceSerializer,
     RepairPhotoSerializer,
     MaintenanceRuleSerializer,
-    MaintenanceLogSerializer
+    MaintenanceLogSerializer,
+    MaintenanceKitSerializer
 )
-from django_filters.rest_framework import DjangoFilterBackend
-
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
+    # Базовий QuerySet з оптимізацією (join клієнтів і авто)
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
@@ -40,6 +41,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         'truck__license_plate', 
         'client__name',
     ]
+    filterset_fields = ['status', 'client', 'truck', 'marked_for_deletion']
     ordering_fields = ['created_at', 'order_number', 'status']
     ordering = ['-created_at']
     
@@ -48,17 +50,21 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return ServiceOrderListSerializer
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
+        # Для retrieve (перегляду) використовуємо детальний серіалізатор
         return ServiceOrderDetailSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
         
+        # Для детального перегляду підтягуємо всі зв'язки (роботи, запчастини, фото)
         if self.action == 'retrieve':
             queryset = queryset.prefetch_related(
                 'works', 'works__work', 'works__mechanic', 
                 'works__used_parts', 'works__used_parts__part', 'photos'
             )
+            # Примітка: тут ми НЕ фільтруємо видалені, щоб адмін міг відкрити і подивитися причину
             
+        # Глобальний пошук (зберіг твою логіку)
         global_search = self.request.query_params.get('global_search', None)
         if global_search:
             queryset = queryset.filter(
@@ -68,11 +74,17 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
+    # Забороняємо фізичне видалення через API (DELETE /api/orders/{id}/)
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Фізичне видалення заборонено. Використовуйте позначення на видалення."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):
         """
         API для пошуку авто по частині номера.
-        URL: /api/orders/search-truck/?plate=1234
         """
         plate_query = request.query_params.get('plate', '').strip()
         
@@ -100,8 +112,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def check_maintenance(self, request):
         """
         API для перевірки регламентів.
-        URL: /api/orders/check-maintenance/
-        Body: { "truck_id": 1, "current_mileage": 500000 }
         """
         truck_id = request.data.get('truck_id')
         current_mileage = request.data.get('current_mileage')
@@ -208,8 +218,48 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def unmark_for_deletion(self, request, pk=None):
         order = self.get_object()
         order.marked_for_deletion = False
+        order.deletion_reason = ''
+        order.marked_for_deletion_by = None
+        order.marked_for_deletion_at = None
         order.save()
         return Response({'status': 'success'})
+
+    @action(detail=True, methods=['post'])
+    def add_work(self, request, pk=None):
+        order = self.get_object()
+        serializer = ServiceWorkSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(service_order=order)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def add_part(self, request, pk=None):
+        # Якщо логіка додавання запчастини реалізована в іншому ViewSet,
+        # цей метод можна видалити або залишити як проксі.
+        # Зазвичай це робиться через UsedPartViewSet, але якщо ти додаєш через ордер:
+        from inventory.models import UsedPart, Product, Warehouse
+        
+        order = self.get_object()
+        part_id = request.data.get('part')
+        quantity = request.data.get('quantity', 1)
+        
+        try:
+            part = Product.objects.get(id=part_id)
+            # Тут можна додати логіку списання зі складу
+            used_part = UsedPart.objects.create(
+                service_order=order,
+                part=part,
+                quantity=quantity,
+                unit_price=part.selling_price
+            )
+            # Оновлюємо загальну вартість
+            order.update_total_cost() 
+            return Response({'status': 'success', 'id': used_part.id}, status=status.HTTP_201_CREATED)
+        except Product.DoesNotExist:
+             return Response({'error': 'Part not found'}, status=400)
+        except Exception as e:
+             return Response({'error': str(e)}, status=400)
 
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
@@ -232,6 +282,8 @@ class WorkPriceViewSet(viewsets.ModelViewSet):
     queryset = WorkPrice.objects.all()
     serializer_class = WorkPriceSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
 
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
@@ -249,4 +301,9 @@ class MaintenanceRuleViewSet(viewsets.ModelViewSet):
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceLog.objects.all()
     serializer_class = MaintenanceLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+class MaintenanceKitViewSet(viewsets.ModelViewSet):
+    queryset = MaintenanceKit.objects.all()
+    serializer_class = MaintenanceKitSerializer
     permission_classes = [permissions.IsAuthenticated]
