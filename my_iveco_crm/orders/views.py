@@ -23,11 +23,8 @@ from .serializers import (
 )
 from django_filters.rest_framework import DjangoFilterBackend
 
-class IsAuthenticated(permissions.IsAuthenticated):
-    pass
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # Оптимізований запит (вирішує проблему повільного завантаження)
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
@@ -35,7 +32,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         'marked_for_deletion_by'
     ).all().order_by('-created_at')
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
     search_fields = [
@@ -71,7 +68,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
-    # --- ВИПРАВЛЕНО: Додано url_path='search-truck' ---
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):
         """
@@ -83,7 +79,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if len(plate_query) < 2:
             return Response({'results': []}, status=status.HTTP_200_OK)
 
-        # Шукаємо авто, назва яких містить введені символи
         trucks = Truck.objects.filter(
             license_plate__icontains=plate_query
         ).select_related('client')[:10]
@@ -101,7 +96,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         
         return Response({'results': results})
 
-    # --- ВИПРАВЛЕНО: Додано url_path='check-maintenance' ---
     @action(detail=False, methods=['post'], url_path='check-maintenance')
     def check_maintenance(self, request):
         """
@@ -122,18 +116,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return Response({'alerts': []})
 
         alerts = []
-        # Беремо всі активні правила (спрощено)
         rules = MaintenanceRule.objects.all() 
 
         for rule in rules:
-            # Шукаємо останній запис про виконання цього правила
             last_log = MaintenanceLog.objects.filter(
                 truck=truck, 
                 rule=rule
             ).aggregate(last_mileage=Max('mileage'))
             
             last_mileage = last_log['last_mileage'] or 0
-            next_due = last_mileage + rule.interval_mileage
+            next_due = last_mileage + rule.km_interval
 
             if current_mileage >= next_due:
                 overdue = current_mileage - next_due
@@ -174,16 +166,32 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def previous_maintenance(self, request, pk=None):
         order = self.get_object()
-        if not order.truck: return Response({'results': []})
-        previous_orders = ServiceOrder.objects.filter(truck=order.truck, status='CLOSED').exclude(id=order.id).order_by('-created_at')[:5]
+        if not order.truck:
+            return Response({'results': []})
+        
+        previous_orders = ServiceOrder.objects.filter(
+            truck=order.truck, 
+            status='CLOSED'
+        ).exclude(id=order.id).order_by('-created_at')[:5]
+        
         result = []
         for prev_order in previous_orders:
-            works = prev_order.works.filter(Q(work__name__icontains='ТО') | Q(work__name__icontains='олив')).select_related('work')
+            works = prev_order.works.filter(
+                Q(work__name__icontains='ТО') | Q(work__name__icontains='олив')
+            ).select_related('work')
+            
             if works.exists():
-                work_data = {'order_number': prev_order.order_number, 'date': prev_order.created_at, 'works': []}
+                work_data = {
+                    'order_number': prev_order.order_number, 
+                    'date': prev_order.created_at, 
+                    'works': []
+                }
                 for work in works:
-                    work_data['works'].append({'work_name': work.work.name if work.work else 'Інше'})
+                    work_data['works'].append({
+                        'work_name': work.work.name if work.work else 'Інше'
+                    })
                 result.append(work_data)
+        
         return Response({'results': result})
     
     @action(detail=True, methods=['post'])
@@ -203,34 +211,42 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.save()
         return Response({'status': 'success'})
 
+
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     queryset = ServiceWork.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']: return ServiceWorkWriteSerializer
+        if self.action in ['create', 'update', 'partial_update']:
+            return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
+
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
     queryset = WorkGroup.objects.all()
     serializer_class = WorkGroupSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
 
 class WorkPriceViewSet(viewsets.ModelViewSet):
     queryset = WorkPrice.objects.all()
     serializer_class = WorkPriceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
     queryset = RepairPhoto.objects.all()
     serializer_class = RepairPhotoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
 
 class MaintenanceRuleViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRule.objects.all()
     serializer_class = MaintenanceRuleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
 
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceLog.objects.all()
     serializer_class = MaintenanceLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]

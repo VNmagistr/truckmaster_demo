@@ -1,85 +1,56 @@
 from django.db import models
-from django.core.validators import MinValueValidator
-from decimal import Decimal
+from django.conf import settings
 
 
-class ProductCategory(models.Model):
-    """
-    Головні категорії товарів
-    Приклади: Оливи, Фільтри, Рідини, Омивачі, Запчастини
-    """
-    CATEGORY_TYPES = [
-        ('oil', 'Оливи'),
-        ('filter', 'Фільтри'),
-        ('fluid', 'Технічні рідини'),
-        ('washer', 'Омивачі'),
-        ('part', 'Запчастини'),
-        ('other', 'Інше'),
-    ]
-    
+class Category(models.Model):
+    """Категорія товарів (Оливи, Фільтри, тощо)"""
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug', unique=True)
-    category_type = models.CharField(
-        'Тип категорії',
-        max_length=20,
-        choices=CATEGORY_TYPES,
-        default='other'
-    )
-    icon = models.CharField('Іконка', max_length=50, blank=True)
-    sort_order = models.IntegerField('Порядок сортування', default=0)
+    category_type = models.CharField('Тип', max_length=50, default='other')
     is_active = models.BooleanField('Активна', default=True)
+    sort_order = models.IntegerField('Порядок сортування', default=0)
 
     class Meta:
-        verbose_name = 'Категорія товарів'
-        verbose_name_plural = 'Категорії товарів'
+        verbose_name = 'Категорія'
+        verbose_name_plural = 'Категорії'
         ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name
 
 
-class ProductSubcategory(models.Model):
-    """
-    Підкатегорії товарів
-    Приклади для "Оливи": Моторна, Трансмісійна, Гідравлічна, тощо
-    """
+class SubCategory(models.Model):
+    """Підкатегорія товарів"""
     category = models.ForeignKey(
-        ProductCategory,
+        Category,
         on_delete=models.CASCADE,
         related_name='subcategories',
         verbose_name='Категорія'
     )
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug')
-    description = models.TextField('Опис', blank=True)
-    sort_order = models.IntegerField('Порядок сортування', default=0)
     is_active = models.BooleanField('Активна', default=True)
-    
-    # Інтервал заміни за замовчуванням (для олив та фільтрів)
     default_change_interval_km = models.PositiveIntegerField(
         'Інтервал заміни (км)',
-        null=True, blank=True,
-        help_text='Стандартний інтервал заміни для цього типу'
+        null=True,
+        blank=True
     )
 
     class Meta:
-        verbose_name = 'Підкатегорія товарів'
-        verbose_name_plural = 'Підкатегорії товарів'
-        ordering = ['category', 'sort_order', 'name']
+        verbose_name = 'Підкатегорія'
+        verbose_name_plural = 'Підкатегорії'
+        ordering = ['category', 'name']
         unique_together = ['category', 'slug']
 
     def __str__(self):
-        return f"{self.category.name} → {self.name}"
+        return self.name
 
 
 class Warehouse(models.Model):
-    """
-    Склад
-    """
+    """Склад"""
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug', unique=True)
     address = models.TextField('Адреса', blank=True)
-    description = models.TextField('Опис', blank=True)
     is_active = models.BooleanField('Активний', default=True)
     is_default = models.BooleanField('За замовчуванням', default=False)
     sort_order = models.IntegerField('Порядок сортування', default=0)
@@ -93,40 +64,14 @@ class Warehouse(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        # Тільки один склад може бути за замовчуванням
         if self.is_default:
             Warehouse.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
 
 
-class PartCategory(models.Model):
-    """Існуюча модель категорій запчастин - залишаємо для сумісності"""
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='subcategories',
-        verbose_name="Батьківська категорія"
-    )
-    name = models.CharField(max_length=100, unique=True, verbose_name="Назва категорії")
-    description = models.TextField(blank=True, null=True, verbose_name="Опис")
-
-    class Meta:
-        verbose_name = "Категорія запчастин"
-        verbose_name_plural = "Категорії запчастин"
-        ordering = ['parent__name', 'name']
-
-    def __str__(self):
-        if self.parent:
-            return f"{self.parent.name} -> {self.name}"
-        return self.name
-
-
-class Part(models.Model):
-    """
-    Товар / Запчастина
-    Об'єднує старий функціонал Part з новим функціоналом для олив
-    """
+class Product(models.Model):
+    """Товар / Запчастина"""
     UNIT_CHOICES = [
         ('pcs', 'шт'),
         ('l', 'л'),
@@ -135,109 +80,50 @@ class Part(models.Model):
         ('m', 'м'),
     ]
 
-    category = models.ForeignKey(
-        PartCategory,
+    sku_code = models.CharField('Артикул', max_length=100, unique=True)
+    name = models.CharField('Назва', max_length=255)
+    brand = models.CharField('Бренд', max_length=100, blank=True)
+    subcategory = models.ForeignKey(
+        SubCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Категорія (стара)",
-        help_text="Застаріле поле, використовуйте subcategory"
-    )
-    name = models.CharField(max_length=255, verbose_name="Назва")
-    sku_code = models.CharField(max_length=100, unique=True, verbose_name="Код/Артикул")
-    description = models.TextField(blank=True, null=True, verbose_name="Опис")
-    cost_price = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        default=0,
-        verbose_name="Собівартість"
-    )
-    selling_price = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        default=0,
-        verbose_name="Ціна продажу"
-    )
- 
-    current_stock = models.PositiveIntegerField(default=0, verbose_name="Залишок (заг.)")
-    
-    substitutes = models.ManyToManyField(
-        'self',
-        blank=True,
-        symmetrical=False,
-        verbose_name="Замінники (аналоги)"
-    )
-    address_in_stock = models.CharField(
-        max_length=255,
-        blank=True, null=True,
-        verbose_name="Адреса на складі"
-    )
-    notes = models.TextField(blank=True, null=True, verbose_name="Примітки")
-
-    subcategory = models.ForeignKey(
-        ProductSubcategory,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
         related_name='products',
-        verbose_name='Підкатегорія (нова)'
+        verbose_name='Підкатегорія'
     )
-    brand = models.CharField('Бренд', max_length=100, blank=True)
-    
-    viscosity = models.CharField('В\'язкість', max_length=20, blank=True)
-    specifications = models.TextField('Специфікації', blank=True)
 
-    unit = models.CharField(
-        'Одиниця виміру',
-        max_length=10,
-        choices=UNIT_CHOICES,
-        default='pcs'
-    )
-    volume_per_unit = models.DecimalField(
-        'Об\'єм в упаковці',
-        max_digits=10, decimal_places=2,
-        null=True, blank=True,
-        help_text='Наприклад: 20 літрів в каністрі'
-    )
-    price_per_liter = models.DecimalField(
-        'Ціна за літр',
-        max_digits=10, decimal_places=2,
-        null=True, blank=True
-    )
-    
-    min_stock_level = models.DecimalField(
-        'Мінімальний залишок',
-        max_digits=10, decimal_places=2,
-        default=0,
-        help_text='Сповіщення коли залишок нижче цього значення'
-    )
-    
+    cost_price = models.DecimalField('Собівартість', max_digits=10, decimal_places=2, default=0)
+    selling_price = models.DecimalField('Ціна продажу', max_digits=10, decimal_places=2, default=0)
+    current_stock = models.DecimalField('Залишок', max_digits=10, decimal_places=2, default=0)
+    min_stock_level = models.DecimalField('Мін. залишок', max_digits=10, decimal_places=2, default=0)
+
+    unit = models.CharField('Одиниця виміру', max_length=10, choices=UNIT_CHOICES, default='pcs')
     is_active = models.BooleanField('Активний', default=True)
     created_at = models.DateTimeField('Створено', auto_now_add=True)
-    updated_at = models.DateTimeField('Оновлено', auto_now=True)
+
+    # Додаткові поля для олив
+    viscosity = models.CharField('В\'язкість', max_length=20, blank=True)
+    volume_per_unit = models.DecimalField('Об\'єм в упаковці', max_digits=10, decimal_places=2, null=True, blank=True)
+    specifications = models.TextField('Специфікації', blank=True)
+    notes = models.TextField('Примітки', blank=True)
+    address_in_stock = models.CharField('Адреса на складі', max_length=100, blank=True)
+
     # Поля для м'якого видалення
-    marked_for_deletion = models.BooleanField(
-        default=False,
-        verbose_name="Позначено на видалення"
-    )
+    marked_for_deletion = models.BooleanField('Позначено на видалення', default=False)
+    deletion_reason = models.TextField('Причина видалення', blank=True)
     marked_for_deletion_by = models.ForeignKey(
-        'auth.User',
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='parts_marked_for_deletion',
-        verbose_name="Позначив на видалення"
+        related_name='products_marked_for_deletion',
+        verbose_name='Позначив на видалення'
     )
-    marked_for_deletion_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="Дата позначення"
-    )
-    deletion_reason = models.TextField(
-        blank=True,
-        verbose_name="Причина видалення"
-    )
+    marked_for_deletion_at = models.DateTimeField('Дата позначення', null=True, blank=True)
 
     class Meta:
-        verbose_name = "Товар/Запчастина"
-        verbose_name_plural = "Товари/Запчастини"
+        verbose_name = 'Товар'
+        verbose_name_plural = 'Товари'
         ordering = ['name']
 
     def __str__(self):
@@ -248,47 +134,14 @@ class Part(models.Model):
             parts.append(self.viscosity)
         return ' '.join(parts)
 
-    def save(self, *args, **kwargs):
-        if self.volume_per_unit and self.volume_per_unit > 0 and self.selling_price:
-            self.price_per_liter = self.selling_price / self.volume_per_unit
-        super().save(*args, **kwargs)
-
-    def update_current_stock(self):
-        """Синхронізує загальний залишок з усіх складів"""
-        total = self.stock_items.aggregate(
-            total=Sum('quantity')
-        )['total'] or 0
-        
-        if self.current_stock != total:
-            Part.objects.filter(pk=self.pk).update(current_stock=total)
-    
     @property
-    def total_stock(self):
-        """Використовує кешоване значення"""
-        return self.current_stock
-
-    @property
-    def is_oil(self):
-        """Чи є цей товар оливою"""
-        return self.subcategory and self.subcategory.category.category_type == 'oil'
-
-    @property
-    def is_filter(self):
-        """Чи є цей товар фільтром"""
-        return self.subcategory and self.subcategory.category.category_type == 'filter'
-
-    @property
-    def total_stock(self):
-        """Загальний залишок по всіх складах"""
-        return self.stock_items.aggregate(
-            total=models.Sum('quantity')
-        )['total'] or 0
+    def is_low_stock(self):
+        """Чи низький залишок"""
+        return self.current_stock <= self.min_stock_level
 
 
-class Stock(models.Model):
-    """
-    Залишки товару на конкретному складі
-    """
+class StockItem(models.Model):
+    """Залишок товару на конкретному складі"""
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.CASCADE,
@@ -296,33 +149,14 @@ class Stock(models.Model):
         verbose_name='Склад'
     )
     product = models.ForeignKey(
-        Part,
+        Product,
         on_delete=models.CASCADE,
         related_name='stock_items',
         verbose_name='Товар'
     )
-    
-    quantity = models.DecimalField(
-        'Кількість',
-        max_digits=12, decimal_places=2,
-        default=0,
-        validators=[MinValueValidator(Decimal('0.00'))]
-    )
-    reserved = models.DecimalField(
-        'Зарезервовано',
-        max_digits=12, decimal_places=2,
-        default=0,
-        validators=[MinValueValidator(Decimal('0.00'))]
-    )
-    
-    # Розташування на складі
-    location = models.CharField(
-        'Місце зберігання',
-        max_length=100,
-        blank=True,
-        help_text='Полиця, секція, тощо'
-    )
-    
+    quantity = models.DecimalField('Кількість', max_digits=12, decimal_places=2, default=0)
+    reserved = models.DecimalField('Зарезервовано', max_digits=12, decimal_places=2, default=0)
+    location = models.CharField('Місце зберігання', max_length=100, blank=True)
     updated_at = models.DateTimeField('Оновлено', auto_now=True)
 
     class Meta:
@@ -338,16 +172,9 @@ class Stock(models.Model):
         """Доступна кількість (без резерву)"""
         return self.quantity - self.reserved
 
-    @property
-    def is_low_stock(self):
-        """Чи низький залишок"""
-        return self.quantity <= self.product.min_stock_level
-
 
 class StockMovement(models.Model):
-    """
-    Рух товару по складу
-    """
+    """Рух товару по складу"""
     MOVEMENT_TYPES = [
         ('in', 'Надходження'),
         ('out', 'Витрата'),
@@ -357,66 +184,52 @@ class StockMovement(models.Model):
         ('write_off', 'Списання'),
     ]
 
-    movement_type = models.CharField(
-        'Тип руху',
-        max_length=20,
-        choices=MOVEMENT_TYPES
-    )
-    
+    movement_type = models.CharField('Тип руху', max_length=20, choices=MOVEMENT_TYPES)
     product = models.ForeignKey(
-        Part,
+        Product,
         on_delete=models.PROTECT,
         related_name='movements',
         verbose_name='Товар'
     )
-    quantity = models.DecimalField(
-        'Кількість',
-        max_digits=12, decimal_places=2
-    )
-    
-    # Склади
+    quantity = models.DecimalField('Кількість', max_digits=12, decimal_places=2)
     warehouse_from = models.ForeignKey(
         Warehouse,
+        related_name='out_movements',
         on_delete=models.PROTECT,
-        related_name='movements_out',
-        verbose_name='Зі складу',
-        null=True, blank=True
+        null=True,
+        blank=True,
+        verbose_name='Зі складу'
     )
     warehouse_to = models.ForeignKey(
         Warehouse,
+        related_name='in_movements',
         on_delete=models.PROTECT,
-        related_name='movements_in',
-        verbose_name='На склад',
-        null=True, blank=True
+        null=True,
+        blank=True,
+        verbose_name='На склад'
     )
-    
-    service_order = models.ForeignKey(
-        'orders.ServiceOrder',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='stock_movements',
-        verbose_name='Наряд-замовлення'
-    )
-    
-    # Інформація про надходження
-    supplier = models.CharField('Постачальник', max_length=200, blank=True)
-    invoice_number = models.CharField('Номер накладної', max_length=50, blank=True)
-    purchase_price = models.DecimalField(
-        'Закупівельна ціна',
-        max_digits=12, decimal_places=2,
-        null=True, blank=True
-    )
-    
-    notes = models.TextField('Примітки', blank=True)
-    
+    created_at = models.DateTimeField('Створено', auto_now_add=True)
     created_by = models.ForeignKey(
-        'auth.User',
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='stock_movements',
         verbose_name='Створив'
     )
-    created_at = models.DateTimeField('Створено', auto_now_add=True)
+
+    # Додаткові поля
+    service_order = models.ForeignKey(
+        'orders.ServiceOrder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_movements',
+        verbose_name='Наряд-замовлення'
+    )
+    supplier = models.CharField('Постачальник', max_length=200, blank=True)
+    invoice_number = models.CharField('Номер накладної', max_length=100, blank=True)
+    purchase_price = models.DecimalField('Закупівельна ціна', max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField('Примітки', blank=True)
 
     class Meta:
         verbose_name = 'Рух товару'
@@ -426,139 +239,94 @@ class StockMovement(models.Model):
     def __str__(self):
         return f"{self.get_movement_type_display()}: {self.product} ({self.quantity})"
 
-    def save(self, *args, **kwargs):
-        """Автоматичне оновлення залишків при збереженні"""
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        
-        if is_new:
-            self._update_stock()
-
-    def _update_stock(self):
-        """Оновлення залишків на складах"""
-        if self.movement_type == 'in' and self.warehouse_to:
-            # Надходження
-            stock, _ = Stock.objects.get_or_create(
-                warehouse=self.warehouse_to,
-                product=self.product
-            )
-            stock.quantity += self.quantity
-            stock.save()
-            
-        elif self.movement_type == 'out' and self.warehouse_from:
-            # Витрата
-            stock = Stock.objects.get(
-                warehouse=self.warehouse_from,
-                product=self.product
-            )
-            stock.quantity -= self.quantity
-            stock.save()
-            
-        elif self.movement_type == 'transfer':
-            # Переміщення
-            if self.warehouse_from:
-                stock_from = Stock.objects.get(
-                    warehouse=self.warehouse_from,
-                    product=self.product
-                )
-                stock_from.quantity -= self.quantity
-                stock_from.save()
-            
-            if self.warehouse_to:
-                stock_to, _ = Stock.objects.get_or_create(
-                    warehouse=self.warehouse_to,
-                    product=self.product
-                )
-                stock_to.quantity += self.quantity
-                stock_to.save()
-
 
 class UsedPart(models.Model):
-    """
-    Використана запчастина
-    Може бути прив'язана або до роботи (ServiceWork) або напряму до замовлення (ServiceOrder)
-    """
-    # Прив'язка до роботи (необов'язкова)
+    """Використана запчастина"""
     service_work = models.ForeignKey(
         'orders.ServiceWork',
         on_delete=models.CASCADE,
-        related_name='used_parts',
-        verbose_name="Робота",
         null=True,
-        blank=True
+        blank=True,
+        related_name='used_parts',
+        verbose_name='Робота'
     )
-    
-    # Пряма прив'язка до замовлення (необов'язкова)
     service_order = models.ForeignKey(
         'orders.ServiceOrder',
         on_delete=models.CASCADE,
-        related_name='direct_parts',
-        verbose_name="Наряд-замовлення",
-        null=True,
-        blank=True
-    )
-    
-    part = models.ForeignKey(
-        'Part',
-        on_delete=models.PROTECT,
-        verbose_name="Запчастина"
-    )
-    quantity = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Кількість"
-    )
-    
-    # З якого складу
-    warehouse = models.ForeignKey(
-        'Warehouse',
-        on_delete=models.PROTECT,
-        null=True, blank=True,
-        verbose_name='Склад'
-    )
-    
-    # Ціна на момент використання (може відрізнятись від поточної)
-    unit_price = models.DecimalField(
-        'Ціна за одиницю',
-        max_digits=10,
-        decimal_places=2,
         null=True,
         blank=True,
-        help_text='Заповнюється автоматично з selling_price товару'
+        related_name='direct_parts',
+        verbose_name='Наряд-замовлення'
     )
+    part = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        verbose_name='Запчастина'
+    )
+    quantity = models.DecimalField('Кількість', max_digits=10, decimal_places=2)
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name='Склад'
+    )
+    unit_price = models.DecimalField('Ціна за одиницю', max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
-        verbose_name = "Використана запчастина"
-        verbose_name_plural = "Використані запчастини"
+        verbose_name = 'Використана запчастина'
+        verbose_name_plural = 'Використані запчастини'
         ordering = ['part__name']
 
     def __str__(self):
-        return f"{self.part.name} - {self.quantity} {self.part.unit}"
-    
-    def clean(self):
-        """Валідація: повинна бути прив'язка або до роботи, або до замовлення"""
-        from django.core.exceptions import ValidationError
-        
-        if not self.service_work and not self.service_order:
-            raise ValidationError(
-                'Запчастина повинна бути прив\'язана або до роботи, або до наряду-замовлення'
-            )
-        
-        if self.service_work and self.service_order:
-            raise ValidationError(
-                'Запчастина не може бути одночасно прив\'язана до роботи та наряду-замовлення'
-            )
-    
+        return f"{self.part.name} x {self.quantity}"
+
     def save(self, *args, **kwargs):
-        # Автоматично заповнюємо ціну з товару якщо не вказана
+        # Автоматично заповнюємо ціну з товару
         if self.unit_price is None and self.part:
             self.unit_price = self.part.selling_price
-        
         super().save(*args, **kwargs)
-    
+
     @property
     def total_price(self):
-        """Загальна вартість = кількість × ціна"""
+        """Загальна вартість"""
         if self.unit_price:
             return self.quantity * self.unit_price
         return self.quantity * (self.part.selling_price or 0)
+
+
+# Proxy model для сумісності зі старим кодом
+# Django зможе знайти inventory.Part як окрему модель
+class Part(Product):
+    """
+    Proxy модель для сумісності.
+    Part є синонімом Product для старого коду та міграцій.
+    """
+    class Meta:
+        proxy = True
+        verbose_name = 'Запчастина'
+        verbose_name_plural = 'Запчастини'
+
+
+class PartCategory(models.Model):
+    """Стара модель категорій - для сумісності з міграціями"""
+    name = models.CharField('Назва', max_length=100)
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='subcategories',
+        verbose_name='Батьківська категорія'
+    )
+    description = models.TextField('Опис', blank=True)
+
+    class Meta:
+        verbose_name = 'Категорія запчастин (стара)'
+        verbose_name_plural = 'Категорії запчастин (старі)'
+        ordering = ['name']
+
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} -> {self.name}"
+        return self.name
