@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
@@ -126,6 +126,10 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
 class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
+    marked_for_deletion_by_name = serializers.CharField(
+        source='marked_for_deletion_by.get_full_name',
+        read_only=True
+    )
 
     class Meta:
         model = ServiceOrder
@@ -138,6 +142,7 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
             'created_at', 
             'problem_description',
             'marked_for_deletion',
+            'marked_for_deletion_by_name'
         ]
 
 
@@ -188,4 +193,9 @@ class MaintenanceRuleSerializer(serializers.ModelSerializer):
 class MaintenanceLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceLog
+        fields = '__all__'
+
+class MaintenanceKitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MaintenanceKit
         fields = '__all__'
