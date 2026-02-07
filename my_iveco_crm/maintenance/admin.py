@@ -59,7 +59,7 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
     date_hierarchy = 'performed_at'
     readonly_fields = ['created_at', 'total_price', 'get_interval_info', 'get_reminder_info']
     
-    # Autocomplete для пошуку Вантажівки, Наряду-замовлення та Товару
+    # Autocomplete для пошуку
     autocomplete_fields = ['truck', 'service_order', 'product', 'subcategory']
     
     fieldsets = (
@@ -175,27 +175,27 @@ class FluidChangeRecordAdmin(admin.ModelAdmin):
 class ServiceReminderAdmin(admin.ModelAdmin):
     list_display = [
         'truck', 
-        'service_type',  # ЗМІНЕНО: замість subcategory
+        'service_type',
         'title', 
         'status', 
         'priority', 
         'target_date', 
         'target_mileage'
     ]
-    list_filter = ['status', 'priority', 'service_type', 'reminder_type']  # ЗМІНЕНО
+    list_filter = ['status', 'priority', 'service_type', 'reminder_type']
     search_fields = ['truck__license_plate', 'title', 'description']
     list_editable = ['status', 'priority']
     date_hierarchy = 'target_date'
     
     # Autocomplete
-    autocomplete_fields = ['truck', 'completed_order', 'service_type']  # ЗМІНЕНО
+    autocomplete_fields = ['truck', 'completed_order', 'service_type']
     
     fieldsets = (
         ('Вантажівка', {
             'fields': ('truck',)
         }),
         ('Нагадування', {
-            'fields': ('service_type', 'title', 'description')  # ЗМІНЕНО
+            'fields': ('service_type', 'title', 'description')
         }),
         ('Параметри', {
             'fields': ('reminder_type', 'target_mileage', 'target_date', 'priority')

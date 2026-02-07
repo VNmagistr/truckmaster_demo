@@ -27,8 +27,9 @@ class ServiceType(models.Model):
     )
     
     # Пов'язані підкатегорії товарів (для автоматичного створення нагадувань)
+    # ВИПРАВЛЕНО: SubCategory замість ProductSubcategory
     related_subcategories = models.ManyToManyField(
-        'inventory.ProductSubcategory',
+        'inventory.SubCategory',
         blank=True,
         verbose_name='Пов\'язані підкатегорії товарів',
         help_text='Коли змінюється товар з цієї підкатегорії - створюється нагадування цього типу'
@@ -69,13 +70,15 @@ class FluidChangeRecord(models.Model):
         related_name='fluid_changes',
         verbose_name='Вантажівка'
     )
+    # ВИПРАВЛЕНО: SubCategory замість ProductSubcategory
     subcategory = models.ForeignKey(
-        'inventory.ProductSubcategory',
+        'inventory.SubCategory',
         on_delete=models.PROTECT,
         verbose_name='Тип рідини/оливи'
     )
+    # ВИПРАВЛЕНО: Product замість Part
     product = models.ForeignKey(
-        'inventory.Part',
+        'inventory.Product',
         on_delete=models.PROTECT,
         verbose_name='Використаний товар'
     )
@@ -140,7 +143,7 @@ class FluidChangeRecord(models.Model):
         1. Наступної заміни за пробігом (якщо не вказано вручну)
         2. Наступної заміни за датою (якщо не вказано вручну)
         3. Загальної вартості
-        4. НОВИЙ: Створення нагадування про наступну заміну
+        4. Створення нагадування про наступну заміну
         """
         
         is_new = self.pk is None
@@ -232,12 +235,11 @@ class ServiceReminder(models.Model):
         verbose_name='Вантажівка'
     )
     
-    # ЗМІНЕНО: замість subcategory використовуємо service_type
     service_type = models.ForeignKey(
         ServiceType,
         on_delete=models.PROTECT,
         verbose_name='Тип обслуговування',
-	null=True,
+        null=True,
         blank=True,
         help_text='Конкретний тип ТО (заміна оливи, колодок і т.д.)'
     )
@@ -323,21 +325,23 @@ class TruckFluidSpec(models.Model):
         related_name='fluid_specs',
         verbose_name='Вантажівка'
     )
+    # ВИПРАВЛЕНО: SubCategory замість ProductSubcategory
     subcategory = models.ForeignKey(
-        'inventory.ProductSubcategory',
+        'inventory.SubCategory',
         on_delete=models.CASCADE,
         verbose_name='Тип рідини'
     )
     
+    # ВИПРАВЛЕНО: Product замість Part
     recommended_product = models.ForeignKey(
-        'inventory.Part',
+        'inventory.Product',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='recommended_for_trucks',
         verbose_name='Рекомендований товар'
     )
     alternative_products = models.ManyToManyField(
-        'inventory.Part',
+        'inventory.Product',
         blank=True,
         related_name='alternative_for_trucks',
         verbose_name='Альтернативні товари'
