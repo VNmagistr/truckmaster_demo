@@ -128,7 +128,8 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
     truck = TruckSerializerForOrder(read_only=True)
     marked_for_deletion_by_name = serializers.CharField(
         source='marked_for_deletion_by.get_full_name',
-        read_only=True
+        read_only=True,
+        default=None
     )
 
     class Meta:
@@ -153,7 +154,8 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     photos = RepairPhotoSerializer(many=True, read_only=True)
     marked_for_deletion_by_name = serializers.CharField(
         source='marked_for_deletion_by.get_full_name',
-        read_only=True
+        read_only=True,
+        default=None
     )
 
     class Meta:
@@ -195,6 +197,7 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
         model = MaintenanceLog
         fields = '__all__'
 
+# 🔥 ДОДАНО ВІДСУТНІЙ СЕРІАЛІЗАТОР
 class MaintenanceKitSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceKit

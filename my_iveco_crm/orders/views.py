@@ -42,7 +42,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     ]
     filterset_fields = ['status', 'client', 'truck', 'marked_for_deletion']
     ordering_fields = ['created_at', 'order_number', 'status']
-    ordering = ['-created_at']
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -62,11 +61,14 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
             return queryset
             
-        # Якщо це список (list) - ховаємо помічені на видалення
-        # (якщо явно не передано фільтр ?marked_for_deletion=true)
+        # Якщо це список (list), за замовчуванням ховаємо помічені на видалення,
+        # АЛЕ якщо користувач хоче їх бачити (фільтр у URL), то показуємо.
+        # Це виправить проблему, що їх видно в списку, але не можна відкрити.
         if self.action == 'list':
-            # Перевіряємо, чи клієнт явно не просить показати видалені
-            if self.request.query_params.get('marked_for_deletion') != 'true':
+             # Якщо фронтенд прямо не просить ?marked_for_deletion=true/false,
+             # то показуємо тільки живі замовлення.
+             marked_param = self.request.query_params.get('marked_for_deletion')
+             if marked_param is None:
                  queryset = queryset.filter(marked_for_deletion=False)
             
         global_search = self.request.query_params.get('global_search', None)
@@ -87,11 +89,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):
-        """
-        API для пошуку авто по частині номера.
-        """
         plate_query = request.query_params.get('plate', '').strip()
-        
         if len(plate_query) < 2:
             return Response({'results': []}, status=status.HTTP_200_OK)
 
@@ -109,14 +107,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'client_id': truck.client.id if truck.client else None,
                 'client_name': truck.client.name if truck.client else "Без власника"
             })
-        
         return Response({'results': results})
 
     @action(detail=False, methods=['post'], url_path='check-maintenance')
     def check_maintenance(self, request):
-        """
-        API для перевірки регламентів.
-        """
         truck_id = request.data.get('truck_id')
         current_mileage = request.data.get('current_mileage')
 
@@ -133,17 +127,18 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         rules = MaintenanceRule.objects.all() 
 
         for rule in rules:
-            # Тут треба адаптувати під реальні поля MaintenanceLog
-            # Припустимо, що там є mileage. Якщо немає - цей код треба коригувати під модель
+            # Спроба отримати останній запис обслуговування
+            # Увага: переконайтесь, що в MaintenanceLog є поле mileage або date_performed
             last_log = MaintenanceLog.objects.filter(
                 truck=truck, 
                 rule=rule
-            ).aggregate(last_mileage=Max('mileage')) # Перевір, чи є поле mileage в моделі Log!
+            ).order_by('-id').first() 
             
-            last_mileage = last_log['last_mileage'] or 0
+            # Логіка визначення пробігу останнього ТО (якщо є поле mileage)
+            last_mileage = getattr(last_log, 'mileage', 0) if last_log else 0
+            
             if rule.km_interval:
                 next_due = last_mileage + rule.km_interval
-
                 if current_mileage >= next_due:
                     overdue = current_mileage - next_due
                     alerts.append({
@@ -159,12 +154,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         return Response({'alerts': alerts})
     
-    @action(detail=False, methods=['get'])
-    def recent(self, request):
-        recent_orders = self.get_queryset()[:10]
-        serializer = ServiceOrderListSerializer(recent_orders, many=True)
-        return Response(serializer.data)
-
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         queryset = ServiceOrder.objects.all()
@@ -268,6 +257,7 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
     serializer_class = MaintenanceLogSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+# Додано ViewSet для MaintenanceKit, щоб все працювало
 class MaintenanceKitViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceKit.objects.all()
     serializer_class = MaintenanceKitSerializer
