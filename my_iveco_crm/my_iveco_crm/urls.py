@@ -10,6 +10,9 @@ urlpatterns = [
     
     # Аутентифікація
     path('api/', include('accounts.urls')),
+
+    # Користувачі
+    path('api/', include('users.urls')),
     
     # Основні модулі
     path('api/', include('clients.urls')),
