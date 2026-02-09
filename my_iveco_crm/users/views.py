@@ -5,24 +5,50 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import RegisterSerializer, UserMeSerializer, ChangePasswordSerializer
 
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     ViewSet для роботи з користувачами.
+    
+    Фільтри:
+    - ?group=Механіки - фільтр по назві групи
     """
     queryset = User.objects.all()
     serializer_class = UserMeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Звичайний юзер бачить тільки себе
-        if self.request.user.is_superuser:
-            return User.objects.all()
-        return User.objects.filter(id=self.request.user.id)
+        queryset = User.objects.all()
+        
+        # Фільтр по групі
+        group_name = self.request.query_params.get('group')
+        if group_name:
+            queryset = queryset.filter(groups__name=group_name)
+        
+        # Звичайний юзер бачить тільки себе (крім фільтра по групі)
+        if not self.request.user.is_superuser and not group_name:
+            queryset = queryset.filter(id=self.request.user.id)
+        
+        return queryset.distinct()
+
+    @action(detail=False, methods=['get'], url_path='mechanics')
+    def mechanics(self, request):
+        """
+        Отримати список механіків (користувачі з групи "Механіки").
+        """
+        mechanics = User.objects.filter(
+            groups__name='Механіки',
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        
+        serializer = self.get_serializer(mechanics, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get', 'patch', 'delete'], url_path='me')
     def me(self, request):
