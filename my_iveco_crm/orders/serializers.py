@@ -100,6 +100,7 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             'client',
             'truck',
             'problem_description',
+            'recommendations',
             'current_mileage',
             'status',
             'car_photo',
@@ -140,6 +141,7 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
             'client', 
             'truck', 
             'status', 
+            'total_cost',
             'created_at', 
             'problem_description',
             'marked_for_deletion',
@@ -165,7 +167,8 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'order_number', 
             'client', 
             'truck', 
-            'problem_description', 
+            'problem_description',
+            'recommendations', 
             'current_mileage',
             'status', 
             'created_at', 
@@ -197,7 +200,7 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
         model = MaintenanceLog
         fields = '__all__'
 
-# 🔥 ДОДАНО ВІДСУТНІЙ СЕРІАЛІЗАТОР
+
 class MaintenanceKitSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceKit
