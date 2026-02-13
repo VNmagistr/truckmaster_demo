@@ -28,7 +28,7 @@ from .serializers import (
 
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # ФІКС 500 ПОМИЛКИ: Прибрано 'truck__client' із select_related
+    # 🔥 ВИПРАВЛЕНО: Прибрано 'truck__client', це ламало базу даних
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
@@ -38,7 +38,11 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
-    search_fields = ['order_number', 'truck__license_plate', 'client__name']
+    search_fields = [
+        'order_number',
+        'truck__license_plate', 
+        'client__name',
+    ]
     filterset_fields = ['status', 'client', 'truck', 'marked_for_deletion']
     ordering_fields = ['created_at', 'order_number', 'status']
     
@@ -83,13 +87,13 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def search_truck(self, request):
         plate_query = request.query_params.get('plate', '').strip()
         if len(plate_query) < 2:
-            return Response({'results': []})
+            return Response({'results': []}, status=status.HTTP_200_OK)
 
         trucks = Truck.objects.filter(license_plate__icontains=plate_query)[:10]
 
         results = []
         for truck in trucks:
-            # Безпечний пошук (client або owner)
+            # Безпечне отримання власника
             client_obj = getattr(truck, 'client', getattr(truck, 'owner', None))
             
             results.append({
