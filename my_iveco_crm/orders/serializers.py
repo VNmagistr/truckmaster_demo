@@ -11,12 +11,18 @@ User = get_user_model()
 
 
 class ClientSerializerForOrder(serializers.ModelSerializer):
+    """Серіалізатор клієнта для відображення в замовленні."""
+    
     class Meta:
         model = Client
         fields = ['id', 'name', 'phone']
 
 
 class TruckSerializerForOrder(serializers.ModelSerializer):
+    """
+    Серіалізатор вантажівки для відображення в замовленні.
+    Виправлено: безпечна обробка NULL значень для client.
+    """
     client_name = serializers.SerializerMethodField()
     client_id = serializers.SerializerMethodField()
 
@@ -25,16 +31,26 @@ class TruckSerializerForOrder(serializers.ModelSerializer):
         fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin', 'client_id', 'client_name']
 
     def get_client_name(self, obj):
-        # Безпечно шукаємо власника
-        client = getattr(obj, 'client', getattr(obj, 'owner', None))
-        return client.name if client else None
+        """Безпечне отримання імені клієнта."""
+        try:
+            if obj.client:
+                return obj.client.name
+        except Exception:
+            pass
+        return None
 
     def get_client_id(self, obj):
-        client = getattr(obj, 'client', getattr(obj, 'owner', None))
-        return client.id if client else None
+        """Безпечне отримання ID клієнта."""
+        try:
+            if obj.client:
+                return obj.client.id
+        except Exception:
+            pass
+        return None
 
 
 class MechanicSerializer(serializers.ModelSerializer):
+    """Серіалізатор механіка."""
     full_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -42,66 +58,107 @@ class MechanicSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name', 'last_name', 'full_name']
         
     def get_full_name(self, obj):
+        """Отримання повного імені механіка."""
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
 
 
 class WorkGroupSerializer(serializers.ModelSerializer):
+    """Серіалізатор групи робіт."""
+    
     class Meta:
         model = WorkGroup
         fields = '__all__'
 
 
 class WorkPriceSerializer(serializers.ModelSerializer):
+    """Серіалізатор ціни роботи."""
+    calculated_price = serializers.SerializerMethodField()
+    
     class Meta:
         model = WorkPrice
         fields = '__all__'
+    
+    def get_calculated_price(self, obj):
+        """Отримання розрахованої ціни."""
+        try:
+            return obj.get_calculated_price()
+        except Exception:
+            return 0
 
 
 class UsedPartSerializer(serializers.ModelSerializer):
+    """Серіалізатор використаної запчастини."""
+    part_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = UsedPart
         fields = '__all__'
+    
+    def get_part_name(self, obj):
+        """Безпечне отримання назви запчастини."""
+        try:
+            if obj.part:
+                return str(obj.part)
+        except Exception:
+            pass
+        return None
 
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
+    """Серіалізатор виконаної роботи для читання."""
     work = WorkPriceSerializer(read_only=True)
     mechanic = MechanicSerializer(read_only=True)
     used_parts = UsedPartSerializer(many=True, read_only=True)
+    amount = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceWork
         fields = '__all__'
+    
+    def get_amount(self, obj):
+        """Отримання суми за роботу."""
+        try:
+            return obj.amount
+        except Exception:
+            return 0
 
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
+    """Серіалізатор виконаної роботи для запису."""
+    
     class Meta:
         model = ServiceWork
         fields = ['service_order', 'work', 'description', 'mechanic', 'hours_spent']
 
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
+    """Серіалізатор фото ремонту."""
+    
     class Meta:
         model = RepairPhoto
         fields = '__all__'
 
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
+    """Серіалізатор замовлення для запису."""
+    
     class Meta:
         model = ServiceOrder
         fields = '__all__'
 
     def validate(self, data):
+        """Автоматичне заповнення клієнта з вантажівки."""
         truck = data.get('truck')
         client = data.get('client')
 
         if truck and not client:
-            truck_client = getattr(truck, 'client', getattr(truck, 'owner', None))
-            if truck_client:
-                data['client'] = truck_client
+            if truck.client:
+                data['client'] = truck.client
         return data
 
 
 class ServiceOrderListSerializer(serializers.ModelSerializer):
+    """Серіалізатор замовлення для списку."""
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
     marked_for_deletion_by_name = serializers.SerializerMethodField()
@@ -121,13 +178,18 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
         ]
 
     def get_marked_for_deletion_by_name(self, obj):
-        if obj.marked_for_deletion_by:
-            u = obj.marked_for_deletion_by
-            return f"{u.first_name} {u.last_name}".strip() or u.username
+        """Безпечне отримання імені користувача, який позначив на видалення."""
+        try:
+            if obj.marked_for_deletion_by:
+                u = obj.marked_for_deletion_by
+                return f"{u.first_name} {u.last_name}".strip() or u.username
+        except Exception:
+            pass
         return None
 
 
-class ServiceOrderDetailSerializer(serializers.ModelSerializer): 
+class ServiceOrderDetailSerializer(serializers.ModelSerializer):
+    """Серіалізатор замовлення для детального перегляду."""
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
     works = ServiceWorkSerializer(many=True, read_only=True)
@@ -161,25 +223,35 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
         ]
         
     def get_marked_for_deletion_by_name(self, obj):
-        if obj.marked_for_deletion_by:
-            u = obj.marked_for_deletion_by
-            return f"{u.first_name} {u.last_name}".strip() or u.username
+        """Безпечне отримання імені користувача, який позначив на видалення."""
+        try:
+            if obj.marked_for_deletion_by:
+                u = obj.marked_for_deletion_by
+                return f"{u.first_name} {u.last_name}".strip() or u.username
+        except Exception:
+            pass
         return None
 
 
 class MaintenanceRuleSerializer(serializers.ModelSerializer):
+    """Серіалізатор правила ТО."""
+    
     class Meta:
         model = MaintenanceRule
         fields = '__all__'
 
 
 class MaintenanceLogSerializer(serializers.ModelSerializer):
+    """Серіалізатор журналу ТО."""
+    
     class Meta:
         model = MaintenanceLog
         fields = '__all__'
 
 
 class MaintenanceKitSerializer(serializers.ModelSerializer):
+    """Серіалізатор комплекту ТО."""
+    
     class Meta:
         model = MaintenanceKit
         fields = '__all__'
