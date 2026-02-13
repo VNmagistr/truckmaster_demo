@@ -9,6 +9,7 @@ from .models import (
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit
 )
 from clients.models import Truck
+from inventory.models import UsedPart
 from .serializers import (
     ServiceOrderListSerializer,
     ServiceOrderDetailSerializer,
@@ -20,7 +21,8 @@ from .serializers import (
     RepairPhotoSerializer,
     MaintenanceRuleSerializer,
     MaintenanceLogSerializer,
-    MaintenanceKitSerializer
+    MaintenanceKitSerializer,
+    UsedPartSerializer
 )
 
 
@@ -63,7 +65,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             
         # Якщо це список (list), за замовчуванням ховаємо помічені на видалення,
         # АЛЕ якщо користувач хоче їх бачити (фільтр у URL), то показуємо.
-        # Це виправить проблему, що їх видно в списку, але не можна відкрити.
         if self.action == 'list':
              # Якщо фронтенд прямо не просить ?marked_for_deletion=true/false,
              # то показуємо тільки живі замовлення.
@@ -127,14 +128,11 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         rules = MaintenanceRule.objects.all() 
 
         for rule in rules:
-            # Спроба отримати останній запис обслуговування
-            # Увага: переконайтесь, що в MaintenanceLog є поле mileage або date_performed
             last_log = MaintenanceLog.objects.filter(
                 truck=truck, 
                 rule=rule
             ).order_by('-id').first() 
             
-            # Логіка визначення пробігу останнього ТО (якщо є поле mileage)
             last_mileage = getattr(last_log, 'mileage', 0) if last_log else 0
             
             if rule.km_interval:
@@ -227,6 +225,63 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
+    @action(detail=True, methods=['post'], url_path='add-part')
+    def add_part(self, request, pk=None):
+        """Додати запчастину до роботи."""
+        service_work = self.get_object()
+        
+        part_id = request.data.get('part')
+        quantity = request.data.get('quantity', 1)
+        unit_price = request.data.get('unit_price')
+        warehouse_id = request.data.get('warehouse')
+        
+        if not part_id:
+            return Response(
+                {'error': 'Необхідно вказати запчастину (part)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            used_part = UsedPart.objects.create(
+                service_work=service_work,
+                part_id=part_id,
+                quantity=quantity,
+                unit_price=unit_price,
+                warehouse_id=warehouse_id
+            )
+            
+            # Оновлюємо загальну вартість замовлення
+            service_work.service_order.update_total_cost()
+            
+            serializer = UsedPartSerializer(used_part)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['delete'], url_path='remove-part/(?P<part_id>[^/.]+)')
+    def remove_part(self, request, pk=None, part_id=None):
+        """Видалити запчастину з роботи."""
+        service_work = self.get_object()
+        
+        try:
+            used_part = UsedPart.objects.get(id=part_id, service_work=service_work)
+            used_part.delete()
+            
+            # Оновлюємо загальну вартість замовлення
+            service_work.service_order.update_total_cost()
+            
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+            
+        except UsedPart.DoesNotExist:
+            return Response(
+                {'error': 'Запчастину не знайдено'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
     queryset = WorkGroup.objects.all()
@@ -257,7 +312,7 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
     serializer_class = MaintenanceLogSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# Додано ViewSet для MaintenanceKit, щоб все працювало
+
 class MaintenanceKitViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceKit.objects.all()
     serializer_class = MaintenanceKitSerializer
