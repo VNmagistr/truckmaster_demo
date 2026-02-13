@@ -28,7 +28,7 @@ from .serializers import (
 
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # 🔥 ВИПРАВЛЕНО: Прибрано 'truck__client', це ламало базу даних
+    # 🔥 ВИПРАВЛЕНО: Видалено 'truck__client' - це головна причина 500 помилки
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
@@ -93,7 +93,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         results = []
         for truck in trucks:
-            # Безпечне отримання власника
+            # Безпечне отримання власника (client або owner)
             client_obj = getattr(truck, 'client', getattr(truck, 'owner', None))
             
             results.append({
