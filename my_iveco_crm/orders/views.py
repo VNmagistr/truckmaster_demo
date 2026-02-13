@@ -28,10 +28,14 @@ from .serializers import (
 
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # 🔥 ВИПРАВЛЕНО: Видалено 'truck__client' - це головна причина 500 помилки
+    """
+    ViewSet для роботи з нарядами-замовленнями.
+    Виправлено: додано truck__client до select_related для оптимізації запитів.
+    """
     queryset = ServiceOrder.objects.select_related(
         'client', 
-        'truck', 
+        'truck',
+        'truck__client',  # Додано для оптимізації запитів до клієнта вантажівки
         'marked_for_deletion_by'
     ).all().order_by('-created_at')
     
@@ -64,9 +68,9 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return queryset
             
         if self.action == 'list':
-             marked_param = self.request.query_params.get('marked_for_deletion')
-             if str(marked_param).lower() != 'true':
-                 queryset = queryset.filter(marked_for_deletion=False)
+            marked_param = self.request.query_params.get('marked_for_deletion')
+            if str(marked_param).lower() != 'true':
+                queryset = queryset.filter(marked_for_deletion=False)
             
         global_search = self.request.query_params.get('global_search', None)
         if global_search:
@@ -85,33 +89,35 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):
+        """Пошук вантажівки за номерним знаком."""
         plate_query = request.query_params.get('plate', '').strip()
         if len(plate_query) < 2:
             return Response({'results': []}, status=status.HTTP_200_OK)
 
-        trucks = Truck.objects.filter(license_plate__icontains=plate_query)[:10]
+        trucks = Truck.objects.select_related('client').filter(
+            license_plate__icontains=plate_query
+        )[:10]
 
         results = []
         for truck in trucks:
-            # Безпечне отримання власника (client або owner)
-            client_obj = getattr(truck, 'client', getattr(truck, 'owner', None))
-            
             results.append({
                 'id': truck.id,
                 'license_plate': truck.license_plate,
-                'model': getattr(truck, 'specific_model_name', getattr(truck, 'model', '')),
-                'vin': getattr(truck, 'last_seven_vin', getattr(truck, 'vin', '')),
-                'client_id': client_obj.id if client_obj else None,
-                'client_name': client_obj.name if client_obj else "Без власника"
+                'model': truck.specific_model_name,
+                'vin': truck.last_seven_vin,
+                'client_id': truck.client.id if truck.client else None,
+                'client_name': truck.client.name if truck.client else "Без власника"
             })
         return Response({'results': results})
 
     @action(detail=False, methods=['post'], url_path='check-maintenance')
     def check_maintenance(self, request):
+        """Перевірка необхідності ТО."""
         return Response({'alerts': []})
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
+        """Статистика для дашборду."""
         queryset = ServiceOrder.objects.all()
         stats = {
             'total_orders': queryset.count(),
@@ -124,6 +130,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
+        """Позначити замовлення на видалення."""
         order = self.get_object()
         order.marked_for_deletion = True
         order.marked_for_deletion_by = request.user
@@ -134,6 +141,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def unmark_for_deletion(self, request, pk=None):
+        """Зняти позначку на видалення."""
         order = self.get_object()
         order.marked_for_deletion = False
         order.deletion_reason = ''
@@ -144,6 +152,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def add_work(self, request, pk=None):
+        """Додати роботу до замовлення."""
         order = self.get_object()
         serializer = ServiceWorkWriteSerializer(data=request.data)
         if serializer.is_valid():
@@ -153,7 +162,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
-    queryset = ServiceWork.objects.all()
+    """ViewSet для роботи з виконаними роботами."""
+    queryset = ServiceWork.objects.select_related(
+        'service_order', 'work', 'mechanic'
+    ).all()
     serializer_class = ServiceWorkSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -164,6 +176,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='add-part')
     def add_part(self, request, pk=None):
+        """Додати запчастину до роботи."""
         service_work = self.get_object()
         part_id = request.data.get('part')
         quantity = request.data.get('quantity', 1)
@@ -183,6 +196,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             
     @action(detail=True, methods=['delete'], url_path='remove-part/(?P<part_id>[^/.]+)')
     def remove_part(self, request, pk=None, part_id=None):
+        """Видалити запчастину з роботи."""
         try:
             UsedPart.objects.get(id=part_id, service_work_id=pk).delete()
             work = ServiceWork.objects.get(pk=pk)
@@ -193,36 +207,42 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
 
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
+    """ViewSet для груп робіт."""
     queryset = WorkGroup.objects.all()
     serializer_class = WorkGroupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class WorkPriceViewSet(viewsets.ModelViewSet):
-    queryset = WorkPrice.objects.all()
+    """ViewSet для цін на роботи."""
+    queryset = WorkPrice.objects.select_related('work_group').all()
     serializer_class = WorkPriceSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):
-    queryset = RepairPhoto.objects.all()
+    """ViewSet для фото ремонту."""
+    queryset = RepairPhoto.objects.select_related('service_order').all()
     serializer_class = RepairPhotoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class MaintenanceRuleViewSet(viewsets.ModelViewSet):
+    """ViewSet для правил ТО."""
     queryset = MaintenanceRule.objects.all()
     serializer_class = MaintenanceRuleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
-    queryset = MaintenanceLog.objects.all()
+    """ViewSet для журналу ТО."""
+    queryset = MaintenanceLog.objects.select_related('truck', 'rule').all()
     serializer_class = MaintenanceLogSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class MaintenanceKitViewSet(viewsets.ModelViewSet):
-    queryset = MaintenanceKit.objects.all()
+    """ViewSet для комплектів ТО."""
+    queryset = MaintenanceKit.objects.select_related('truck', 'oil').all()
     serializer_class = MaintenanceKitSerializer
     permission_classes = [permissions.IsAuthenticated]
