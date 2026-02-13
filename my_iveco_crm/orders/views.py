@@ -26,8 +26,9 @@ from .serializers import (
     UsedPartSerializer
 )
 
+
 class ServiceOrderViewSet(viewsets.ModelViewSet):
-    # 🔥 ВИПРАВЛЕНО: Прибрано 'truck__client', щоб уникнути помилки 500
+    # ФІКС 500 ПОМИЛКИ: Прибрано 'truck__client' із select_related
     queryset = ServiceOrder.objects.select_related(
         'client', 
         'truck', 
@@ -85,10 +86,12 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return Response({'results': []})
 
         trucks = Truck.objects.filter(license_plate__icontains=plate_query)[:10]
+
         results = []
         for truck in trucks:
-            # Безпечна перевірка власника
+            # Безпечний пошук (client або owner)
             client_obj = getattr(truck, 'client', getattr(truck, 'owner', None))
+            
             results.append({
                 'id': truck.id,
                 'license_plate': truck.license_plate,
@@ -99,9 +102,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             })
         return Response({'results': results})
 
-    # ... інші методи (check_maintenance, dashboard_stats, mark_for_deletion) залишаємо без змін
-    # Вони працюють коректно
-    
     @action(detail=False, methods=['post'], url_path='check-maintenance')
     def check_maintenance(self, request):
         return Response({'alerts': []})
