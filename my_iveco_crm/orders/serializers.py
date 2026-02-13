@@ -25,7 +25,6 @@ class TruckSerializerForOrder(serializers.ModelSerializer):
         fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin', 'client_id', 'client_name']
 
     def get_client_name(self, obj):
-        # Безпечно шукаємо власника (client або owner)
         client = getattr(obj, 'client', getattr(obj, 'owner', None))
         return client.name if client else None
 
