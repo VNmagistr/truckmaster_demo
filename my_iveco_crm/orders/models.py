@@ -68,7 +68,7 @@ class ServiceOrder(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка")
     current_mileage = models.PositiveIntegerField(null=True, blank=True, verbose_name="Поточний пробіг")
     problem_description = models.TextField(blank=True, verbose_name="Опис проблеми")
-    
+    recommendations = models.TextField(blank=True, verbose_name="Рекомендації")
     car_photo = models.ImageField(upload_to='order_photos/cars/', blank=True, null=True)
     odometer_photo = models.ImageField(upload_to='order_photos/odometers/', blank=True, null=True)
     dashboard_photo = models.ImageField(upload_to='order_photos/dashboards/', blank=True, null=True)
