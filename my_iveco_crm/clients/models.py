@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Max
 from django.contrib.auth.models import User
 
 class Client(models.Model):
@@ -131,8 +132,8 @@ class Truck(models.Model):
         
         order_mileage = ServiceOrder.objects.filter(
             truck=self
-        ).aggregate(Max('mileage'))['mileage__max']
-        
+        ).aggregate(Max('current_mileage'))['current_mileage__max']
+
         fluid_mileage = FluidChangeRecord.objects.filter(
             truck=self
         ).aggregate(Max('mileage'))['mileage__max']
