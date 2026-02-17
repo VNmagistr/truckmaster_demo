@@ -150,6 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -163,7 +164,7 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'my_iveco_crm.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 50,
 }
 
@@ -206,9 +207,7 @@ if not DEBUG:
     }
     LOGGING['loggers']['django']['handlers'].append('file')
 
-# Дозволяємо підключення з будь-якого IP (щоб точно запрацювало)
-CORS_ALLOW_ALL_ORIGINS = True 
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS видалено — використовуємо CORS_ALLOWED_ORIGINS whitelist
 
 # Явно дозволяємо методи (це виправить помилку 405)
 CORS_ALLOW_METHODS = [

@@ -5,7 +5,7 @@ from django.utils import timezone
 
 # Імпортуємо тільки існуючі моделі
 from clients.models import Client, Truck, IvecoBaseModel
-from inventory.models import UsedPart, Warehouse, StockItem, Product
+from inventory.models import UsedPart, Product
 
 
 def get_repair_photo_path(instance, filename):
