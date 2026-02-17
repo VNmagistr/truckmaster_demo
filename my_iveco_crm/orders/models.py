@@ -107,12 +107,19 @@ class ServiceOrder(models.Model):
 
     def update_total_cost(self):
         works_cost = sum(w.amount for w in self.works.all())
-        parts_cost = UsedPart.objects.filter(
+        # Запчастини через ServiceWork
+        work_parts_cost = UsedPart.objects.filter(
             service_work__service_order=self
         ).aggregate(
             total=Sum(F('quantity') * F('unit_price'))
         )['total'] or 0
-        self.total_cost = works_cost + parts_cost
+        # Запчастини додані напряму до замовлення
+        direct_parts_cost = UsedPart.objects.filter(
+            service_order=self, service_work__isnull=True
+        ).aggregate(
+            total=Sum(F('quantity') * F('unit_price'))
+        )['total'] or 0
+        self.total_cost = works_cost + work_parts_cost + direct_parts_cost
         self.save(update_fields=['total_cost'])
 
 

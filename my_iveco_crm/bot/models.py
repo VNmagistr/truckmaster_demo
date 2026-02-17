@@ -30,6 +30,10 @@ class BotUser(models.Model):
     def __str__(self):
         return f"{self.first_name} ({self.get_role_display()})"
 
+    def get_full_name(self):
+        parts = [self.first_name, self.last_name]
+        return ' '.join(p for p in parts if p) or str(self.telegram_id)
+
     class Meta:
         verbose_name = "Користувач бота"
         verbose_name_plural = "Користувачі бота"

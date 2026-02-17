@@ -19,7 +19,7 @@ class BotUserViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_active', 'is_blocked']
     search_fields = ['username', 'first_name', 'last_name', 'phone_number']
-    ordering_fields = ['created_at', 'last_activity', 'total_messages']
+    ordering_fields = ['created_at', 'last_activity']
     ordering = ['-last_activity']
     
     @action(detail=False, methods=['get'])
@@ -46,7 +46,7 @@ class MessageLogViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['bot_user', 'message_type', 'is_incoming', 'is_processed']
     search_fields = ['message_text', 'bot_response']
-    ordering_fields = ['created_at', 'processing_time_ms']
+    ordering_fields = ['created_at']
     ordering = ['-created_at']
     
     @action(detail=False, methods=['get'])
