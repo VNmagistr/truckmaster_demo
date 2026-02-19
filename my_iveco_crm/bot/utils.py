@@ -13,7 +13,7 @@ from asgiref.sync import sync_to_async
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from .models import BotUser, MessageLog, ConversationState
+from .models import BotUser, BotMessageLog
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def require_role(*allowed_roles):
     """
     Декоратор для перевірки ролі користувача
-    
+
     Використання:
         @require_role('owner', 'admin')
         async def my_handler(update, context):
@@ -33,10 +33,10 @@ def require_role(*allowed_roles):
         @wraps(func)
         async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
             user = update.effective_user
-            
+
             try:
                 bot_user = await sync_to_async(BotUser.objects.get)(telegram_id=user.id)
-                
+
                 if bot_user.role in allowed_roles or bot_user.role == 'admin':
                     return await func(update, context, *args, **kwargs)
                 else:
@@ -44,13 +44,13 @@ def require_role(*allowed_roles):
                         "⛔ У вас немає доступу до цієї команди."
                     )
                     return None
-                    
+
             except BotUser.DoesNotExist:
                 await update.message.reply_text(
                     "❌ Користувача не знайдено. Використайте /start для реєстрації."
                 )
                 return None
-                
+
         return wrapper
     return decorator
 
@@ -65,11 +65,11 @@ def log_message(func):
         start_time = time.time()
         user = update.effective_user
         message = update.message or update.callback_query.message
-        
+
         # Визначаємо тип повідомлення
         message_type = 'text'
         message_text = ''
-        
+
         if update.message:
             if update.message.text:
                 message_type = 'command' if update.message.text.startswith('/') else 'text'
@@ -89,58 +89,45 @@ def log_message(func):
         elif update.callback_query:
             message_type = 'callback'
             message_text = update.callback_query.data
-        
+
         try:
             # Викликаємо оригінальну функцію
             result = await func(update, context, *args, **kwargs)
-            
-            # Вираховуємо час обробки
-            processing_time = int((time.time() - start_time) * 1000)  # в мілісекундах
-            
+
             # Зберігаємо в БД
             try:
                 bot_user = await sync_to_async(BotUser.objects.get)(telegram_id=user.id)
-                
-                await sync_to_async(MessageLog.objects.create)(
+
+                await sync_to_async(BotMessageLog.objects.create)(
                     bot_user=bot_user,
                     message_type=message_type,
                     is_incoming=True,
                     message_text=message_text,
                     is_processed=True,
-                    processing_time_ms=processing_time,
-                    handler_name=func.__name__
                 )
-                
-                # Оновлюємо лічильник повідомлень
-                await sync_to_async(bot_user.increment_message_count)()
-                
+
             except Exception as e:
                 logger.error(f"Error logging message: {e}")
-            
+
             return result
-            
+
         except Exception as e:
             # Логуємо помилку
-            processing_time = int((time.time() - start_time) * 1000)
-            
             try:
                 bot_user = await sync_to_async(BotUser.objects.get)(telegram_id=user.id)
-                await sync_to_async(MessageLog.objects.create)(
+                await sync_to_async(BotMessageLog.objects.create)(
                     bot_user=bot_user,
                     message_type=message_type,
                     is_incoming=True,
                     message_text=message_text,
                     is_processed=False,
-                    processing_time_ms=processing_time,
-                    handler_name=func.__name__,
-                    error_message=str(e)
                 )
             except Exception as log_error:
                 logger.error(f"Error logging error message: {log_error}")
-            
+
             # Перекидаємо помилку далі
             raise
-            
+
     return wrapper
 
 
@@ -157,7 +144,7 @@ def get_or_create_bot_user(telegram_id: int, username: str = None, first_name: s
             'last_name': last_name or '',
         }
     )
-    
+
     # Оновлюємо дані якщо вони змінились
     if not created:
         updated = False
@@ -170,10 +157,10 @@ def get_or_create_bot_user(telegram_id: int, username: str = None, first_name: s
         if last_name and bot_user.last_name != last_name:
             bot_user.last_name = last_name
             updated = True
-        
+
         if updated:
             bot_user.save()
-    
+
     return bot_user
 
 
@@ -189,36 +176,10 @@ def get_bot_user(telegram_id: int) -> Optional[BotUser]:
 @sync_to_async
 def get_user_trucks(bot_user: BotUser):
     """Отримує список автомобілів користувача"""
-    if bot_user.role == 'driver':
-        return list(bot_user.assigned_trucks.all())
-    elif bot_user.role == 'owner' and bot_user.client:
+    if bot_user.role == 'owner' and bot_user.client:
         from clients.models import Truck
         return list(Truck.objects.filter(client=bot_user.client))
     return []
-
-
-@sync_to_async
-def get_conversation_state(bot_user: BotUser) -> ConversationState:
-    """Отримує або створює стан розмови"""
-    state, created = ConversationState.objects.get_or_create(bot_user=bot_user)
-    return state
-
-
-@sync_to_async
-def set_conversation_state(bot_user: BotUser, state: str, context: dict = None):
-    """Встановлює стан розмови"""
-    conv_state, created = ConversationState.objects.get_or_create(bot_user=bot_user)
-    conv_state.set_state(state, context)
-
-
-@sync_to_async
-def reset_conversation_state(bot_user: BotUser):
-    """Скидає стан розмови"""
-    try:
-        conv_state = ConversationState.objects.get(bot_user=bot_user)
-        conv_state.reset()
-    except ConversationState.DoesNotExist:
-        pass
 
 
 # ========== ФОРМАТУВАННЯ ==========
@@ -230,14 +191,14 @@ def format_phone_number(phone: str) -> str:
     """
     if not phone:
         return ""
-    
+
     # Видаляємо всі символи крім цифр і +
     clean = ''.join(c for c in phone if c.isdigit() or c == '+')
-    
+
     # Якщо починається з 380
     if clean.startswith('+380') and len(clean) == 13:
         return f"+38 ({clean[3:6]}) {clean[6:9]}-{clean[9:11]}-{clean[11:]}"
-    
+
     return phone
 
 
@@ -246,10 +207,10 @@ def format_truck_info(truck) -> str:
     info = f"🚚 {truck.specific_model_name}\n"
     info += f"📋 Номер: {truck.license_plate}\n"
     info += f"🔢 VIN: ...{truck.last_seven_vin}\n"
-    
+
     if truck.euro_standard:
         info += f"♻️ Євростандарт: {truck.get_euro_standard_display()}\n"
-    
+
     return info
 
 
@@ -258,16 +219,16 @@ def format_order_info(order) -> str:
     info = f"📝 Замовлення #{order.order_number}\n"
     info += f"📅 Дата: {order.created_at.strftime('%d.%m.%Y %H:%M')}\n"
     info += f"📊 Статус: {order.get_status_display()}\n"
-    
+
     if order.truck:
         info += f"🚚 Автомобіль: {order.truck.license_plate}\n"
-    
+
     if order.problem_description:
         info += f"📝 Опис: {order.problem_description[:100]}\n"
-    
+
     if order.total_cost:
         info += f"💰 Вартість: {order.total_cost} грн\n"
-    
+
     return info
 
 
@@ -306,11 +267,11 @@ async def send_long_message(update: Update, text: str, max_length: int = 4096):
     if len(text) <= max_length:
         await update.message.reply_text(text)
         return
-    
+
     # Розбиваємо на частини
     parts = []
     current_part = ""
-    
+
     for line in text.split('\n'):
         if len(current_part) + len(line) + 1 <= max_length:
             current_part += line + '\n'
@@ -318,10 +279,10 @@ async def send_long_message(update: Update, text: str, max_length: int = 4096):
             if current_part:
                 parts.append(current_part)
             current_part = line + '\n'
-    
+
     if current_part:
         parts.append(current_part)
-    
+
     # Відправляємо частинами
     for i, part in enumerate(parts, 1):
         header = f"📄 Частина {i}/{len(parts)}\n\n" if len(parts) > 1 else ""

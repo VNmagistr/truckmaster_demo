@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Max
 from django.contrib.auth.models import User
 
 class Client(models.Model):
@@ -62,7 +63,7 @@ class Truck(models.Model):
     specific_model_name = models.CharField(max_length=100, verbose_name="Конкретна модель (напр. 35C15)")
     full_vin = models.CharField(max_length=17, unique=True, verbose_name="Повний VIN")
     last_seven_vin = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="Останні 7 символів VIN", editable=False)
-    license_plate = models.CharField(max_length=20, verbose_name="Номерний знак", db_index=True)
+    license_plate = models.CharField(max_length=20, verbose_name="Номерний знак")
     euro_standard = models.CharField(max_length=10, choices=EURO_STANDARD_CHOICES, blank=True, null=True, verbose_name="Євростандарт викидів")
     # Поля для м'якого видалення
     marked_for_deletion = models.BooleanField(
@@ -131,8 +132,8 @@ class Truck(models.Model):
         
         order_mileage = ServiceOrder.objects.filter(
             truck=self
-        ).aggregate(Max('mileage'))['mileage__max']
-        
+        ).aggregate(Max('current_mileage'))['current_mileage__max']
+
         fluid_mileage = FluidChangeRecord.objects.filter(
             truck=self
         ).aggregate(Max('mileage'))['mileage__max']

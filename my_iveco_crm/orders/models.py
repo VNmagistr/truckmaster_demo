@@ -5,7 +5,7 @@ from django.utils import timezone
 
 # Імпортуємо тільки існуючі моделі
 from clients.models import Client, Truck, IvecoBaseModel
-from inventory.models import UsedPart, Warehouse, StockItem, Product
+from inventory.models import UsedPart, Product
 
 
 def get_repair_photo_path(instance, filename):
@@ -102,17 +102,38 @@ class ServiceOrder(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            self.order_number = f"SO-{timezone.now().strftime('%Y%m%d')}-{ServiceOrder.objects.count()+1:04d}"
+            from django.db.models import Max
+            today = timezone.now().strftime('%Y%m%d')
+            prefix = f"SO-{today}-"
+            last_number = (
+                ServiceOrder.objects.filter(order_number__startswith=prefix)
+                .aggregate(max_num=Max('order_number'))['max_num']
+            )
+            if last_number:
+                try:
+                    seq = int(last_number.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.order_number = f"{prefix}{seq:04d}"
         super().save(*args, **kwargs)
 
     def update_total_cost(self):
         works_cost = sum(w.amount for w in self.works.all())
-        parts_cost = UsedPart.objects.filter(
+        # Запчастини через ServiceWork
+        work_parts_cost = UsedPart.objects.filter(
             service_work__service_order=self
         ).aggregate(
             total=Sum(F('quantity') * F('unit_price'))
         )['total'] or 0
-        self.total_cost = works_cost + parts_cost
+        # Запчастини додані напряму до замовлення
+        direct_parts_cost = UsedPart.objects.filter(
+            service_order=self, service_work__isnull=True
+        ).aggregate(
+            total=Sum(F('quantity') * F('unit_price'))
+        )['total'] or 0
+        self.total_cost = works_cost + work_parts_cost + direct_parts_cost
         self.save(update_fields=['total_cost'])
 
 
@@ -152,7 +173,6 @@ class ServiceWork(models.Model):
         if not self.price_at_moment and self.work:
             self.price_at_moment = self.work.get_calculated_price()
         super().save(*args, **kwargs)
-        self.service_order.update_total_cost()
 
 
 class RepairPhoto(models.Model):

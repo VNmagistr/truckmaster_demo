@@ -3,6 +3,7 @@ Django settings for my_iveco_crm project.
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 from decouple import config, Csv
 
@@ -152,7 +153,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
+    "http://157.230.114.19",
+    "https://157.230.114.19",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -166,7 +170,7 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'my_iveco_crm.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 50,
 }
 
@@ -209,9 +213,7 @@ if not DEBUG:
     }
     LOGGING['loggers']['django']['handlers'].append('file')
 
-# Дозволяємо підключення з будь-якого IP (щоб точно запрацювало)
-CORS_ALLOW_ALL_ORIGINS = True 
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS видалено — використовуємо CORS_ALLOWED_ORIGINS whitelist
 
 # Явно дозволяємо методи (це виправить помилку 405)
 CORS_ALLOW_METHODS = [
@@ -236,4 +238,13 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# JWT налаштування
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 

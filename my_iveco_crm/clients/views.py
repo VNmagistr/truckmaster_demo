@@ -13,16 +13,12 @@ class ClientViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'phone', 'email', 'address'] 
     
     def get_queryset(self):
-        """
-        ТИМЧАСОВО БЕЗ ФІЛЬТРА для дебагу
-        """
         queryset = Client.objects.all().order_by('name')
-        
-        # ЗАКОМЕНТОВАНО фільтр
-        # show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
-        # if not show_deleted:
-        #     queryset = queryset.filter(marked_for_deletion=False)
-        
+
+        show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
+        if not show_deleted:
+            queryset = queryset.filter(marked_for_deletion=False)
+
         return queryset
 
 # Створюємо ViewSet для довідника моделей, він нам знадобиться у формі
@@ -46,14 +42,10 @@ class TruckViewSet(viewsets.ModelViewSet):
         return TruckDetailSerializer # Для всього іншого (створення, редагування)
     
     def get_queryset(self):
-        """
-        ТИМЧАСОВО БЕЗ ФІЛЬТРА для дебагу
-        """
         queryset = Truck.objects.select_related('client', 'base_model').order_by('license_plate')
-        
-        # ЗАКОМЕНТОВАНО фільтр
-        # show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
-        # if not show_deleted:
-        #     queryset = queryset.filter(marked_for_deletion=False)
-        
+
+        show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
+        if not show_deleted:
+            queryset = queryset.filter(marked_for_deletion=False)
+
         return queryset
