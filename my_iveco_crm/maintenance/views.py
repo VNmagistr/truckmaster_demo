@@ -1,5 +1,7 @@
 # maintenance/views.py
 
+from datetime import timedelta
+
 from rest_framework import viewsets, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -59,7 +61,7 @@ class FluidChangeRecordViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def upcoming_changes(self, request):
         today = timezone.now().date()
-        upcoming_date = today + timezone.timedelta(days=30)
+        upcoming_date = today + timedelta(days=30)
         records = self.queryset.filter(
             Q(next_change_date__lte=upcoming_date, next_change_date__gte=today) |
             Q(next_change_date__isnull=True, next_change_mileage__isnull=False)
