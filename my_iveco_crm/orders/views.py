@@ -1,9 +1,14 @@
+import logging
+import traceback
+
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
@@ -243,3 +248,40 @@ class MaintenanceKitViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceKit.objects.select_related('truck', 'oil').all()
     serializer_class = MaintenanceKitSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+# === ТИМЧАСОВИЙ ДІАГНОСТИЧНИЙ ENDPOINT (видалити після дебагу) ===
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+
+class OrdersDiagnosticView(APIView):
+    """Тимчасовий endpoint для діагностики 500 помилки на orders."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            # Крок 1: Простий count
+            count = ServiceOrder.objects.count()
+
+            # Крок 2: Queryset як у ViewSet
+            qs = ServiceOrder.objects.select_related(
+                'client', 'truck', 'truck__client', 'marked_for_deletion_by'
+            ).filter(marked_for_deletion=False).order_by('-created_at')[:5]
+
+            # Крок 3: Серіалізація
+            serializer = ServiceOrderListSerializer(qs, many=True)
+            data = serializer.data
+
+            return Response({
+                'status': 'ok',
+                'total_orders': count,
+                'sample_count': len(data),
+                'sample': data,
+            })
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'error': str(e),
+                'type': type(e).__name__,
+                'traceback': traceback.format_exc(),
+            }, status=500)
