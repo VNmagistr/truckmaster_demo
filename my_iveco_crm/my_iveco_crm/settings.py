@@ -3,6 +3,7 @@ Django settings for my_iveco_crm project.
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 from decouple import config, Csv
 
@@ -149,6 +150,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
+    "http://157.230.114.19",
+    "https://157.230.114.19",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -232,4 +235,13 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# JWT налаштування
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
