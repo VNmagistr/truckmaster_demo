@@ -1,4 +1,7 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement
 from .serializers import (
@@ -79,6 +82,34 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(marked_for_deletion=False)
 
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Фізичне видалення заборонено. Використовуйте позначення на видалення."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    @action(detail=True, methods=['post'])
+    def mark_for_deletion(self, request, pk=None):
+        """Позначити товар на видалення (м'яке видалення)."""
+        product = self.get_object()
+        product.marked_for_deletion = True
+        product.marked_for_deletion_by = request.user
+        product.marked_for_deletion_at = timezone.now()
+        product.deletion_reason = request.data.get('reason', '')
+        product.save()
+        return Response({'status': 'success'})
+
+    @action(detail=True, methods=['post'])
+    def unmark_for_deletion(self, request, pk=None):
+        """Зняти позначку на видалення."""
+        product = self.get_object()
+        product.marked_for_deletion = False
+        product.deletion_reason = ''
+        product.marked_for_deletion_by = None
+        product.marked_for_deletion_at = None
+        product.save()
+        return Response({'status': 'success'})
 
 
 class StockItemViewSet(viewsets.ModelViewSet):
