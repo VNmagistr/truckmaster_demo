@@ -114,6 +114,9 @@ class ProductSerializer(serializers.ModelSerializer):
             'marked_for_deletion_at',
             'deletion_reason',
         ]
+        extra_kwargs = {
+            'notes': {'required': False, 'allow_blank': True, 'default': ''},
+        }
 
 
 class ProductListSerializer(serializers.ModelSerializer):
