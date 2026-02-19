@@ -9,6 +9,7 @@ from .views import (
     MaintenanceRuleViewSet,
     MaintenanceLogViewSet,
     MaintenanceKitViewSet,
+    OrdersDiagnosticView,
 )
 
 router = DefaultRouter()
@@ -29,5 +30,6 @@ router.register(r'maintenance-logs', MaintenanceLogViewSet)
 router.register(r'maintenance-kits', MaintenanceKitViewSet)
 
 urlpatterns = [
+    path('orders/diagnostic/', OrdersDiagnosticView.as_view(), name='orders-diagnostic'),
     path('', include(router.urls)),
 ]
