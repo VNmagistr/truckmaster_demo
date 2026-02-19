@@ -189,7 +189,6 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
                 quantity=quantity,
                 unit_price=unit_price
             )
-            service_work.service_order.update_total_cost()
             return Response(UsedPartSerializer(used_part).data, status=201)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
@@ -199,8 +198,6 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         """Видалити запчастину з роботи."""
         try:
             UsedPart.objects.get(id=part_id, service_work_id=pk).delete()
-            work = ServiceWork.objects.get(pk=pk)
-            work.service_order.update_total_cost()
             return Response(status=204)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
