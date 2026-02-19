@@ -102,7 +102,21 @@ class ServiceOrder(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            self.order_number = f"SO-{timezone.now().strftime('%Y%m%d')}-{ServiceOrder.objects.count()+1:04d}"
+            from django.db.models import Max
+            today = timezone.now().strftime('%Y%m%d')
+            prefix = f"SO-{today}-"
+            last_number = (
+                ServiceOrder.objects.filter(order_number__startswith=prefix)
+                .aggregate(max_num=Max('order_number'))['max_num']
+            )
+            if last_number:
+                try:
+                    seq = int(last_number.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.order_number = f"{prefix}{seq:04d}"
         super().save(*args, **kwargs)
 
     def update_total_cost(self):
@@ -159,7 +173,6 @@ class ServiceWork(models.Model):
         if not self.price_at_moment and self.work:
             self.price_at_moment = self.work.get_calculated_price()
         super().save(*args, **kwargs)
-        self.service_order.update_total_cost()
 
 
 class RepairPhoto(models.Model):
