@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement
+from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
 from .serializers import (
     ProductSerializer,
     ProductListSerializer,
@@ -12,6 +12,7 @@ from .serializers import (
     WarehouseSerializer,
     StockItemSerializer,
     StockMovementSerializer,
+    UsedPartSerializer,
 )
 
 
@@ -137,3 +138,17 @@ class StockMovementViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Автоматично встановлюємо користувача, який створив рух"""
         serializer.save(created_by=self.request.user)
+
+
+class UsedPartViewSet(viewsets.ModelViewSet):
+    """ViewSet для використаних запчастин."""
+    serializer_class = UsedPartSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['service_work', 'service_order', 'part', 'warehouse']
+    search_fields = ['part__name', 'part__sku_code']
+    ordering_fields = ['part__name', 'quantity', 'unit_price']
+
+    def get_queryset(self):
+        return UsedPart.objects.select_related(
+            'part', 'warehouse', 'service_work', 'service_order'
+        ).all()
