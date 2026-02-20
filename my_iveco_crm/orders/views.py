@@ -208,6 +208,48 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=400)
 
+    @action(detail=True, methods=['post'], url_path='apply-kit')
+    def apply_kit(self, request, pk=None):
+        """
+        Вручну додати набір ТО (оливу + фільтри) до роботи.
+        Використовується кнопкою 'Додати набір ТО' на фронтенді.
+        """
+        work = self.get_object()
+        truck = work.service_order.truck
+
+        if not truck:
+            return Response({'error': 'Вантажівка не вказана в замовленні'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            kit = MaintenanceKit.objects.prefetch_related('filters__part').get(truck=truck)
+        except MaintenanceKit.DoesNotExist:
+            return Response(
+                {'error': f'Набір ТО для {truck.license_plate} не знайдено. Спочатку збережіть набір.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        added = []
+
+        if kit.oil:
+            UsedPart.objects.get_or_create(
+                service_work=work,
+                part=kit.oil,
+                defaults={'quantity': kit.oil_quantity}
+            )
+            added.append({'name': kit.oil.name, 'quantity': str(kit.oil_quantity), 'type': 'oil'})
+
+        for kit_filter in kit.filters.all():
+            UsedPart.objects.get_or_create(
+                service_work=work,
+                part=kit_filter.part,
+                defaults={'quantity': kit_filter.quantity}
+            )
+            added.append({'name': kit_filter.part.name, 'quantity': kit_filter.quantity, 'type': 'filter'})
+
+        work.service_order.update_total_cost()
+
+        return Response({'added': added, 'count': len(added)}, status=status.HTTP_200_OK)
+
 
 class WorkGroupViewSet(viewsets.ModelViewSet):
     """ViewSet для груп робіт."""

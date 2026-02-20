@@ -263,8 +263,10 @@ class MaintenanceKitFilter(models.Model):
         verbose_name="Комплект ТО"
     )
     filter_type = models.ForeignKey(
-        FilterType, 
+        FilterType,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         verbose_name="Тип фільтра"
     )
     # Використовуємо Product замість Part
