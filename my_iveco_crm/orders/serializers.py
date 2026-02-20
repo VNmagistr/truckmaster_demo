@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
-    ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit
+    ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
@@ -249,9 +249,32 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
+    """Серіалізатор фільтра в комплекті ТО."""
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    filter_type_name = serializers.CharField(source='filter_type.name', read_only=True)
+
+    class Meta:
+        model = MaintenanceKitFilter
+        fields = ['id', 'maintenance_kit', 'filter_type', 'filter_type_name', 'part', 'part_name', 'part_sku', 'quantity']
+
+
 class MaintenanceKitSerializer(serializers.ModelSerializer):
-    """Серіалізатор комплекту ТО."""
-    
+    """Серіалізатор комплекту ТО — повний (для читання)."""
+    filters = MaintenanceKitFilterSerializer(many=True, read_only=True)
+    oil_name = serializers.CharField(source='oil.name', read_only=True)
+    oil_sku = serializers.CharField(source='oil.sku_code', read_only=True)
+    truck_display = serializers.CharField(source='truck.__str__', read_only=True)
+
     class Meta:
         model = MaintenanceKit
-        fields = '__all__'
+        fields = ['id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'filters']
+
+
+class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
+    """Серіалізатор комплекту ТО — для створення та редагування."""
+
+    class Meta:
+        model = MaintenanceKit
+        fields = ['id', 'truck', 'oil', 'oil_quantity']

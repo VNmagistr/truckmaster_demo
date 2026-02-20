@@ -10,8 +10,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 logger = logging.getLogger(__name__)
 
 from .models import (
-    ServiceOrder, ServiceWork, WorkGroup, WorkPrice, 
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit
+    ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
 )
 from clients.models import Truck
 from inventory.models import UsedPart
@@ -27,6 +27,8 @@ from .serializers import (
     MaintenanceRuleSerializer,
     MaintenanceLogSerializer,
     MaintenanceKitSerializer,
+    MaintenanceKitWriteSerializer,
+    MaintenanceKitFilterSerializer,
     UsedPartSerializer
 )
 
@@ -244,7 +246,51 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
 
 class MaintenanceKitViewSet(viewsets.ModelViewSet):
     """ViewSet для комплектів ТО."""
-    queryset = MaintenanceKit.objects.select_related('truck', 'oil').all()
-    serializer_class = MaintenanceKitSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['truck']
+
+    def get_queryset(self):
+        return MaintenanceKit.objects.select_related(
+            'truck', 'oil'
+        ).prefetch_related(
+            'filters', 'filters__filter_type', 'filters__part'
+        ).all()
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return MaintenanceKitWriteSerializer
+        return MaintenanceKitSerializer
+
+    @action(detail=True, methods=['post'], url_path='add-filter')
+    def add_filter(self, request, pk=None):
+        """Додати фільтр до комплекту ТО."""
+        kit = self.get_object()
+        serializer = MaintenanceKitFilterSerializer(data={**request.data, 'maintenance_kit': kit.pk})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], url_path='remove-filter/(?P<filter_id>[^/.]+)')
+    def remove_filter(self, request, pk=None, filter_id=None):
+        """Видалити фільтр з комплекту ТО."""
+        try:
+            MaintenanceKitFilter.objects.get(id=filter_id, maintenance_kit_id=pk).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except MaintenanceKitFilter.DoesNotExist:
+            return Response({'error': 'Фільтр не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MaintenanceKitFilterViewSet(viewsets.ModelViewSet):
+    """ViewSet для окремих фільтрів комплекту ТО."""
+    serializer_class = MaintenanceKitFilterSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['maintenance_kit']
+
+    def get_queryset(self):
+        return MaintenanceKitFilter.objects.select_related(
+            'maintenance_kit', 'filter_type', 'part'
+        ).all()
 

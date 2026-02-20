@@ -9,6 +9,7 @@ from .views import (
     MaintenanceRuleViewSet,
     MaintenanceLogViewSet,
     MaintenanceKitViewSet,
+    MaintenanceKitFilterViewSet,
 )
 
 router = DefaultRouter()
@@ -27,6 +28,7 @@ router.register(r'repair-photos', RepairPhotoViewSet)
 router.register(r'maintenance-rules', MaintenanceRuleViewSet)
 router.register(r'maintenance-logs', MaintenanceLogViewSet)
 router.register(r'maintenance-kits', MaintenanceKitViewSet)
+router.register(r'maintenance-kit-filters', MaintenanceKitFilterViewSet, basename='maintenance-kit-filters')
 
 urlpatterns = [
     path('', include(router.urls)),
