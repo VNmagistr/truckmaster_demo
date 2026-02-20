@@ -1,15 +1,9 @@
 from django.contrib.auth.models import User
-from rest_framework import generics, viewsets, status, permissions
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import RegisterSerializer, UserMeSerializer, ChangePasswordSerializer
-
-
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
+from rest_framework.permissions import IsAuthenticated
+from .serializers import UserMeSerializer, ChangePasswordSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
