@@ -62,7 +62,7 @@ class Truck(models.Model):
     base_model = models.ForeignKey(IvecoBaseModel, on_delete=models.SET_NULL, null=True, verbose_name="Базова модель")
     specific_model_name = models.CharField(max_length=100, verbose_name="Конкретна модель (напр. 35C15)")
     full_vin = models.CharField(max_length=17, unique=True, verbose_name="Повний VIN")
-    last_seven_vin = models.CharField(max_length=7, unique=True, db_index=True, verbose_name="Останні 7 символів VIN", editable=False)
+    last_seven_vin = models.CharField(max_length=7, db_index=True, verbose_name="Останні 7 символів VIN", editable=False)
     license_plate = models.CharField(max_length=20, verbose_name="Номерний знак")
     euro_standard = models.CharField(max_length=10, choices=EURO_STANDARD_CHOICES, blank=True, null=True, verbose_name="Євростандарт викидів")
     # Поля для м'якого видалення

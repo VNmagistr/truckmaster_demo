@@ -36,3 +36,4 @@ class TruckDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Truck
         fields = '__all__'
+        read_only_fields = ['last_seven_vin']
