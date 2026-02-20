@@ -1,10 +1,31 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import ServiceWork, MaintenanceKit
-# ❌ ВИДАЛЕНО: from inventory.models import UsedPart
+from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Типи категорій, що вважаються оливою
+OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
+
+TO_KEYWORDS = ['то ', 'т.о.', 'заміна оливи', 'заміна масла', 'регламент', 'технічне обслуговування']
+
+
+def _is_maintenance_work(work):
+    """Перевіряє чи є робота технічним обслуговуванням."""
+    if not work:
+        return False
+    name = work.name.lower()
+    group = work.work_group.name.lower() if work.work_group else ''
+    return any(kw in name or kw in group for kw in TO_KEYWORDS)
+
+
+def _is_oil_product(product):
+    """Перевіряє чи є товар оливою по типу категорії."""
+    try:
+        return product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES
+    except AttributeError:
+        return False
 
 
 @receiver([post_save, post_delete], sender=ServiceWork)
@@ -24,62 +45,93 @@ def update_order_on_work_change(sender, instance, **kwargs):
 def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     """
     При створенні роботи типу 'ТО' або 'Заміна оливи'
-    автоматично додає запчастини з набору ТО для цього авто.
+    автоматично додає запчастини з існуючого набору ТО для цього авто.
     """
-    # ✅ ЛОКАЛЬНИЙ ІМПОРТ всередині функції!
     from inventory.models import UsedPart
-    
+
     if not created:
-        return  # Тільки при створенні нової роботи
-    
-    # Перевіряємо чи є вантажівка в замовленні
+        return
+
     truck = instance.service_order.truck
-    if not truck:
+    if not truck or not _is_maintenance_work(instance.work):
         return
-    
-    # Перевіряємо чи робота пов'язана з ТО (по назві категорії або роботи)
-    work = instance.work
-    if not work:
-        return
-    
-    # Ключові слова для визначення робіт ТО
-    to_keywords = ['то ', 'т.о.', 'заміна оливи', 'заміна масла', 'регламент', 'технічне обслуговування']
-    
-    work_name_lower = work.name.lower()
-    group_name_lower = work.work_group.name.lower() if work.work_group else ''
-    
-    is_maintenance_work = any(
-        keyword in work_name_lower or keyword in group_name_lower 
-        for keyword in to_keywords
-    )
-    
-    if not is_maintenance_work:
-        return  # Це не робота ТО, пропускаємо
-    
-    # Шукаємо набір ТО для цієї вантажівки
+
     try:
         kit = MaintenanceKit.objects.get(truck=truck)
     except MaintenanceKit.DoesNotExist:
         logger.info(f"Набір ТО для {truck.license_plate} не знайдено")
         return
-    
-    # Додаємо оливу
+
     if kit.oil:
         UsedPart.objects.get_or_create(
             service_work=instance,
             part=kit.oil,
             defaults={'quantity': int(kit.oil_quantity)}
         )
-    
-    # Додаємо всі фільтри з набору
+
     for kit_filter in kit.filters.all():
         UsedPart.objects.get_or_create(
             service_work=instance,
             part=kit_filter.part,
             defaults={'quantity': kit_filter.quantity}
         )
-    
+
     logger.info(f"Автоматично додано набір ТО для {truck.license_plate}")
-    
-    # Оновлюємо вартість замовлення
     instance.service_order.update_total_cost()
+
+
+def auto_save_maintenance_kit(sender, instance, created, **kwargs):
+    # Підключається вручну в orders/apps.py після завантаження всіх застосунків
+    """
+    Коли до роботи ТО додається запчастина — автоматично зберігає/оновлює
+    набір ТО для цього автомобіля, щоб використовувати його в майбутніх нарядах.
+
+    Логіка:
+    - Олива (category_type in OIL_CATEGORY_TYPES) → створює/оновлює MaintenanceKit,
+      плюс додає всі вже наявні фільтри з цієї роботи.
+    - Фільтр → якщо kit вже існує, додає/оновлює MaintenanceKitFilter.
+    """
+    if not created or not instance.service_work:
+        return
+
+    work = instance.service_work
+    if not _is_maintenance_work(work.work):
+        return
+
+    truck = work.service_order.truck
+    if not truck:
+        return
+
+    part = instance.part
+
+    try:
+        if _is_oil_product(part):
+            # Створюємо або оновлюємо kit з оливою
+            kit, _ = MaintenanceKit.objects.update_or_create(
+                truck=truck,
+                defaults={'oil': part, 'oil_quantity': instance.quantity}
+            )
+            # Додаємо всі вже збережені фільтри з цієї роботи до kit
+            for used_part in work.used_parts.exclude(pk=instance.pk):
+                if not _is_oil_product(used_part.part):
+                    MaintenanceKitFilter.objects.get_or_create(
+                        maintenance_kit=kit,
+                        part=used_part.part,
+                        defaults={'quantity': used_part.quantity}
+                    )
+            logger.info(f"Збережено оливу '{part}' у наборі ТО для {truck.license_plate}")
+        else:
+            # Це фільтр — додаємо до існуючого kit
+            kit = MaintenanceKit.objects.filter(truck=truck).first()
+            if kit:
+                obj, created_filter = MaintenanceKitFilter.objects.get_or_create(
+                    maintenance_kit=kit,
+                    part=part,
+                    defaults={'quantity': instance.quantity}
+                )
+                if not created_filter and obj.quantity != instance.quantity:
+                    obj.quantity = instance.quantity
+                    obj.save()
+                logger.info(f"Збережено фільтр '{part}' у наборі ТО для {truck.license_plate}")
+    except Exception as e:
+        logger.error(f"Помилка авто-збереження набору ТО: {e}")
