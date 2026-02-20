@@ -27,7 +27,7 @@ router.register(r'work-prices', WorkPriceViewSet)
 router.register(r'repair-photos', RepairPhotoViewSet)
 router.register(r'maintenance-rules', MaintenanceRuleViewSet)
 router.register(r'maintenance-logs', MaintenanceLogViewSet)
-router.register(r'maintenance-kits', MaintenanceKitViewSet)
+router.register(r'maintenance-kits', MaintenanceKitViewSet, basename='maintenance-kits')
 router.register(r'maintenance-kit-filters', MaintenanceKitFilterViewSet, basename='maintenance-kit-filters')
 
 urlpatterns = [
