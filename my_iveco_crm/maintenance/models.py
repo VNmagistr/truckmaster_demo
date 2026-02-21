@@ -73,7 +73,9 @@ class FluidChangeRecord(models.Model):
     # ВИПРАВЛЕНО: SubCategory замість ProductSubcategory
     subcategory = models.ForeignKey(
         'inventory.SubCategory',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name='Тип рідини/оливи'
     )
     # ВИПРАВЛЕНО: Product замість Part
