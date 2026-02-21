@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec, ServiceType
+from .models import FluidChangeRecord, ServiceReminder, ServiceType
 
 
 @admin.register(ServiceType)
@@ -217,38 +217,3 @@ class ServiceReminderAdmin(admin.ModelAdmin):
         queryset.update(status='dismissed')
 
 
-@admin.register(TruckFluidSpec)
-class TruckFluidSpecAdmin(admin.ModelAdmin):
-    list_display = [
-        'truck', 
-        'subcategory', 
-        'recommended_product', 
-        'fill_volume',
-        'change_interval_km'
-    ]
-    list_filter = ['subcategory']
-    search_fields = [
-        'truck__license_plate', 
-        'truck__last_seven_vin',
-        'recommended_product__name'
-    ]
-    filter_horizontal = ['alternative_products']
-    
-    # Autocomplete
-    autocomplete_fields = ['truck', 'recommended_product', 'subcategory']
-    
-    fieldsets = (
-        ('Вантажівка', {
-            'fields': ('truck', 'subcategory')
-        }),
-        ('Рекомендації', {
-            'fields': ('recommended_product', 'alternative_products', 'fill_volume')
-        }),
-        ('Інтервали', {
-            'fields': ('change_interval_km', 'change_interval_months')
-        }),
-        ('Примітки', {
-            'fields': ('notes',),
-            'classes': ('collapse',)
-        }),
-    )
