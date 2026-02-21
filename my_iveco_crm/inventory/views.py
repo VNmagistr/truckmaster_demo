@@ -54,7 +54,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
 
     # Поля фільтрації (точний збіг)
-    filterset_fields = ['subcategory', 'subcategory__category', 'is_active', 'brand']
+    filterset_fields = ['subcategory', 'subcategory__category', 'subcategory__category__category_type', 'is_active', 'brand']
 
     # Поля пошуку (частковий збіг)
     search_fields = ['name', 'sku_code', 'brand', 'notes']
