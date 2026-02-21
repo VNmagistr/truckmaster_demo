@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.text import slugify
 from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
 
 
@@ -24,6 +25,12 @@ class WarehouseAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'is_default', 'is_active')
     list_filter = ('is_active', 'is_default')
     search_fields = ('name', 'slug')
+    exclude = ['slug']
+
+    def save_model(self, request, obj, form, change):
+        if not obj.slug:
+            obj.slug = slugify(obj.name, allow_unicode=True)
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Product)

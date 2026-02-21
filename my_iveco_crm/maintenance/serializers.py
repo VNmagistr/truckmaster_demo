@@ -1,12 +1,12 @@
 # maintenance/serializers.py
 
 from rest_framework import serializers
-from .models import FluidChangeRecord, ServiceReminder, ServiceType
+from .models import ServiceReminder, ServiceType
 
 
 class ServiceTypeSerializer(serializers.ModelSerializer):
     """Серіалізатор для типів технічного обслуговування"""
-    
+
     class Meta:
         model = ServiceType
         fields = [
@@ -19,40 +19,6 @@ class ServiceTypeSerializer(serializers.ModelSerializer):
             'is_active',
             'sort_order',
         ]
-
-
-class FluidChangeRecordSerializer(serializers.ModelSerializer):
-    """Серіалізатор для записів про заміну рідин"""
-    
-    truck_display = serializers.StringRelatedField(source='truck', read_only=True)
-    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
-    
-    class Meta:
-        model = FluidChangeRecord
-        fields = [
-            'id',
-            'truck',
-            'truck_display',
-            'subcategory',
-            'subcategory_name',
-            'product',
-            'product_name',
-            'quantity',
-            'mileage',
-            'next_change_mileage',
-            'next_change_date',
-            'service_order',
-            'unit_price',
-            'total_price',
-            'notes',
-            'performed_at',
-            'created_by',
-            'created_by_name',
-            'created_at',
-        ]
-        read_only_fields = ['created_at', 'created_by', 'total_price']
 
 
 class ServiceReminderSerializer(serializers.ModelSerializer):
