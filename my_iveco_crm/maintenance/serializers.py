@@ -1,7 +1,7 @@
 # maintenance/serializers.py
 
 from rest_framework import serializers
-from .models import FluidChangeRecord, ServiceReminder, TruckFluidSpec, ServiceType
+from .models import FluidChangeRecord, ServiceReminder, ServiceType
 
 
 class ServiceTypeSerializer(serializers.ModelSerializer):
@@ -105,38 +105,3 @@ class ServiceReminderSerializer(serializers.ModelSerializer):
         return False
 
 
-class TruckFluidSpecSerializer(serializers.ModelSerializer):
-    """Серіалізатор для специфікацій рідин"""
-    
-    truck_display = serializers.StringRelatedField(source='truck', read_only=True)
-    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
-    recommended_product_name = serializers.CharField(
-        source='recommended_product.name', 
-        read_only=True
-    )
-    alternative_products_list = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = TruckFluidSpec
-        fields = [
-            'id',
-            'truck',
-            'truck_display',
-            'subcategory',
-            'subcategory_name',
-            'recommended_product',
-            'recommended_product_name',
-            'alternative_products',
-            'alternative_products_list',
-            'fill_volume',
-            'change_interval_km',
-            'change_interval_months',
-            'notes',
-        ]
-    
-    def get_alternative_products_list(self, obj):
-        """Список альтернативних товарів"""
-        return [
-            {'id': p.id, 'name': str(p)} 
-            for p in obj.alternative_products.all()
-        ]
