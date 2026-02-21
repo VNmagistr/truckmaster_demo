@@ -166,6 +166,67 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'], url_path='apply_maintenance_set')
+    def apply_maintenance_set(self, request, pk=None):
+        """Застосувати набір ТО до наряду."""
+        order = self.get_object()
+        rule_id = request.data.get('rule_id')
+
+        if not rule_id:
+            return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rule = MaintenanceRule.objects.get(id=rule_id)
+        except MaintenanceRule.DoesNotExist:
+            return Response({'detail': 'Правило ТО не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            kit = MaintenanceKit.objects.prefetch_related('filters').get(truck=order.truck)
+        except MaintenanceKit.DoesNotExist:
+            return Response(
+                {'detail': 'Для цього авто не налаштовано комплект ТО. Додайте комплект у картці авто.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Створюємо запис роботи для цього ТО
+        service_work = ServiceWork.objects.create(
+            service_order=order,
+            work=None,
+            description=f'ТО: {rule.name}',
+            hours_spent=1,
+        )
+
+        # Додаємо оливу
+        UsedPart.objects.create(
+            service_work=service_work,
+            part=kit.oil,
+            quantity=kit.oil_quantity,
+        )
+
+        # Додаємо фільтри
+        for kit_filter in kit.filters.all():
+            UsedPart.objects.create(
+                service_work=service_work,
+                part=kit_filter.part,
+                quantity=kit_filter.quantity,
+            )
+
+        # Логуємо виконання ТО
+        MaintenanceLog.objects.create(
+            truck=order.truck,
+            rule=rule,
+            date_performed=timezone.now().date(),
+            mileage=order.current_mileage,
+        )
+
+        # Оновлюємо загальну вартість наряду
+        order.update_total_cost()
+
+        return Response(
+            {'detail': f'Набір ТО "{rule.name}" застосовано до наряду'},
+            status=status.HTTP_201_CREATED
+        )
+
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     """ViewSet для роботи з виконаними роботами."""
