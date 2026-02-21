@@ -357,7 +357,7 @@ class MaintenanceKitViewSet(viewsets.ModelViewSet):
         return MaintenanceKit.objects.select_related(
             'truck', 'oil'
         ).prefetch_related(
-            'filters', 'filters__filter_type', 'filters__part'
+            'filters', 'filters__part'
         ).all()
 
     def get_serializer_class(self):
@@ -394,6 +394,6 @@ class MaintenanceKitFilterViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return MaintenanceKitFilter.objects.select_related(
-            'maintenance_kit', 'filter_type', 'part'
+            'maintenance_kit', 'part'
         ).all()
 

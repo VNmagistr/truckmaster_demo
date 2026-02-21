@@ -209,32 +209,6 @@ class MaintenanceLog(models.Model):
         verbose_name_plural = "Записи ТО"
 
 
-class FilterType(models.Model):
-    EURO_CHOICES = [
-        ('EURO3', 'Євро-3'),
-        ('EURO4', 'Євро-4'),
-        ('EURO5', 'Євро-5'),
-        ('EURO6', 'Євро-6'),
-    ]
-    
-    name = models.CharField(max_length=100, verbose_name="Назва")
-    euro_standard = models.CharField(
-        max_length=10, 
-        choices=EURO_CHOICES, 
-        blank=True,
-        verbose_name="Євростандарт"
-    )
-    replacement_interval_km = models.PositiveIntegerField(default=20000, verbose_name="Інтервал заміни (км)")
-    applicable_models = models.ManyToManyField(IvecoBaseModel, blank=True, verbose_name="Застосовні моделі")
-    
-    class Meta:
-        verbose_name = "Тип фільтра"
-        verbose_name_plural = "Типи фільтрів"
-    
-    def __str__(self): 
-        return self.name
-
-
 class MaintenanceKit(models.Model):
     truck = models.OneToOneField(
         Truck, 
@@ -267,14 +241,6 @@ class MaintenanceKitFilter(models.Model):
         related_name='filters',
         verbose_name="Комплект ТО"
     )
-    filter_type = models.ForeignKey(
-        FilterType,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        verbose_name="Тип фільтра"
-    )
-    # Використовуємо Product замість Part
     part = models.ForeignKey(
         'inventory.Product', 
         on_delete=models.PROTECT,

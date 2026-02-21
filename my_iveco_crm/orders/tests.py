@@ -10,7 +10,7 @@ from decimal import Decimal
 from .models import (
     WorkGroup, WorkPrice, ServiceOrder, ServiceWork,
     RepairPhoto, MaintenanceRule, MaintenanceLog,
-    FilterType, MaintenanceKit, MaintenanceKitFilter
+    MaintenanceKit, MaintenanceKitFilter
 )
 from clients.models import Client, IvecoBaseModel, Truck
 from inventory.models import Product, UsedPart
@@ -304,40 +304,6 @@ class MaintenanceRuleModelTest(TestCase):
         self.assertEqual(str(rule), 'Заміна оливи')
 
 
-class FilterTypeModelTest(TestCase):
-    """Tests for FilterType model"""
-
-    def test_create_filter_type(self):
-        """Test creating a filter type"""
-        filter_type = FilterType.objects.create(
-            name='Масляний фільтр',
-            euro_standard='EURO5',
-            replacement_interval_km=15000
-        )
-
-        self.assertEqual(filter_type.name, 'Масляний фільтр')
-        self.assertEqual(filter_type.euro_standard, 'EURO5')
-
-    def test_filter_type_str(self):
-        """Test string representation"""
-        filter_type = FilterType.objects.create(
-            name='Паливний фільтр',
-            euro_standard='EURO6',
-            replacement_interval_km=30000
-        )
-
-        self.assertEqual(str(filter_type), 'Паливний фільтр')
-
-    def test_filter_type_str_without_euro(self):
-        """Test string representation without euro standard"""
-        filter_type = FilterType.objects.create(
-            name='Повітряний фільтр',
-            replacement_interval_km=20000
-        )
-
-        self.assertEqual(str(filter_type), 'Повітряний фільтр')
-
-
 class MaintenanceKitModelTest(TestCase):
     """Tests for MaintenanceKit model - maintenance kit per vehicle"""
 
@@ -393,10 +359,6 @@ class MaintenanceKitFilterModelTest(TestCase):
             sku_code='FILTER-001',
             selling_price=Decimal('250.00')
         )
-        self.filter_type = FilterType.objects.create(
-            name='Масляний фільтр',
-            replacement_interval_km=15000
-        )
         self.kit = MaintenanceKit.objects.create(
             truck=self.truck,
             oil=self.oil,
@@ -407,20 +369,17 @@ class MaintenanceKitFilterModelTest(TestCase):
         """Test adding a filter to maintenance kit"""
         kit_filter = MaintenanceKitFilter.objects.create(
             maintenance_kit=self.kit,
-            filter_type=self.filter_type,
             part=self.filter_part,
             quantity=1
         )
 
         self.assertEqual(kit_filter.maintenance_kit, self.kit)
-        self.assertEqual(kit_filter.filter_type, self.filter_type)
         self.assertEqual(kit_filter.quantity, 1)
 
     def test_kit_filter_default_quantity(self):
         """Test default quantity is 1"""
         kit_filter = MaintenanceKitFilter.objects.create(
             maintenance_kit=self.kit,
-            filter_type=self.filter_type,
             part=self.filter_part,
         )
 

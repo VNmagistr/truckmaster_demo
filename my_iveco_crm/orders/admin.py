@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
-    MaintenanceKit, MaintenanceKitFilter, MaintenanceRule, 
-    MaintenanceLog, FilterType, RepairPhoto
+    MaintenanceKit, MaintenanceKitFilter, MaintenanceRule,
+    MaintenanceLog, RepairPhoto
 )
 
 
@@ -15,7 +15,7 @@ class ServiceWorkInline(admin.StackedInline):
 class MaintenanceKitFilterInline(admin.TabularInline):
     model = MaintenanceKitFilter
     extra = 1
-    autocomplete_fields = ['filter_type', 'part']
+    autocomplete_fields = ['part']
 
 
 @admin.register(WorkGroup)
@@ -40,7 +40,7 @@ class ServiceOrderAdmin(admin.ModelAdmin):
     autocomplete_fields = ['client', 'truck']
     inlines = [ServiceWorkInline]
     readonly_fields = ('total_cost', 'created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Основне', {
             'fields': ('order_number', 'client', 'truck', 'status')
@@ -91,17 +91,9 @@ class MaintenanceLogAdmin(admin.ModelAdmin):
     autocomplete_fields = ['truck', 'rule']
 
 
-@admin.register(FilterType)
-class FilterTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'euro_standard', 'replacement_interval_km')
-    list_filter = ('euro_standard',)
-    search_fields = ('name',)
-    filter_horizontal = ('applicable_models',)
-
-
 @admin.register(MaintenanceKit)
 class MaintenanceKitAdmin(admin.ModelAdmin):
-    list_display = ('truck', 'oil', 'oil_quantity')
+    list_display = ('truck', 'oil', 'oil_quantity', 'oil_change_interval_km')
     search_fields = ('truck__license_plate',)
     autocomplete_fields = ['truck', 'oil']
     inlines = [MaintenanceKitFilterInline]
@@ -109,5 +101,5 @@ class MaintenanceKitAdmin(admin.ModelAdmin):
 
 @admin.register(MaintenanceKitFilter)
 class MaintenanceKitFilterAdmin(admin.ModelAdmin):
-    list_display = ('maintenance_kit', 'filter_type', 'part', 'quantity')
-    autocomplete_fields = ['maintenance_kit', 'filter_type', 'part']
+    list_display = ('maintenance_kit', 'part', 'quantity', 'change_interval_km')
+    autocomplete_fields = ['maintenance_kit', 'part']
