@@ -243,10 +243,11 @@ class MaintenanceRuleSerializer(serializers.ModelSerializer):
 
 class MaintenanceLogSerializer(serializers.ModelSerializer):
     """Серіалізатор журналу ТО."""
-    
+    rule_name = serializers.CharField(source='rule.name', read_only=True)
+
     class Meta:
         model = MaintenanceLog
-        fields = '__all__'
+        fields = ['id', 'truck', 'rule', 'rule_name', 'date_performed', 'mileage']
 
 
 class MaintenanceKitFilterSerializer(serializers.ModelSerializer):

@@ -128,20 +128,12 @@ class Truck(models.Model):
     def get_latest_mileage(self):
         """Отримує останній зафіксований пробіг"""
         from orders.models import ServiceOrder
-        from maintenance.models import FluidChangeRecord
-        
+
         order_mileage = ServiceOrder.objects.filter(
             truck=self
         ).aggregate(Max('current_mileage'))['current_mileage__max']
 
-        fluid_mileage = FluidChangeRecord.objects.filter(
-            truck=self
-        ).aggregate(Max('mileage'))['mileage__max']
-        
-        return max(
-            order_mileage or 0,
-            fluid_mileage or 0
-        )
+        return order_mileage or 0
 
 # --- МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
 class OwnershipHistory(models.Model):
