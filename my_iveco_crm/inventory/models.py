@@ -14,7 +14,6 @@ class Category(models.Model):
         verbose_name = 'Категорія'
         verbose_name_plural = 'Категорії'
         ordering = ['sort_order', 'name']
-        db_table = 'inventory_productcategory'
 
     def __str__(self):
         return self.name
@@ -30,14 +29,7 @@ class SubCategory(models.Model):
     )
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug')
-    description = models.TextField('Опис', blank=True, default='')
     is_active = models.BooleanField('Активна', default=True)
-    sort_order = models.IntegerField('Порядок сортування', default=0)
-    default_change_interval_km = models.PositiveIntegerField(
-        'Інтервал заміни (км)',
-        null=True,
-        blank=True
-    )
 
     class Meta:
         verbose_name = 'Підкатегорія'
@@ -67,7 +59,6 @@ class Warehouse(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Тільки один склад може бути за замовчуванням
         if self.is_default:
             Warehouse.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
@@ -104,14 +95,12 @@ class Product(models.Model):
     is_active = models.BooleanField('Активний', default=True)
     created_at = models.DateTimeField('Створено', auto_now_add=True)
 
-    # Додаткові поля для олив
     viscosity = models.CharField('В\'язкість', max_length=20, blank=True)
     volume_per_unit = models.DecimalField('Об\'єм в упаковці', max_digits=10, decimal_places=2, null=True, blank=True)
     specifications = models.TextField('Специфікації', blank=True)
     notes = models.TextField('Примітки', blank=True)
     address_in_stock = models.CharField('Адреса на складі', max_length=100, blank=True)
 
-    # Поля для м'якого видалення
     marked_for_deletion = models.BooleanField('Позначено на видалення', default=False)
     deletion_reason = models.TextField('Причина видалення', blank=True)
     marked_for_deletion_by = models.ForeignKey(
@@ -139,7 +128,6 @@ class Product(models.Model):
 
     @property
     def is_low_stock(self):
-        """Чи низький залишок"""
         return self.current_stock <= self.min_stock_level
 
 
@@ -172,7 +160,6 @@ class StockItem(models.Model):
 
     @property
     def available(self):
-        """Доступна кількість (без резерву)"""
         return self.quantity - self.reserved
 
 
@@ -219,8 +206,6 @@ class StockMovement(models.Model):
         related_name='stock_movements',
         verbose_name='Створив'
     )
-
-    # Додаткові поля
     service_order = models.ForeignKey(
         'orders.ServiceOrder',
         on_delete=models.SET_NULL,
@@ -285,51 +270,12 @@ class UsedPart(models.Model):
         return f"{self.part.name} x {self.quantity}"
 
     def save(self, *args, **kwargs):
-        # Автоматично заповнюємо ціну з товару
         if self.unit_price is None and self.part:
             self.unit_price = self.part.selling_price
         super().save(*args, **kwargs)
 
     @property
     def total_price(self):
-        """Загальна вартість"""
         if self.unit_price:
             return self.quantity * self.unit_price
         return self.quantity * (self.part.selling_price or 0)
-
-
-# Proxy model для сумісності зі старим кодом
-# Django зможе знайти inventory.Part як окрему модель
-class Part(Product):
-    """
-    Proxy модель для сумісності.
-    Part є синонімом Product для старого коду та міграцій.
-    """
-    class Meta:
-        proxy = True
-        verbose_name = 'Запчастина'
-        verbose_name_plural = 'Запчастини'
-
-
-class PartCategory(models.Model):
-    """Стара модель категорій - для сумісності з міграціями"""
-    name = models.CharField('Назва', max_length=100)
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='subcategories',
-        verbose_name='Батьківська категорія'
-    )
-    description = models.TextField('Опис', blank=True)
-
-    class Meta:
-        verbose_name = 'Категорія запчастин (стара)'
-        verbose_name_plural = 'Категорії запчастин (старі)'
-        ordering = ['name']
-
-    def __str__(self):
-        if self.parent:
-            return f"{self.parent.name} -> {self.name}"
-        return self.name

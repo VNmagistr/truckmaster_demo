@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart, PartCategory, Part
+from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
 
 
 @admin.register(Category)
@@ -33,7 +33,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'sku_code', 'brand', 'notes')
     list_editable = ('selling_price', 'current_stock', 'is_active')
     autocomplete_fields = ['subcategory']
-    
+
     fieldsets = (
         ('Основне', {
             'fields': ('name', 'sku_code', 'brand', 'subcategory')
@@ -55,12 +55,6 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
 
-# Part є alias для Product, тому реєструємо той самий admin
-# Це потрібно для autocomplete_fields в інших застосунках (orders)
-# Але Django не дозволяє реєструвати одну модель двічі,
-# тому використовуємо proxy model якщо потрібно
-
-
 @admin.register(StockItem)
 class StockItemAdmin(admin.ModelAdmin):
     list_display = ('product', 'warehouse', 'quantity', 'reserved', 'location', 'updated_at')
@@ -78,7 +72,7 @@ class StockMovementAdmin(admin.ModelAdmin):
     autocomplete_fields = ['product', 'warehouse_from', 'warehouse_to']
     readonly_fields = ('created_at', 'created_by')
     date_hierarchy = 'created_at'
-    
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.created_by = request.user
@@ -90,21 +84,3 @@ class UsedPartAdmin(admin.ModelAdmin):
     list_display = ('part', 'quantity', 'warehouse', 'unit_price')
     search_fields = ('part__name', 'part__sku_code')
     autocomplete_fields = ['part', 'warehouse']
-
-
-# Реєструємо Part proxy model для autocomplete в інших застосунках
-@admin.register(Part)
-class PartAdmin(admin.ModelAdmin):
-    """
-    Admin для Part (proxy model).
-    Потрібен для autocomplete_fields в orders та інших застосунках.
-    """
-    list_display = ('name', 'sku_code', 'brand', 'selling_price', 'current_stock')
-    search_fields = ('name', 'sku_code', 'brand')
-    list_filter = ('subcategory__category', 'is_active')
-
-
-@admin.register(PartCategory)
-class PartCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'parent')
-    search_fields = ('name',)
