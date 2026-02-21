@@ -150,11 +150,7 @@ class FluidChangeRecord(models.Model):
         
         is_new = self.pk is None
         
-        # 1. Розрахунок наступної заміни за пробігом
-        if self.mileage and not self.next_change_mileage:
-            if self.subcategory and self.subcategory.default_change_interval_km:
-                interval_km = self.subcategory.default_change_interval_km
-                self.next_change_mileage = self.mileage + interval_km
+        # 1. Розрахунок наступної заміни за пробігом (інтервал задається вручну)
         
         # 2. Розрахунок наступної заміни за датою
         if not self.next_change_date:
