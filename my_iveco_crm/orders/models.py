@@ -249,6 +249,11 @@ class MaintenanceKit(models.Model):
         verbose_name="Олива"
     )
     oil_quantity = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Кількість оливи")
+    oil_change_interval_km = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Інтервал заміни оливи (км)",
+        help_text="Наприклад: 20000"
+    )
 
     class Meta:
         verbose_name = "Комплект ТО"
@@ -276,6 +281,11 @@ class MaintenanceKitFilter(models.Model):
         verbose_name="Запчастина"
     )
     quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+    change_interval_km = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Інтервал заміни (км)",
+        help_text="Наприклад: 20000"
+    )
 
     class Meta:
         verbose_name = "Фільтр комплекту ТО"

@@ -257,7 +257,7 @@ class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceKitFilter
-        fields = ['id', 'maintenance_kit', 'filter_type', 'filter_type_name', 'part', 'part_name', 'part_sku', 'quantity']
+        fields = ['id', 'maintenance_kit', 'filter_type', 'filter_type_name', 'part', 'part_name', 'part_sku', 'quantity', 'change_interval_km']
 
 
 class MaintenanceKitSerializer(serializers.ModelSerializer):
@@ -269,7 +269,7 @@ class MaintenanceKitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceKit
-        fields = ['id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'filters']
+        fields = ['id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'oil_change_interval_km', 'filters']
 
 
 class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
@@ -277,4 +277,4 @@ class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceKit
-        fields = ['id', 'truck', 'oil', 'oil_quantity']
+        fields = ['id', 'truck', 'oil', 'oil_quantity', 'oil_change_interval_km']
