@@ -4,14 +4,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     ServiceTypeViewSet,
-    FluidChangeRecordViewSet,
     ServiceReminderViewSet,
-    CheckRegulationsView
+    CheckRegulationsView,
 )
 
 router = DefaultRouter()
 router.register(r'service-types', ServiceTypeViewSet, basename='service-type')
-router.register(r'fluid-changes', FluidChangeRecordViewSet, basename='fluid-change')
 router.register(r'reminders', ServiceReminderViewSet, basename='reminder')
 
 urlpatterns = [

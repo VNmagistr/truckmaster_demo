@@ -1,25 +1,21 @@
 # maintenance/views.py
 
-from datetime import timedelta
-
 from rest_framework import viewsets, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
 
 # Імпорти моделей з поточної програми
-from .models import FluidChangeRecord, ServiceReminder, ServiceType
+from .models import ServiceReminder, ServiceType
 # Імпорти моделей з інших програм (для аналізу)
 from clients.models import Truck
 from orders.models import MaintenanceRule, MaintenanceLog  # Ті самі правила, що ми створили раніше
 
 from .serializers import (
-    FluidChangeRecordSerializer,
     ServiceReminderSerializer,
-    ServiceTypeSerializer
+    ServiceTypeSerializer,
 )
 
 
@@ -30,43 +26,6 @@ class ServiceTypeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     ordering_fields = ['sort_order', 'name']
     ordering = ['sort_order', 'name']
-
-
-class FluidChangeRecordViewSet(viewsets.ModelViewSet):
-    """API для історії замін рідин"""
-    queryset = FluidChangeRecord.objects.select_related(
-        'truck', 'subcategory', 'product', 'service_order', 'created_by'
-    ).all()
-    serializer_class = FluidChangeRecordSerializer
-    permission_classes = [IsAuthenticated]
-    
-    filterset_fields = ['truck', 'subcategory', 'product']
-    search_fields = ['truck__license_plate', 'notes']
-    ordering_fields = ['performed_at', 'mileage', 'created_at']
-    ordering = ['-performed_at']
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-    
-    @action(detail=False, methods=['get'])
-    def by_truck(self, request):
-        truck_id = request.query_params.get('truck_id')
-        if not truck_id:
-            return Response({'error': 'truck_id is required'}, status=400)
-        records = self.queryset.filter(truck_id=truck_id)
-        serializer = self.get_serializer(records, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def upcoming_changes(self, request):
-        today = timezone.now().date()
-        upcoming_date = today + timedelta(days=30)
-        records = self.queryset.filter(
-            Q(next_change_date__lte=upcoming_date, next_change_date__gte=today) |
-            Q(next_change_date__isnull=True, next_change_mileage__isnull=False)
-        ).order_by('next_change_date', 'next_change_mileage')
-        serializer = self.get_serializer(records, many=True)
-        return Response(serializer.data)
 
 
 class ServiceReminderViewSet(viewsets.ModelViewSet):

@@ -342,9 +342,11 @@ class MaintenanceRuleViewSet(viewsets.ModelViewSet):
 
 class MaintenanceLogViewSet(viewsets.ModelViewSet):
     """ViewSet для журналу ТО."""
-    queryset = MaintenanceLog.objects.select_related('truck', 'rule').all()
+    queryset = MaintenanceLog.objects.select_related('truck', 'rule').order_by('-date_performed')
     serializer_class = MaintenanceLogSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['truck']
 
 
 class MaintenanceKitViewSet(viewsets.ModelViewSet):
