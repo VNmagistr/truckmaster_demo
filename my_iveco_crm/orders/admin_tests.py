@@ -13,7 +13,7 @@ from orders.models import (
 from orders.admin import ServiceOrderAdmin
 from clients.models import Client, IvecoBaseModel, Truck
 from clients.admin import TruckAdmin
-from inventory.models import Part, UsedPart
+from inventory.models import Product, UsedPart
 
 
 class ServiceOrderAdminTest(TestCase):
@@ -79,7 +79,7 @@ class ServiceOrderAdminTest(TestCase):
             hours_spent=Decimal('1.0')
         )
         
-        part = Part.objects.create(
+        part = Product.objects.create(
             name='Oil Filter',
             sku_code='OIL-001',
             selling_price=Decimal('200.00')
@@ -106,7 +106,7 @@ class ServiceOrderAdminTest(TestCase):
             hours_spent=Decimal('1.0')
         )
         
-        oil = Part.objects.create(
+        oil = Product.objects.create(
             name='Моторна олива 10W-40',
             sku_code='OIL-10W40',
             selling_price=Decimal('800.00')
@@ -132,7 +132,7 @@ class ServiceOrderAdminTest(TestCase):
             hours_spent=Decimal('1.0')
         )
         
-        oil_filter = Part.objects.create(
+        oil_filter = Product.objects.create(
             name='Фільтр оливи',
             sku_code='FILTER-OIL-001',
             selling_price=Decimal('250.00')
