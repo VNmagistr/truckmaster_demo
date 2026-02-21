@@ -31,6 +31,7 @@ class SubCategory(models.Model):
     slug = models.SlugField('Slug')
     description = models.TextField('Опис', blank=True, default='')
     is_active = models.BooleanField('Активна', default=True)
+    sort_order = models.IntegerField('Порядок сортування', default=0)
     default_change_interval_km = models.PositiveIntegerField(
         'Інтервал заміни (км)',
         null=True,
