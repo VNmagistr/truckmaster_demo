@@ -194,26 +194,28 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
     truck = TruckSerializerForOrder(read_only=True)
     works = ServiceWorkSerializer(many=True, read_only=True)
     photos = RepairPhotoSerializer(many=True, read_only=True)
+    direct_parts = UsedPartSerializer(many=True, read_only=True)
     marked_for_deletion_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 
-            'order_number', 
-            'client', 
-            'truck', 
+            'id',
+            'order_number',
+            'client',
+            'truck',
             'problem_description',
-            'recommendations', 
+            'recommendations',
             'current_mileage',
-            'status', 
-            'created_at', 
+            'status',
+            'created_at',
             'updated_at',
             'total_cost',
             'car_photo',
             'odometer_photo',
             'dashboard_photo',
-            'works', 
+            'works',
+            'direct_parts',
             'photos',
             'marked_for_deletion',
             'marked_for_deletion_by',

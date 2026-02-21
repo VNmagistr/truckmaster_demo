@@ -68,8 +68,9 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         
         if self.action == 'retrieve':
             queryset = queryset.prefetch_related(
-                'works', 'works__work', 'works__mechanic', 
-                'works__used_parts', 'works__used_parts__part', 'photos'
+                'works', 'works__work', 'works__mechanic',
+                'works__used_parts', 'works__used_parts__part', 'photos',
+                'direct_parts', 'direct_parts__part',
             )
             return queryset
             
@@ -188,25 +189,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Створюємо запис роботи для цього ТО
-        service_work = ServiceWork.objects.create(
-            service_order=order,
-            work=None,
-            description=f'ТО: {rule.name}',
-            hours_spent=1,
-        )
-
-        # Додаємо оливу
+        # Додаємо запчастини напряму до наряду (без створення порожньої роботи)
         UsedPart.objects.create(
-            service_work=service_work,
+            service_order=order,
             part=kit.oil,
             quantity=kit.oil_quantity,
         )
 
-        # Додаємо фільтри
         for kit_filter in kit.filters.all():
             UsedPart.objects.create(
-                service_work=service_work,
+                service_order=order,
                 part=kit_filter.part,
                 quantity=kit_filter.quantity,
             )
