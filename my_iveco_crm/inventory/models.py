@@ -14,6 +14,7 @@ class Category(models.Model):
         verbose_name = 'Категорія'
         verbose_name_plural = 'Категорії'
         ordering = ['sort_order', 'name']
+        db_table = 'inventory_productcategory'
 
     def __str__(self):
         return self.name
