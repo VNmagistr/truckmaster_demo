@@ -15,6 +15,7 @@ class SubCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'slug', 'is_active')
     list_filter = ('category', 'is_active')
     search_fields = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['category']
 
 
