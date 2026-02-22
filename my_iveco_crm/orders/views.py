@@ -189,16 +189,24 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Додаємо запчастини напряму до наряду (без створення порожньої роботи)
-        UsedPart.objects.create(
+        # Створюємо роботу для ТО
+        service_work = ServiceWork.objects.create(
             service_order=order,
+            description=rule.name,
+            hours_spent=0,
+            price_at_moment=0,
+        )
+
+        # Додаємо запчастини до роботи (не напряму до наряду)
+        UsedPart.objects.create(
+            service_work=service_work,
             part=kit.oil,
             quantity=kit.oil_quantity,
         )
 
         for kit_filter in kit.filters.all():
             UsedPart.objects.create(
-                service_order=order,
+                service_work=service_work,
                 part=kit_filter.part,
                 quantity=kit_filter.quantity,
             )
