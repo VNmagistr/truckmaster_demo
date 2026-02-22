@@ -31,6 +31,9 @@ class SubCategory(models.Model):
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug')
     is_active = models.BooleanField('Активна', default=True)
+    default_change_interval_km = models.PositiveIntegerField(
+        'Інтервал заміни (км)', null=True, blank=True
+    )
 
     class Meta:
         verbose_name = 'Підкатегорія'
