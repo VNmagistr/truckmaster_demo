@@ -189,6 +189,17 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Очищаємо старі direct_parts цього наряду від запчастин набору ТО
+        kit_part_ids = [kit.oil_id] + list(kit.filters.values_list('part_id', flat=True))
+        UsedPart.objects.filter(
+            service_order=order,
+            service_work__isnull=True,
+            part_id__in=kit_part_ids,
+        ).delete()
+
+        # Видаляємо попередньо застосований набір (якщо є), щоб уникнути дублювання
+        ServiceWork.objects.filter(service_order=order, description=rule.name).delete()
+
         # Створюємо роботу для ТО
         service_work = ServiceWork.objects.create(
             service_order=order,
