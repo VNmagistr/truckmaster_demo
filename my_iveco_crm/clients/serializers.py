@@ -11,10 +11,14 @@ class IvecoBaseModelSerializer(serializers.ModelSerializer):
         model = IvecoBaseModel
         fields = '__all__'
 
+class ClientBriefSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ['id', 'name']
+
 # Цей серіалізатор будемо використовувати для списків (GET)
 class TruckListSerializer(serializers.ModelSerializer):
-    client = serializers.StringRelatedField()
-    client_name = serializers.CharField(source='client.name', read_only=True)
+    client = ClientBriefSerializer(read_only=True)
     base_model = serializers.StringRelatedField()
 
     class Meta:
@@ -25,7 +29,6 @@ class TruckListSerializer(serializers.ModelSerializer):
             'license_plate',
             'client',
             'client_id',
-            'client_name',
             'base_model',
             'last_seven_vin',
             'marked_for_deletion',
