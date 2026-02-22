@@ -36,8 +36,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Папка не знайдена: {folder_path}'))
             return
 
-        # Знаходимо всі .fp3 файли
-        fp3_files = list(Path(folder_path).glob('*.fp3'))
+        # Знаходимо всі .fp3 файли (враховуємо обидва регістри розширення)
+        fp3_files = list(Path(folder_path).glob('*.fp3')) + list(Path(folder_path).glob('*.FP3'))
         
         if not fp3_files:
             self.stdout.write(self.style.WARNING('Не знайдено .fp3 файлів у папці'))
@@ -69,9 +69,10 @@ class Command(BaseCommand):
                             'plate': data.get('plate', 'Н/Д'),
                             'chassis': data.get('chassis', 'Н/Д'),
                             'mileage': data.get('mileage', 'Н/Д'),
-                            'date': data.get('date', 'Н/Д'),
+                            # Баг 4: використовуємо дані з імені файлу як fallback
+                            'date': data.get('date') or file_info.get('date') or 'Н/Д',
                             'model': data.get('model', 'Н/Д'),
-                            'invoice': data.get('invoice', 'Н/Д'),
+                            'invoice': data.get('invoice') or file_info.get('invoice') or 'Н/Д',
                             'oil_change': oil_change,
                             'works': data.get('works', []),
                             'parts': data.get('parts', [])
@@ -106,8 +107,9 @@ class Command(BaseCommand):
         if 'М1' in filename or 'M1' in filename:
             info['has_m1'] = True
         
-        # Шукаємо цифри номера (4 цифри підряд)
-        plate_match = re.search(r'(\d{4})', filename)
+        # Баг 1: шукаємо 4 цифри безпосередньо перед датою (6 цифр наприкінці)
+        # Приклад: 12484_..._9744_250923.fp3 → знайде 9744, а не 1248
+        plate_match = re.search(r'_(\d{4})_\d{6}\.fp3$', filename, re.IGNORECASE)
         if plate_match:
             info['plate_digits'] = plate_match.group(1)
         
@@ -131,8 +133,18 @@ class Command(BaseCommand):
     def parse_fp3_file(self, file_path):
         """Парсить XML файл .fp3"""
         try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
+            # Баг 5: файли можуть бути в cp1251 (Windows-1251) або utf-8
+            raw = file_path.read_bytes()
+            for encoding in ('utf-8', 'cp1251', 'utf-8-sig'):
+                try:
+                    content = raw.decode(encoding)
+                    root = ET.fromstring(content)
+                    break
+                except (UnicodeDecodeError, ET.ParseError):
+                    continue
+            else:
+                self.stdout.write(self.style.ERROR(f'Не вдалося визначити кодування: {file_path.name}'))
+                return None
             
             data = {
                 'plate': None,
@@ -149,7 +161,10 @@ class Command(BaseCommand):
             page0 = root.find('.//page0')
             if not page0:
                 return None
-            
+
+            # Баг 2: будуємо parent_map один раз, щоб уникнути O(n²) пошуку
+            parent_map = {child: parent for parent in page0.iter() for child in parent}
+
             # Витягуємо дані з елементів
             for elem in page0.iter():
                 if 'u' in elem.attrib:
@@ -161,8 +176,8 @@ class Command(BaseCommand):
                         if invoice_match:
                             data['invoice'] = invoice_match.group(1)
                     
-                    # Дата
-                    if 'від' in text and 'р.' in text:
+                    # Баг 3: дата — беремо тільки перший збіг, щоб не перезаписувати
+                    if not data['date'] and 'від' in text and 'р.' in text:
                         data['date'] = text.replace('від ', '').replace(' р.', '')
                     
                     # Модель
@@ -194,14 +209,10 @@ class Command(BaseCommand):
                     if elem.tag == 'm1':
                         # Це назва роботи/запчастини
                         item_name = text
-                        
-                        # Шукаємо кількість та одиницю виміру
-                        parent = None
-                        for p in page0.iter():
-                            if elem in list(p):
-                                parent = p
-                                break
-                        
+
+                        # Баг 2: використовуємо готовий parent_map замість O(n²) циклу
+                        parent = parent_map.get(elem)
+
                         if parent:
                             unit = None
                             qty = None
@@ -293,7 +304,9 @@ class Command(BaseCommand):
             
             if result['parts']:
                 self.stdout.write(f'\n🛠 Запчастини:')
-                for part in result['parts'][:5]:  # Показуємо перші 5
+                for part in result['parts'][:5]:
                     self.stdout.write(f"   - {part['name']} ({part['quantity']} {part['unit']})")
+                if len(result['parts']) > 5:
+                    self.stdout.write(f"   ... і ще {len(result['parts']) - 5} позицій")
         
         self.stdout.write(self.style.SUCCESS(f'\n{"="*80}\n'))
