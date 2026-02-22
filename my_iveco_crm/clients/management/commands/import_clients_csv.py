@@ -15,38 +15,48 @@ from clients.models import Client
 
 def clean_phone(raw):
     """
-    Витягує перший придатний номер телефону з рядка.
+    Витягує перший придатний номер телефону з рядка і нормалізує його.
+
+    Правила:
+      +380XXXXXXXXX  → залишаємо як є
+      380XXXXXXXXX   → додаємо +
+      0XXXXXXXXX     → додаємо +38
+      80XXXXXXXXX    → додаємо +3
+      решта          → пропускаємо
+
     Приклади вхідних даних:
       'тел.(0332)786558, 80506271072'
       '+380954968071'
       '0673696268'
+      '80506271072'
     """
     if not raw:
         return None
 
-    # Видаляємо все крім цифр, +, (, )
+    # Розбиваємо по роздільниках (кома, крапка з комою, пробіл тощо)
     parts = re.split(r'[,;/\s]+', raw.strip())
 
     for part in parts:
+        # Залишаємо тільки цифри та +
         digits = re.sub(r'[^\d+]', '', part)
         if not digits:
             continue
 
-        # Нормалізуємо до +38XXXXXXXXXX
-        if digits.startswith('380') and len(digits) >= 12:
-            return '+' + digits[:12]
-        if digits.startswith('+380') and len(digits) >= 13:
-            return digits[:13]
-        if digits.startswith('80') and len(digits) >= 11:
-            return '+3' + digits[:11]
-        if digits.startswith('0') and len(digits) >= 10:
-            return '+38' + digits[:10]
-        # Короткий формат (0332)786558 → 0332786558
-        if len(digits) >= 7:
-            if not digits.startswith('0') and not digits.startswith('+'):
-                digits = '0' + digits
-            if digits.startswith('0') and len(digits) >= 10:
-                return '+38' + digits[:10]
+        # +380XXXXXXXXX — вже правильний формат
+        if digits.startswith('+380') and len(digits) == 13:
+            return digits
+
+        # 380XXXXXXXXX → +380XXXXXXXXX
+        if digits.startswith('380') and len(digits) == 12:
+            return '+' + digits
+
+        # 0XXXXXXXXX → +380XXXXXXXXX
+        if digits.startswith('0') and len(digits) == 10:
+            return '+38' + digits
+
+        # 80XXXXXXXXX → +380XXXXXXXXX
+        if digits.startswith('8') and len(digits) == 11:
+            return '+3' + digits
 
     return None
 
