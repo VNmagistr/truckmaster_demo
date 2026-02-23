@@ -254,7 +254,7 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
 
 class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
     """Серіалізатор фільтра в комплекті ТО."""
-    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_name = serializers.SerializerMethodField()
     part_sku = serializers.CharField(source='part.sku_code', read_only=True)
     part_display = serializers.SerializerMethodField()
 
@@ -262,15 +262,21 @@ class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
         model = MaintenanceKitFilter
         fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'part_display', 'quantity', 'change_interval_km']
 
+    def get_part_name(self, obj):
+        return str(obj.part) if obj.part else None
+
     def get_part_display(self, obj):
-        return f'[{obj.part.sku_code}] {obj.part.name}'
+        return str(obj.part) if obj.part else None
 
 
 class MaintenanceKitSerializer(serializers.ModelSerializer):
     """Серіалізатор комплекту ТО — повний (для читання)."""
     filters = MaintenanceKitFilterSerializer(many=True, read_only=True)
-    oil_name = serializers.CharField(source='oil.name', read_only=True)
+    oil_name = serializers.SerializerMethodField()
     oil_sku = serializers.CharField(source='oil.sku_code', read_only=True)
+
+    def get_oil_name(self, obj):
+        return str(obj.oil) if obj.oil else None
     truck_display = serializers.CharField(source='truck.__str__', read_only=True)
 
     class Meta:
