@@ -1,4 +1,5 @@
 from rest_framework import viewsets, filters, status
+from django.db.models import Q
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -51,13 +52,10 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related('subcategory', 'subcategory__category').all()
 
     # Фільтри та пошук
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
 
     # Поля фільтрації (точний збіг)
     filterset_fields = ['subcategory', 'subcategory__category', 'subcategory__category__category_type', 'is_active', 'brand']
-
-    # Поля пошуку (частковий збіг)
-    search_fields = ['name', 'sku_code', 'brand', 'notes']
 
     ordering_fields = ['name', 'current_stock', 'selling_price', 'created_at']
     ordering = ['-created_at']
@@ -81,6 +79,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
         if not show_deleted:
             queryset = queryset.filter(marked_for_deletion=False)
+
+        # Пошук: по закінченню артикулу АБО по назві
+        q = self.request.query_params.get('search', '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(sku_code__iendswith=q) | Q(name__icontains=q)
+            )
 
         return queryset
 
