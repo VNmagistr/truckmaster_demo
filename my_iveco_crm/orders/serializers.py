@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    TruckMaintenanceIntervals,
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
@@ -283,3 +284,18 @@ class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceKit
         fields = ['id', 'truck', 'oil', 'oil_quantity', 'oil_change_interval_km']
+
+
+class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
+    """Серіалізатор інтервалів ТО — для читання та редагування."""
+
+    class Meta:
+        model = TruckMaintenanceIntervals
+        fields = [
+            'id', 'truck',
+            'engine_oil_interval', 'engine_oil_last_km',
+            'gearbox_oil_interval', 'gearbox_oil_last_km',
+            'rear_axle_oil_interval', 'rear_axle_oil_last_km',
+            'belts_interval', 'belts_last_km',
+            'chains_interval', 'chains_last_km',
+        ]
