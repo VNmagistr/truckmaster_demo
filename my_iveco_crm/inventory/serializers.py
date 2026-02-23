@@ -207,6 +207,7 @@ class UsedPartSerializer(serializers.ModelSerializer):
     """Серіалізатор використаних запчастин"""
     part_name = serializers.CharField(source='part.name', read_only=True)
     part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    part_brand = serializers.CharField(source='part.brand', read_only=True)
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
     total_price = serializers.ReadOnlyField()
 
@@ -219,6 +220,7 @@ class UsedPartSerializer(serializers.ModelSerializer):
             'part',
             'part_name',
             'part_sku',
+            'part_brand',
             'quantity',
             'warehouse',
             'warehouse_name',

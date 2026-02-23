@@ -88,20 +88,13 @@ class WorkPriceSerializer(serializers.ModelSerializer):
 
 class UsedPartSerializer(serializers.ModelSerializer):
     """Серіалізатор використаної запчастини."""
-    part_name = serializers.SerializerMethodField()
-    
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    part_brand = serializers.CharField(source='part.brand', read_only=True)
+
     class Meta:
         model = UsedPart
         fields = '__all__'
-    
-    def get_part_name(self, obj):
-        """Безпечне отримання назви запчастини."""
-        try:
-            if obj.part:
-                return str(obj.part)
-        except Exception:
-            pass
-        return None
 
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
