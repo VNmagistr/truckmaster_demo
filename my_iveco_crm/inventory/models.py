@@ -136,7 +136,7 @@ class Product(models.Model):
             parts.insert(0, self.brand)
         if self.viscosity:
             parts.append(self.viscosity)
-        return ' '.join(parts)
+        return f'[{self.sku_code}] {" ".join(parts)}'
 
     @property
     def is_low_stock(self):
