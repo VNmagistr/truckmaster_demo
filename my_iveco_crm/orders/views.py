@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    TruckMaintenanceIntervals,
 )
 from clients.models import Truck
 from inventory.models import UsedPart
@@ -29,7 +30,8 @@ from .serializers import (
     MaintenanceKitSerializer,
     MaintenanceKitWriteSerializer,
     MaintenanceKitFilterSerializer,
-    UsedPartSerializer
+    UsedPartSerializer,
+    TruckMaintenanceIntervalsSerializer,
 )
 
 
@@ -238,6 +240,48 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED
         )
 
+    @action(detail=True, methods=['get'], url_path='maintenance-countdown')
+    def maintenance_countdown(self, request, pk=None):
+        """Повертає відлік регламентних робіт для замовлення."""
+        order = self.get_object()
+        current_km = order.current_mileage
+
+        try:
+            intervals = order.truck.maintenance_intervals
+        except TruckMaintenanceIntervals.DoesNotExist:
+            intervals = None
+
+        TYPES = [
+            ('engine_oil',    'До заміни оливи в двигуні'),
+            ('gearbox_oil',   'До заміни оливи в КПП/АКПП'),
+            ('rear_axle_oil', 'До заміни оливи в задньому мості'),
+            ('belts',         'До заміни ремнів/роликів'),
+            ('chains',        'До заміни ланцюгів'),
+        ]
+
+        result = []
+        for key, label in TYPES:
+            interval = getattr(intervals, f'{key}_interval', None) if intervals else None
+            last_km  = getattr(intervals, f'{key}_last_km', None) if intervals else None
+
+            if interval is not None and last_km is not None and current_km is not None:
+                remaining = last_km + interval - current_km
+            else:
+                remaining = None
+
+            result.append({
+                'key': key,
+                'label': label,
+                'interval': interval,
+                'last_km': last_km,
+                'remaining': remaining,
+            })
+
+        return Response({
+            'current_km': current_km,
+            'items': result,
+        })
+
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
     """ViewSet для роботи з виконаними роботами."""
@@ -409,4 +453,15 @@ class MaintenanceKitFilterViewSet(viewsets.ModelViewSet):
         return MaintenanceKitFilter.objects.select_related(
             'maintenance_kit', 'part'
         ).all()
+
+
+class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
+    """ViewSet для інтервалів ТО."""
+    serializer_class = TruckMaintenanceIntervalsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['truck']
+
+    def get_queryset(self):
+        return TruckMaintenanceIntervals.objects.select_related('truck').all()
 
