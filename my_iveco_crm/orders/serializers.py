@@ -256,10 +256,14 @@ class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
     """Серіалізатор фільтра в комплекті ТО."""
     part_name = serializers.CharField(source='part.name', read_only=True)
     part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    part_display = serializers.SerializerMethodField()
 
     class Meta:
         model = MaintenanceKitFilter
-        fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'quantity', 'change_interval_km']
+        fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'part_display', 'quantity', 'change_interval_km']
+
+    def get_part_display(self, obj):
+        return f'[{obj.part.sku_code}] {obj.part.name}'
 
 
 class MaintenanceKitSerializer(serializers.ModelSerializer):
