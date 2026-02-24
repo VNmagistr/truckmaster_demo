@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql="""
+                DROP SEQUENCE IF EXISTS orders_truckmaintenanceintervals_id_seq CASCADE;
                 CREATE TABLE IF NOT EXISTS "orders_truckmaintenanceintervals" (
                     "id" bigserial NOT NULL PRIMARY KEY,
                     "engine_oil_interval" integer NULL CHECK ("engine_oil_interval" >= 0),
