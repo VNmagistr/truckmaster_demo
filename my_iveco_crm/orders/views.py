@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
@@ -136,6 +137,22 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'canceled_orders': queryset.filter(status='CANCELED').count(),
         }
         return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Підсумок кількості замовлень за день, тиждень, місяць та рік."""
+        today = timezone.now().date()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+        start_of_month = today.replace(day=1)
+        start_of_year = today.replace(month=1, day=1)
+
+        qs = ServiceOrder.objects.filter(marked_for_deletion=False)
+        return Response({
+            'today': qs.filter(created_at__date=today).count(),
+            'week': qs.filter(created_at__date__gte=start_of_week).count(),
+            'month': qs.filter(created_at__date__gte=start_of_month).count(),
+            'year': qs.filter(created_at__date__gte=start_of_year).count(),
+        })
 
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
