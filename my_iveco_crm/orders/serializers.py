@@ -135,7 +135,8 @@ class RepairPhotoSerializer(serializers.ModelSerializer):
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     """Серіалізатор замовлення для запису."""
-    
+    created_at = serializers.DateTimeField(required=False)
+
     class Meta:
         model = ServiceOrder
         fields = '__all__'
