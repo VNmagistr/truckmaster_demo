@@ -185,6 +185,35 @@ class RepairPhoto(models.Model):
         verbose_name_plural = "Фото ремонтів"
 
 
+class OrderStatusHistory(models.Model):
+    """Хронологія змін статусу замовлення."""
+    order = models.ForeignKey(
+        ServiceOrder,
+        on_delete=models.CASCADE,
+        related_name='status_history',
+        verbose_name="Замовлення"
+    )
+    from_status = models.CharField(max_length=20, blank=True, verbose_name="З статусу")
+    to_status = models.CharField(max_length=20, verbose_name="На статус")
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Хто змінив"
+    )
+    changed_at = models.DateTimeField(auto_now_add=True, verbose_name="Час зміни")
+    comment = models.TextField(blank=True, verbose_name="Коментар")
+
+    class Meta:
+        verbose_name = "Зміна статусу"
+        verbose_name_plural = "Зміни статусу"
+        ordering = ['changed_at']
+
+    def __str__(self):
+        from_label = self.from_status or '—'
+        return f"{self.order} | {from_label} → {self.to_status}"
+
+
 class MaintenanceRule(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва")
     km_interval = models.PositiveIntegerField(verbose_name="Інтервал (км)")

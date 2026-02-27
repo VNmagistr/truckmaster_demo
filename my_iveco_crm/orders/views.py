@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    OrderStatusHistory
 )
 from clients.models import Truck
 from inventory.models import UsedPart
@@ -29,7 +30,8 @@ from .serializers import (
     MaintenanceKitSerializer,
     MaintenanceKitWriteSerializer,
     MaintenanceKitFilterSerializer,
-    UsedPartSerializer
+    UsedPartSerializer,
+    OrderStatusHistorySerializer,
 )
 
 
@@ -88,11 +90,31 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
         return queryset
 
+    def perform_create(self, serializer):
+        """При створенні фіксуємо автора початкового статусу."""
+        instance = serializer.save()
+        OrderStatusHistory.objects.filter(
+            order=instance, from_status=''
+        ).update(changed_by=self.request.user)
+
+    def perform_update(self, serializer):
+        """Передаємо поточного користувача в сигнал для запису автора зміни статусу."""
+        serializer.instance._changed_by = self.request.user
+        serializer.save()
+
     def destroy(self, request, *args, **kwargs):
         return Response(
             {"detail": "Фізичне видалення заборонено. Використовуйте позначення на видалення."},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
+
+    @action(detail=True, methods=['get'], url_path='status-history')
+    def status_history(self, request, pk=None):
+        """Хронологія змін статусу замовлення."""
+        order = self.get_object()
+        history = order.status_history.select_related('changed_by').order_by('changed_at')
+        serializer = OrderStatusHistorySerializer(history, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):

@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
-    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter
+    RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    OrderStatusHistory
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
@@ -232,6 +233,39 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
                 return f"{u.first_name} {u.last_name}".strip() or u.username
         except Exception:
             pass
+        return None
+
+
+class OrderStatusHistorySerializer(serializers.ModelSerializer):
+    """Серіалізатор хронології змін статусу замовлення."""
+    from_status_display = serializers.SerializerMethodField()
+    to_status_display = serializers.SerializerMethodField()
+    changed_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderStatusHistory
+        fields = [
+            'id',
+            'from_status', 'from_status_display',
+            'to_status', 'to_status_display',
+            'changed_by', 'changed_by_name',
+            'changed_at',
+            'comment',
+        ]
+
+    def _status_display(self, status_code):
+        return dict(ServiceOrder.StatusChoices.choices).get(status_code, status_code) if status_code else None
+
+    def get_from_status_display(self, obj):
+        return self._status_display(obj.from_status)
+
+    def get_to_status_display(self, obj):
+        return self._status_display(obj.to_status)
+
+    def get_changed_by_name(self, obj):
+        if obj.changed_by:
+            u = obj.changed_by
+            return f"{u.first_name} {u.last_name}".strip() or u.username
         return None
 
 
