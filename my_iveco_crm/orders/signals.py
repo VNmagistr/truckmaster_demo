@@ -1,6 +1,6 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter
+from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,54 @@ def _is_oil_product(product):
         return product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES
     except AttributeError:
         return False
+
+
+@receiver(pre_save, sender=ServiceOrder)
+def capture_old_status(sender, instance, update_fields, **kwargs):
+    """
+    Перед збереженням запам'ятовує поточний статус замовлення.
+    Якщо оновлюються конкретні поля і статус серед них — пропускаємо зайвий SELECT.
+    """
+    if update_fields is not None and 'status' not in update_fields:
+        instance._previous_status = None
+        return
+    if instance.pk:
+        try:
+            instance._previous_status = ServiceOrder.objects.only('status').get(pk=instance.pk).status
+        except ServiceOrder.DoesNotExist:
+            instance._previous_status = None
+    else:
+        instance._previous_status = None
+
+
+@receiver(post_save, sender=ServiceOrder)
+def record_status_change(sender, instance, created, **kwargs):
+    """
+    Після збереження фіксує зміну статусу в OrderStatusHistory.
+    При створенні — записує початковий статус.
+    При оновленні — записує лише якщо статус змінився.
+    """
+    from .models import OrderStatusHistory
+
+    changed_by = getattr(instance, '_changed_by', None)
+
+    if created:
+        OrderStatusHistory.objects.create(
+            order=instance,
+            from_status='',
+            to_status=instance.status,
+            changed_by=changed_by,
+        )
+        return
+
+    previous_status = getattr(instance, '_previous_status', None)
+    if previous_status is not None and previous_status != instance.status:
+        OrderStatusHistory.objects.create(
+            order=instance,
+            from_status=previous_status,
+            to_status=instance.status,
+            changed_by=changed_by,
+        )
 
 
 @receiver([post_save, post_delete], sender=ServiceWork)
