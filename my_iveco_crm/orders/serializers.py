@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    BaseMaintenanceKit, BaseMaintenanceKitFilter,
     TruckMaintenanceIntervals,
     OrderStatusHistory,
 )
@@ -286,10 +287,14 @@ class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
     part_name = serializers.SerializerMethodField()
     part_sku = serializers.CharField(source='part.sku_code', read_only=True)
     part_display = serializers.SerializerMethodField()
+    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
 
     class Meta:
         model = MaintenanceKitFilter
-        fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'part_display', 'quantity', 'change_interval_km']
+        fields = [
+            'id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'part_display',
+            'quantity', 'change_interval_km', 'service_type', 'service_type_display',
+        ]
 
     def get_part_name(self, obj):
         return str(obj.part) if obj.part else None
@@ -319,6 +324,57 @@ class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceKit
         fields = ['id', 'truck', 'oil', 'oil_quantity', 'oil_change_interval_km']
+
+
+class BaseMaintenanceKitFilterSerializer(serializers.ModelSerializer):
+    """Серіалізатор фільтра в базовому шаблоні комплекту ТО."""
+    part_name = serializers.SerializerMethodField()
+    part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
+
+    class Meta:
+        model = BaseMaintenanceKitFilter
+        fields = [
+            'id', 'base_kit', 'part', 'part_name', 'part_sku',
+            'quantity', 'change_interval_km', 'service_type', 'service_type_display',
+        ]
+
+    def get_part_name(self, obj):
+        return str(obj.part) if obj.part else None
+
+
+class BaseMaintenanceKitSerializer(serializers.ModelSerializer):
+    """Серіалізатор базового шаблону комплекту ТО — для читання."""
+    filters = BaseMaintenanceKitFilterSerializer(many=True, read_only=True)
+    oil_name = serializers.SerializerMethodField()
+    oil_sku = serializers.CharField(source='oil.sku_code', read_only=True)
+    base_model_name = serializers.CharField(source='base_model.name', read_only=True)
+    euro_standard_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BaseMaintenanceKit
+        fields = [
+            'id', 'base_model', 'base_model_name',
+            'euro_standard', 'euro_standard_display',
+            'oil', 'oil_name', 'oil_sku',
+            'oil_quantity', 'oil_change_interval_km',
+            'filters',
+        ]
+
+    def get_oil_name(self, obj):
+        return str(obj.oil) if obj.oil else None
+
+    def get_euro_standard_display(self, obj):
+        choices = dict(obj._meta.get_field('euro_standard').choices)
+        return choices.get(obj.euro_standard, obj.euro_standard)
+
+
+class BaseMaintenanceKitWriteSerializer(serializers.ModelSerializer):
+    """Серіалізатор базового шаблону комплекту ТО — для створення та редагування."""
+
+    class Meta:
+        model = BaseMaintenanceKit
+        fields = ['id', 'base_model', 'euro_standard', 'oil', 'oil_quantity', 'oil_change_interval_km']
 
 
 class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):

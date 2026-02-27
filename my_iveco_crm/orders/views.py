@@ -10,9 +10,24 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 logger = logging.getLogger(__name__)
 
+
+def _filters_for_service_type(kit_filters_qs, service_type):
+    """Повертає фільтри набору ТО залежно від виду ТО.
+
+    full    → service_type in ('full', 'both')
+    partial → service_type in ('partial', 'both')
+    None    → всі фільтри (зворотна сумісність)
+    """
+    if service_type == 'full':
+        return kit_filters_qs.filter(service_type__in=['full', 'both'])
+    if service_type == 'partial':
+        return kit_filters_qs.filter(service_type__in=['partial', 'both'])
+    return kit_filters_qs
+
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
+    BaseMaintenanceKit, BaseMaintenanceKitFilter,
     TruckMaintenanceIntervals,
     OrderStatusHistory,
 )
@@ -32,6 +47,9 @@ from .serializers import (
     MaintenanceKitSerializer,
     MaintenanceKitWriteSerializer,
     MaintenanceKitFilterSerializer,
+    BaseMaintenanceKitSerializer,
+    BaseMaintenanceKitWriteSerializer,
+    BaseMaintenanceKitFilterSerializer,
     UsedPartSerializer,
     TruckMaintenanceIntervalsSerializer,
     OrderStatusHistorySerializer,
@@ -210,12 +228,21 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='apply_maintenance_set')
     def apply_maintenance_set(self, request, pk=None):
-        """Застосувати набір ТО до наряду."""
+        """Застосувати набір ТО до наряду.
+
+        Параметри:
+            rule_id (int): обовʼязковий
+            service_type (str): 'full' | 'partial' — вид ТО (за замовч. всі фільтри)
+        """
         order = self.get_object()
         rule_id = request.data.get('rule_id')
+        service_type = request.data.get('service_type')  # 'full' | 'partial' | None
 
         if not rule_id:
             return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if service_type and service_type not in ('full', 'partial'):
+            return Response({'detail': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             rule = MaintenanceRule.objects.get(id=rule_id)
@@ -230,8 +257,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        applicable_filters = _filters_for_service_type(kit.filters, service_type)
+
         # Очищаємо старі direct_parts цього наряду від запчастин набору ТО
-        kit_part_ids = [kit.oil_id] + list(kit.filters.values_list('part_id', flat=True))
+        kit_part_ids = [kit.oil_id] + list(applicable_filters.values_list('part_id', flat=True))
         UsedPart.objects.filter(
             service_order=order,
             service_work__isnull=True,
@@ -249,14 +278,14 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             price_at_moment=0,
         )
 
-        # Додаємо запчастини до роботи (не напряму до наряду)
+        # Додаємо оливу та фільтри до роботи
         UsedPart.objects.create(
             service_work=service_work,
             part=kit.oil,
             quantity=kit.oil_quantity,
         )
 
-        for kit_filter in kit.filters.all():
+        for kit_filter in applicable_filters:
             UsedPart.objects.create(
                 service_work=service_work,
                 part=kit_filter.part,
@@ -271,11 +300,12 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             mileage=order.current_mileage,
         )
 
-        # Оновлюємо загальну вартість наряду
         order.update_total_cost()
 
+        type_label = {'full': 'повне', 'partial': 'часткове'}.get(service_type, '')
+        label = f' ({type_label})' if type_label else ''
         return Response(
-            {'detail': f'Набір ТО "{rule.name}" застосовано до наряду'},
+            {'detail': f'Набір ТО "{rule.name}"{label} застосовано до наряду'},
             status=status.HTTP_201_CREATED
         )
 
@@ -365,15 +395,20 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='apply-kit')
     def apply_kit(self, request, pk=None):
-        """
-        Вручну додати набір ТО (оливу + фільтри) до роботи.
-        Використовується кнопкою 'Додати набір ТО' на фронтенді.
+        """Вручну додати набір ТО (оливу + фільтри) до роботи.
+
+        Параметри:
+            service_type (str): 'full' | 'partial' — вид ТО (за замовч. всі фільтри)
         """
         work = self.get_object()
         truck = work.service_order.truck
+        service_type = request.data.get('service_type')  # 'full' | 'partial' | None
 
         if not truck:
             return Response({'error': 'Вантажівка не вказана в замовленні'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if service_type and service_type not in ('full', 'partial'):
+            return Response({'error': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             kit = MaintenanceKit.objects.prefetch_related('filters__part').get(truck=truck)
@@ -393,7 +428,8 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             )
             added.append({'name': kit.oil.name, 'quantity': str(kit.oil_quantity), 'type': 'oil'})
 
-        for kit_filter in kit.filters.all():
+        applicable_filters = _filters_for_service_type(kit.filters, service_type)
+        for kit_filter in applicable_filters:
             UsedPart.objects.get_or_create(
                 service_work=work,
                 part=kit_filter.part,
@@ -480,6 +516,98 @@ class MaintenanceKitViewSet(viewsets.ModelViewSet):
         except MaintenanceKitFilter.DoesNotExist:
             return Response({'error': 'Фільтр не знайдено'}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'], url_path='suggest')
+    def suggest(self, request):
+        """Повертає базовий шаблон комплекту ТО для конкретної вантажівки.
+
+        Пошук іде за base_model + euro_standard.
+        Якщо точного збігу немає — повертає шаблон без прив'язки до Євро-стандарту.
+        """
+        truck_id = request.query_params.get('truck_id')
+        if not truck_id:
+            return Response({'detail': 'truck_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            truck = Truck.objects.select_related('base_model').get(id=truck_id)
+        except Truck.DoesNotExist:
+            return Response({'detail': 'Вантажівку не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not truck.base_model:
+            return Response(
+                {'detail': 'Для цієї вантажівки не вказано базову модель'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        qs = BaseMaintenanceKit.objects.filter(
+            base_model=truck.base_model
+        ).select_related('oil').prefetch_related('filters', 'filters__part')
+
+        # Спочатку — точний збіг по Євро-стандарту
+        base_kit = qs.filter(euro_standard=truck.euro_standard or '').first()
+
+        # Запасний варіант — шаблон "для будь-якого Євро" цієї моделі
+        if not base_kit and truck.euro_standard:
+            base_kit = qs.filter(euro_standard='').first()
+
+        if not base_kit:
+            return Response(
+                {'detail': 'Базовий шаблон для цієї моделі не знайдено'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(BaseMaintenanceKitSerializer(base_kit).data)
+
+    @action(detail=False, methods=['post'], url_path='from-base')
+    def from_base(self, request):
+        """Копіює базовий шаблон комплекту ТО на конкретну вантажівку.
+
+        Приймає: { truck_id, base_kit_id }
+        Якщо комплект для авто вже існує — перезаписує його.
+        """
+        truck_id = request.data.get('truck_id')
+        base_kit_id = request.data.get('base_kit_id')
+
+        if not truck_id or not base_kit_id:
+            return Response(
+                {'detail': 'truck_id та base_kit_id є обовʼязковими'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            truck = Truck.objects.get(id=truck_id)
+        except Truck.DoesNotExist:
+            return Response({'detail': 'Вантажівку не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            base_kit = BaseMaintenanceKit.objects.prefetch_related('filters').get(id=base_kit_id)
+        except BaseMaintenanceKit.DoesNotExist:
+            return Response({'detail': 'Базовий шаблон не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
+        kit, created = MaintenanceKit.objects.update_or_create(
+            truck=truck,
+            defaults={
+                'oil': base_kit.oil,
+                'oil_quantity': base_kit.oil_quantity,
+                'oil_change_interval_km': base_kit.oil_change_interval_km,
+            }
+        )
+
+        # Замінюємо фільтри копією з шаблону (зберігаємо service_type)
+        kit.filters.all().delete()
+        for f in base_kit.filters.all():
+            MaintenanceKitFilter.objects.create(
+                maintenance_kit=kit,
+                part=f.part,
+                quantity=f.quantity,
+                change_interval_km=f.change_interval_km,
+                service_type=f.service_type,
+            )
+
+        response_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(MaintenanceKitSerializer(
+            MaintenanceKit.objects.prefetch_related('filters', 'filters__part').get(pk=kit.pk)
+        ).data, status=response_status)
+
 
 class MaintenanceKitFilterViewSet(viewsets.ModelViewSet):
     """ViewSet для окремих фільтрів комплекту ТО."""
@@ -504,3 +632,40 @@ class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return TruckMaintenanceIntervals.objects.select_related('truck').all()
 
+
+class BaseMaintenanceKitViewSet(viewsets.ModelViewSet):
+    """ViewSet для базових шаблонів комплектів ТО (по моделі + Євро-стандарт)."""
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['base_model', 'euro_standard']
+
+    def get_queryset(self):
+        return BaseMaintenanceKit.objects.select_related(
+            'base_model', 'oil'
+        ).prefetch_related('filters', 'filters__part').all()
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return BaseMaintenanceKitWriteSerializer
+        return BaseMaintenanceKitSerializer
+
+    @action(detail=True, methods=['post'], url_path='add-filter')
+    def add_filter(self, request, pk=None):
+        """Додати фільтр до базового шаблону."""
+        base_kit = self.get_object()
+        serializer = BaseMaintenanceKitFilterSerializer(
+            data={**request.data, 'base_kit': base_kit.pk}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], url_path='remove-filter/(?P<filter_id>[^/.]+)')
+    def remove_filter(self, request, pk=None, filter_id=None):
+        """Видалити фільтр з базового шаблону."""
+        try:
+            BaseMaintenanceKitFilter.objects.get(id=filter_id, base_kit_id=pk).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except BaseMaintenanceKitFilter.DoesNotExist:
+            return Response({'error': 'Фільтр не знайдено'}, status=status.HTTP_404_NOT_FOUND)
