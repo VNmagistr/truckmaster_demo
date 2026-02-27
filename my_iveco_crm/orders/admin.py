@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     MaintenanceKit, MaintenanceKitFilter, MaintenanceRule,
-    MaintenanceLog, RepairPhoto
+    MaintenanceLog, RepairPhoto, TruckMaintenanceIntervals,
 )
 
 
@@ -103,3 +103,9 @@ class MaintenanceKitAdmin(admin.ModelAdmin):
 class MaintenanceKitFilterAdmin(admin.ModelAdmin):
     list_display = ('maintenance_kit', 'part', 'quantity', 'change_interval_km')
     autocomplete_fields = ['maintenance_kit', 'part']
+
+
+@admin.register(TruckMaintenanceIntervals)
+class TruckMaintenanceIntervalsAdmin(admin.ModelAdmin):
+    list_display = ('truck', 'engine_oil_interval', 'engine_oil_last_km')
+    autocomplete_fields = ['truck']
