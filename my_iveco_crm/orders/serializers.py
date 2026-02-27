@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
-    OrderStatusHistory
+    TruckMaintenanceIntervals,
+    OrderStatusHistory,
 )
 from clients.models import Client, Truck
 from inventory.models import UsedPart
@@ -89,20 +90,13 @@ class WorkPriceSerializer(serializers.ModelSerializer):
 
 class UsedPartSerializer(serializers.ModelSerializer):
     """Серіалізатор використаної запчастини."""
-    part_name = serializers.SerializerMethodField()
-    
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    part_brand = serializers.CharField(source='part.brand', read_only=True)
+
     class Meta:
         model = UsedPart
         fields = '__all__'
-    
-    def get_part_name(self, obj):
-        """Безпечне отримання назви запчастини."""
-        try:
-            if obj.part:
-                return str(obj.part)
-        except Exception:
-            pass
-        return None
 
 
 class ServiceWorkSerializer(serializers.ModelSerializer):
@@ -142,7 +136,8 @@ class RepairPhotoSerializer(serializers.ModelSerializer):
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     """Серіалізатор замовлення для запису."""
-    
+    created_at = serializers.DateTimeField(required=False)
+
     class Meta:
         model = ServiceOrder
         fields = '__all__'
@@ -288,19 +283,29 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
 
 class MaintenanceKitFilterSerializer(serializers.ModelSerializer):
     """Серіалізатор фільтра в комплекті ТО."""
-    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_name = serializers.SerializerMethodField()
     part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+    part_display = serializers.SerializerMethodField()
 
     class Meta:
         model = MaintenanceKitFilter
-        fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'quantity', 'change_interval_km']
+        fields = ['id', 'maintenance_kit', 'part', 'part_name', 'part_sku', 'part_display', 'quantity', 'change_interval_km']
+
+    def get_part_name(self, obj):
+        return str(obj.part) if obj.part else None
+
+    def get_part_display(self, obj):
+        return str(obj.part) if obj.part else None
 
 
 class MaintenanceKitSerializer(serializers.ModelSerializer):
     """Серіалізатор комплекту ТО — повний (для читання)."""
     filters = MaintenanceKitFilterSerializer(many=True, read_only=True)
-    oil_name = serializers.CharField(source='oil.name', read_only=True)
+    oil_name = serializers.SerializerMethodField()
     oil_sku = serializers.CharField(source='oil.sku_code', read_only=True)
+
+    def get_oil_name(self, obj):
+        return str(obj.oil) if obj.oil else None
     truck_display = serializers.CharField(source='truck.__str__', read_only=True)
 
     class Meta:
@@ -314,3 +319,18 @@ class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaintenanceKit
         fields = ['id', 'truck', 'oil', 'oil_quantity', 'oil_change_interval_km']
+
+
+class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
+    """Серіалізатор інтервалів ТО — для читання та редагування."""
+
+    class Meta:
+        model = TruckMaintenanceIntervals
+        fields = [
+            'id', 'truck',
+            'engine_oil_interval', 'engine_oil_last_km',
+            'gearbox_oil_interval', 'gearbox_oil_last_km',
+            'rear_axle_oil_interval', 'rear_axle_oil_last_km',
+            'belts_interval', 'belts_last_km',
+            'chains_interval', 'chains_last_km',
+        ]

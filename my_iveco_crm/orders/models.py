@@ -75,7 +75,7 @@ class ServiceOrder(models.Model):
     
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.OPEN, verbose_name="Статус")
     total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Загальна вартість")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
+    created_at = models.DateTimeField(default=timezone.now, verbose_name="Створено")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
 
     marked_for_deletion = models.BooleanField(default=False, verbose_name="Позначено на видалення")
@@ -285,3 +285,30 @@ class MaintenanceKitFilter(models.Model):
     class Meta:
         verbose_name = "Фільтр комплекту ТО"
         verbose_name_plural = "Фільтри комплектів ТО"
+
+
+class TruckMaintenanceIntervals(models.Model):
+    """Інтервали регламентних робіт для вантажівки."""
+    truck = models.OneToOneField(
+        Truck,
+        on_delete=models.CASCADE,
+        related_name='maintenance_intervals',
+        verbose_name="Вантажівка"
+    )
+    engine_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи двигуна (км)")
+    engine_oil_last_km   = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи двигуна")
+    gearbox_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи КПП/АКПП (км)")
+    gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи КПП/АКПП")
+    rear_axle_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи заднього моста (км)")
+    rear_axle_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи заднього моста")
+    belts_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ремнів/роликів (км)")
+    belts_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні ремнів/роликів")
+    chains_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ланцюгів (км)")
+    chains_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні ланцюгів")
+
+    class Meta:
+        verbose_name = "Інтервали ТО вантажівки"
+        verbose_name_plural = "Інтервали ТО вантажівок"
+
+    def __str__(self):
+        return f"Інтервали ТО: {self.truck}"
