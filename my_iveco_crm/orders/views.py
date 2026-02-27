@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
-    OrderStatusHistory
+    TruckMaintenanceIntervals,
+    OrderStatusHistory,
 )
 from clients.models import Truck
 from inventory.models import UsedPart
@@ -31,6 +33,7 @@ from .serializers import (
     MaintenanceKitWriteSerializer,
     MaintenanceKitFilterSerializer,
     UsedPartSerializer,
+    TruckMaintenanceIntervalsSerializer,
     OrderStatusHistorySerializer,
 )
 
@@ -157,6 +160,22 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         }
         return Response(stats)
 
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Підсумок кількості замовлень за день, тиждень, місяць та рік."""
+        today = timezone.now().date()
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+        start_of_month = today.replace(day=1)
+        start_of_year = today.replace(month=1, day=1)
+
+        qs = ServiceOrder.objects.filter(marked_for_deletion=False)
+        return Response({
+            'today': qs.filter(created_at__date=today).count(),
+            'week': qs.filter(created_at__date__gte=start_of_week).count(),
+            'month': qs.filter(created_at__date__gte=start_of_month).count(),
+            'year': qs.filter(created_at__date__gte=start_of_year).count(),
+        })
+
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
         """Позначити замовлення на видалення."""
@@ -259,6 +278,48 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             {'detail': f'Набір ТО "{rule.name}" застосовано до наряду'},
             status=status.HTTP_201_CREATED
         )
+
+    @action(detail=True, methods=['get'], url_path='maintenance-countdown')
+    def maintenance_countdown(self, request, pk=None):
+        """Повертає відлік регламентних робіт для замовлення."""
+        order = self.get_object()
+        current_km = order.current_mileage
+
+        try:
+            intervals = order.truck.maintenance_intervals
+        except TruckMaintenanceIntervals.DoesNotExist:
+            intervals = None
+
+        TYPES = [
+            ('engine_oil',    'До заміни оливи в двигуні'),
+            ('gearbox_oil',   'До заміни оливи в КПП/АКПП'),
+            ('rear_axle_oil', 'До заміни оливи в задньому мості'),
+            ('belts',         'До заміни ремнів/роликів'),
+            ('chains',        'До заміни ланцюгів'),
+        ]
+
+        result = []
+        for key, label in TYPES:
+            interval = getattr(intervals, f'{key}_interval', None) if intervals else None
+            last_km  = getattr(intervals, f'{key}_last_km', None) if intervals else None
+
+            if interval is not None and last_km is not None and current_km is not None:
+                remaining = last_km + interval - current_km
+            else:
+                remaining = None
+
+            result.append({
+                'key': key,
+                'label': label,
+                'interval': interval,
+                'last_km': last_km,
+                'remaining': remaining,
+            })
+
+        return Response({
+            'current_km': current_km,
+            'items': result,
+        })
 
 
 class ServiceWorkViewSet(viewsets.ModelViewSet):
@@ -431,4 +492,15 @@ class MaintenanceKitFilterViewSet(viewsets.ModelViewSet):
         return MaintenanceKitFilter.objects.select_related(
             'maintenance_kit', 'part'
         ).all()
+
+
+class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
+    """ViewSet для інтервалів ТО."""
+    serializer_class = TruckMaintenanceIntervalsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['truck']
+
+    def get_queryset(self):
+        return TruckMaintenanceIntervals.objects.select_related('truck').all()
 
