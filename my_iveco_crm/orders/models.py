@@ -238,6 +238,89 @@ class MaintenanceLog(models.Model):
         verbose_name_plural = "Записи ТО"
 
 
+class BaseMaintenanceKit(models.Model):
+    """Базовий шаблон комплекту ТО для лінійки Iveco + стандарт Євро.
+    Використовується як шаблон при створенні комплекту для конкретного авто.
+    """
+    base_model = models.ForeignKey(
+        IvecoBaseModel,
+        on_delete=models.CASCADE,
+        related_name='base_kits',
+        verbose_name="Базова модель"
+    )
+    euro_standard = models.CharField(
+        max_length=10,
+        choices=[
+            ('', 'Будь-який'),
+            ('EURO3', 'Євро-3'),
+            ('EURO4', 'Євро-4'),
+            ('EURO5', 'Євро-5'),
+            ('EURO6', 'Євро-6'),
+        ],
+        blank=True,
+        default='',
+        verbose_name="Стандарт Євро"
+    )
+    oil = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='base_oil_for_kits',
+        verbose_name="Олива"
+    )
+    oil_quantity = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Кількість оливи")
+    oil_change_interval_km = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Інтервал заміни оливи (км)"
+    )
+
+    class Meta:
+        unique_together = [['base_model', 'euro_standard']]
+        verbose_name = "Базовий комплект ТО"
+        verbose_name_plural = "Базові комплекти ТО"
+
+    def __str__(self):
+        euro = dict(self._meta.get_field('euro_standard').choices).get(self.euro_standard, self.euro_standard)
+        return f"{self.base_model} — {euro}" if self.euro_standard else str(self.base_model)
+
+
+SERVICE_TYPE_CHOICES = [
+    ('both', 'Повне і часткове ТО'),
+    ('full', 'Тільки повне ТО'),
+    ('partial', 'Тільки часткове ТО'),
+]
+
+
+class BaseMaintenanceKitFilter(models.Model):
+    """Фільтр у базовому шаблоні комплекту ТО."""
+    base_kit = models.ForeignKey(
+        BaseMaintenanceKit,
+        on_delete=models.CASCADE,
+        related_name='filters',
+        verbose_name="Базовий комплект ТО"
+    )
+    part = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        verbose_name="Запчастина"
+    )
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+    change_interval_km = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Інтервал заміни (км)"
+    )
+    service_type = models.CharField(
+        max_length=10,
+        choices=SERVICE_TYPE_CHOICES,
+        default='both',
+        verbose_name="Вид ТО",
+        help_text="В якому виді ТО використовується цей фільтр"
+    )
+
+    class Meta:
+        verbose_name = "Фільтр базового комплекту ТО"
+        verbose_name_plural = "Фільтри базових комплектів ТО"
+
+
 class MaintenanceKit(models.Model):
     truck = models.OneToOneField(
         Truck, 
@@ -265,13 +348,13 @@ class MaintenanceKit(models.Model):
 
 class MaintenanceKitFilter(models.Model):
     maintenance_kit = models.ForeignKey(
-        MaintenanceKit, 
-        on_delete=models.CASCADE, 
+        MaintenanceKit,
+        on_delete=models.CASCADE,
         related_name='filters',
         verbose_name="Комплект ТО"
     )
     part = models.ForeignKey(
-        'inventory.Product', 
+        'inventory.Product',
         on_delete=models.PROTECT,
         verbose_name="Запчастина"
     )
@@ -280,6 +363,13 @@ class MaintenanceKitFilter(models.Model):
         null=True, blank=True,
         verbose_name="Інтервал заміни (км)",
         help_text="Наприклад: 20000"
+    )
+    service_type = models.CharField(
+        max_length=10,
+        choices=SERVICE_TYPE_CHOICES,
+        default='both',
+        verbose_name="Вид ТО",
+        help_text="В якому виді ТО використовується цей фільтр"
     )
 
     class Meta:
