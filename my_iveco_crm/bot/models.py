@@ -3,9 +3,10 @@ from clients.models import Client, Truck
 
 class BotUser(models.Model):
     ROLE_CHOICES = [
-        ('guest', 'Гість'),
-        ('owner', 'Власник'),
-        ('admin', 'Адміністратор'),
+        ('guest',  'Гість'),
+        ('driver', 'Водій'),
+        ('owner',  'Власник'),
+        ('admin',  'Адміністратор'),
     ]
 
     telegram_id = models.BigIntegerField(unique=True, verbose_name="Telegram ID")
