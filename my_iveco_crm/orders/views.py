@@ -179,6 +179,19 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
     @action(detail=False, methods=['get'])
+    def week_detail(self, request):
+        """Кількість замовлень по днях поточного тижня (Пн–Нд)."""
+        today = timezone.now().date()
+        monday = today - datetime.timedelta(days=today.weekday())
+        day_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
+        qs = ServiceOrder.objects.filter(marked_for_deletion=False)
+        result = [
+            {'name': day_names[i], 'orders': qs.filter(created_at__date=monday + datetime.timedelta(days=i)).count()}
+            for i in range(7)
+        ]
+        return Response(result)
+
+    @action(detail=False, methods=['get'])
     def stats(self, request):
         """Підсумок кількості замовлень за день, тиждень, місяць та рік."""
         today = timezone.now().date()
