@@ -207,23 +207,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     bot_user = await get_or_create_bot_user(user)
     is_linked, is_admin, _ = await check_if_user_is_linked(user.id)
-    
+
     if is_linked:
         markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
-        await update.message.reply_text(f"Вітаю, {bot_user.first_name}!", reply_markup=markup)
+        bot_reply = f"Вітаю, {bot_user.first_name}!"
+        await update.message.reply_text(bot_reply, reply_markup=markup)
     else:
         btn = KeyboardButton("Надати номер телефону", request_contact=True)
-        await update.message.reply_text("Я вас не знаю. Надайте номер:", reply_markup=ReplyKeyboardMarkup([[btn]], resize_keyboard=True))
+        bot_reply = "Я вас не знаю. Надайте номер:"
+        await update.message.reply_text(bot_reply, reply_markup=ReplyKeyboardMarkup([[btn]], resize_keyboard=True))
+
+    if bot_user:
+        await log_message_to_db(bot_user, '/start', bot_reply, message_type='command')
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     bot_user = await get_or_create_bot_user(user)
-    text = await link_bot_user_by_phone(bot_user, update.message.contact.phone_number)
-    
+    bot_reply = await link_bot_user_by_phone(bot_user, update.message.contact.phone_number)
+
     is_linked, is_admin, _ = await check_if_user_is_linked(user.id)
     markup = ADMIN_REPLY_MARKUP if is_admin else (MAIN_REPLY_MARKUP if is_linked else None)
-    
-    await update.message.reply_text(text, reply_markup=markup)
+
+    await update.message.reply_text(bot_reply, reply_markup=markup)
+
+    if bot_user:
+        await log_message_to_db(bot_user, f"[контакт] {update.message.contact.phone_number}", bot_reply, message_type='contact')
 
 async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
@@ -231,42 +239,62 @@ async def my_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     res = await get_my_cars_with_keyboard(bot_user)
     await update.message.reply_text(res["reply_text"], reply_markup=res["keyboard"])
 
+    if bot_user:
+        await log_message_to_db(bot_user, update.message.text, res["reply_text"])
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Тут спрощена логіка для прикладу
     text = update.message.text
+    user = update.message.from_user
+    bot_user = await get_or_create_bot_user(user)
+
     if context.user_data.get('awaiting_truck'):
-        res = await find_truck_by_plate(text)
-        await update.message.reply_text(res)
+        bot_reply = await find_truck_by_plate(text)
+        await update.message.reply_text(bot_reply)
         context.user_data['awaiting_truck'] = False
     elif context.user_data.get('awaiting_client'):
-        res = await find_client_by_name(text)
-        await update.message.reply_text(res)
+        bot_reply = await find_client_by_name(text)
+        await update.message.reply_text(bot_reply)
         context.user_data['awaiting_client'] = False
     else:
-        # За замовчуванням
-        await update.message.reply_text("Оберіть дію з меню.")
+        bot_reply = "Оберіть дію з меню."
+        await update.message.reply_text(bot_reply)
+
+    if bot_user:
+        await log_message_to_db(bot_user, text, bot_reply)
 
 async def admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.message.from_user
-    is_linked, is_admin, _ = await check_if_user_is_linked(user.id)
-    
+    is_linked, is_admin, bot_user = await check_if_user_is_linked(user.id)
+
     if not is_admin:
-        await update.message.reply_text("Доступ заборонено.")
+        bot_reply = "Доступ заборонено."
+        await update.message.reply_text(bot_reply)
+        if bot_user:
+            await log_message_to_db(bot_user, text, bot_reply)
         return
 
+    bot_reply = ''
     if "Всі автомобілі" in text:
-        await update.message.reply_text(await get_all_trucks())
+        bot_reply = await get_all_trucks()
+        await update.message.reply_text(bot_reply)
     elif "Всі замовлення" in text:
-        await update.message.reply_text(await get_all_orders())
+        bot_reply = await get_all_orders()
+        await update.message.reply_text(bot_reply)
     elif "Статистика" in text:
-        await update.message.reply_text(await get_statistics())
+        bot_reply = await get_statistics()
+        await update.message.reply_text(bot_reply)
     elif "Знайти авто" in text:
+        bot_reply = "Введіть номер авто:"
         context.user_data['awaiting_truck'] = True
-        await update.message.reply_text("Введіть номер авто:")
+        await update.message.reply_text(bot_reply)
     elif "Знайти клієнта" in text:
+        bot_reply = "Введіть ім'я:"
         context.user_data['awaiting_client'] = True
-        await update.message.reply_text("Введіть ім'я:")
+        await update.message.reply_text(bot_reply)
+
+    if bot_user:
+        await log_message_to_db(bot_user, text, bot_reply)
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
