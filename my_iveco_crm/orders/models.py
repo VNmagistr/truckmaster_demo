@@ -341,6 +341,9 @@ class MaintenanceKit(models.Model):
         help_text="Наприклад: 20000"
     )
 
+    def __str__(self):
+        return f"Комплект ТО — {self.truck.specific_model_name} ({self.truck.license_plate})"
+
     class Meta:
         verbose_name = "Комплект ТО"
         verbose_name_plural = "Комплекти ТО"
