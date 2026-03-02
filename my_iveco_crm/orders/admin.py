@@ -15,18 +15,7 @@ class ServiceWorkInline(admin.StackedInline):
 class MaintenanceKitFilterInline(admin.TabularInline):
     model = MaintenanceKitFilter
     extra = 1
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'part':
-            from inventory.models import Product
-            from django.db.models import Q
-            FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
-            kwargs['queryset'] = Product.objects.filter(
-                Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
-                Q(subcategory__category__name__icontains='фільтр') |
-                Q(name__iregex=r'^фільтр')
-            ).filter(marked_for_deletion=False).order_by('name')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    autocomplete_fields = ['part']
 
 
 @admin.register(WorkGroup)
@@ -106,21 +95,8 @@ class MaintenanceLogAdmin(admin.ModelAdmin):
 class MaintenanceKitAdmin(admin.ModelAdmin):
     list_display = ('truck', 'oil', 'oil_quantity', 'oil_change_interval_km')
     search_fields = ('truck__license_plate',)
-    autocomplete_fields = ['truck']
+    autocomplete_fields = ['truck', 'oil']
     inlines = [MaintenanceKitFilterInline]
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'oil':
-            from inventory.models import Product
-            from django.db.models import Q
-            OIL_TYPES = {'oil', 'олива', 'масло', 'мастило'}
-            kwargs['queryset'] = Product.objects.filter(
-                Q(subcategory__category__category_type__in=list(OIL_TYPES)) |
-                Q(name__iregex=r'^олива') |
-                Q(name__icontains='олива моторна') |
-                Q(name__iregex=r'^масло\s+мотор')
-            ).filter(marked_for_deletion=False).order_by('name')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(MaintenanceKitFilter)

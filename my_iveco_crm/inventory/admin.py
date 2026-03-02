@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Q
 from django.utils.text import slugify
 from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
 
@@ -40,6 +41,30 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'sku_code', 'brand', 'notes')
     list_editable = ('selling_price', 'current_stock', 'is_active')
     autocomplete_fields = ['subcategory']
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        model_name = request.GET.get('model_name', '')
+        field_name = request.GET.get('field_name', '')
+
+        if model_name == 'maintenancekit' and field_name == 'oil':
+            OIL_TYPES = {'oil', 'олива', 'масло', 'мастило'}
+            queryset = queryset.filter(
+                Q(subcategory__category__category_type__in=list(OIL_TYPES)) |
+                Q(name__iregex=r'^олива') |
+                Q(name__icontains='олива моторна') |
+                Q(name__iregex=r'^масло\s+мотор')
+            ).filter(marked_for_deletion=False)
+
+        elif model_name == 'maintenancekitfilter' and field_name == 'part':
+            FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
+            queryset = queryset.filter(
+                Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
+                Q(subcategory__category__name__icontains='фільтр') |
+                Q(name__iregex=r'^фільтр')
+            ).filter(marked_for_deletion=False)
+
+        return queryset, use_distinct
 
     fieldsets = (
         ('Основне', {
