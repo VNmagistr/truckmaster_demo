@@ -69,6 +69,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        # Фільтр тільки оливи (за всіма варіантами category_type)
+        oil_only = self.request.query_params.get('oil_only', None)
+        if oil_only == 'true':
+            OIL_TYPES = {'oil', 'олива', 'масло', 'мастило'}
+            queryset = queryset.filter(
+                subcategory__category__category_type__in=list(OIL_TYPES)
+            )
+
         # Обробка фільтру "Низький залишок"
         low_stock = self.request.query_params.get('low_stock', None)
         if low_stock == 'true':
