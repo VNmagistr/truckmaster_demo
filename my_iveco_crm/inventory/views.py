@@ -77,6 +77,14 @@ class ProductViewSet(viewsets.ModelViewSet):
                 subcategory__category__category_type__in=list(OIL_TYPES)
             )
 
+        # Фільтр тільки фільтри (за всіма варіантами category_type)
+        filter_only = self.request.query_params.get('filter_only', None)
+        if filter_only == 'true':
+            FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
+            queryset = queryset.filter(
+                subcategory__category__category_type__in=list(FILTER_TYPES)
+            )
+
         # Обробка фільтру "Низький залишок"
         low_stock = self.request.query_params.get('low_stock', None)
         if low_stock == 'true':
