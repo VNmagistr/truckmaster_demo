@@ -69,20 +69,24 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        # Фільтр тільки оливи (за всіма варіантами category_type)
+        # Фільтр тільки оливи: за category_type АБО за назвою (для товарів без категорії)
         oil_only = self.request.query_params.get('oil_only', None)
         if oil_only == 'true':
             OIL_TYPES = {'oil', 'олива', 'масло', 'мастило'}
             queryset = queryset.filter(
-                subcategory__category__category_type__in=list(OIL_TYPES)
+                Q(subcategory__category__category_type__in=list(OIL_TYPES)) |
+                Q(name__iregex=r'^олива') |
+                Q(name__icontains='олива моторна') |
+                Q(name__iregex=r'^масло\s+мотор')
             )
 
-        # Фільтр тільки фільтри (за всіма варіантами category_type)
+        # Фільтр тільки фільтри: за category_type АБО за назвою (для товарів без категорії)
         filter_only = self.request.query_params.get('filter_only', None)
         if filter_only == 'true':
             FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
             queryset = queryset.filter(
-                subcategory__category__category_type__in=list(FILTER_TYPES)
+                Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
+                Q(subcategory__category__name__icontains='фільтр')
             )
 
         # Обробка фільтру "Низький залишок"
