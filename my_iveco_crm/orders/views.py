@@ -22,7 +22,7 @@ def _filters_for_service_type(kit_filters_qs, service_type):
         return kit_filters_qs.filter(service_type__in=['full', 'both'])
     if service_type == 'partial':
         return kit_filters_qs.filter(service_type__in=['partial', 'both'])
-    return kit_filters_qs
+    return kit_filters_qs.all()
 
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
