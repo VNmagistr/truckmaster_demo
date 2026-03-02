@@ -9,10 +9,13 @@ def update_order_on_part_change(sender, instance, **kwargs):
     Коли запчастина додається до роботи або видаляється,
     перераховуємо вартість замовлення.
     """
-    if instance.service_work:
-        instance.service_work.service_order.update_total_cost()
-    elif instance.service_order:
-        instance.service_order.update_total_cost()
+    try:
+        if instance.service_work_id:
+            instance.service_work.service_order.update_total_cost()
+        elif instance.service_order_id:
+            instance.service_order.update_total_cost()
+    except Exception:
+        pass  # service_work може бути вже каскадно видалений
 
 
 @receiver([post_save, post_delete], sender=StockItem)
