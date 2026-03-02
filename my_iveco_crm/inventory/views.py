@@ -86,7 +86,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
             queryset = queryset.filter(
                 Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
-                Q(subcategory__category__name__icontains='фільтр')
+                Q(subcategory__category__name__icontains='фільтр') |
+                Q(name__iregex=r'^фільтр')
             )
 
         # Обробка фільтру "Низький залишок"
