@@ -24,6 +24,10 @@ mediafiles/
 .vscode/
 .idea/*.save
 
+# Claude
+CLAUDE.md
+.claude/
+
 # FP3 файли (конфіденційні дані, не повинні бути в Git)
 *.fp3
 test_parsing/
