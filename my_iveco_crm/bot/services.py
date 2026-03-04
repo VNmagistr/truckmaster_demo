@@ -100,6 +100,46 @@ class OrderService:
             )
         return []
 
+    @staticmethod
+    @sync_to_async
+    def get_order_info(order: ServiceOrder) -> str:
+        """Форматує детальну інформацію про замовлення"""
+        works = list(order.servicework_set.select_related('work').all())
+
+        text = f"📝 *Замовлення №{order.order_number}*\n\n"
+        text += f"📊 Статус: *{order.get_status_display()}*\n"
+        text += f"📅 Дата: {order.created_at.strftime('%d.%m.%Y')}\n"
+
+        if order.truck:
+            truck_info = order.truck.license_plate
+            if order.truck.specific_model_name:
+                truck_info += f" ({order.truck.specific_model_name})"
+            text += f"🚚 Авто: {truck_info}\n"
+
+        if order.client:
+            text += f"👤 Клієнт: {order.client.name}\n"
+
+        if order.problem_description:
+            text += f"\n📋 Опис: {order.problem_description[:200]}\n"
+
+        if works:
+            text += "\n🔧 Роботи:\n"
+            for w in works:
+                name = w.work.name if w.work else (w.description or "—")
+                text += f"  • {name}\n"
+
+        if order.total_cost:
+            text += f"\n💰 Вартість: {order.total_cost} грн\n"
+
+        return text
+
+    @staticmethod
+    @sync_to_async
+    def get_truck_orders(truck, limit: int = 5) -> List[ServiceOrder]:
+        return list(
+            ServiceOrder.objects.filter(truck=truck).order_by('-created_at')[:limit]
+        )
+
 # ========== НАГАДУВАННЯ ==========
 
 class ReminderService:

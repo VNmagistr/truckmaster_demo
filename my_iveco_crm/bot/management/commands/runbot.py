@@ -198,8 +198,26 @@ def get_repair_history(truck_id):
     except: return "Помилка."
 
 @sync_to_async
-def ask_for_order_number(update, context): # Виправлено сигнатуру
-    pass # Тут логіка перевірки замовлення
+def get_order_status(order_number):
+    try:
+        order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number.strip())
+        text = f"📝 *Замовлення №{order.order_number}*\n\n"
+        text += f"📊 Статус: *{order.get_status_display()}*\n"
+        text += f"📅 Дата: {order.created_at.strftime('%d.%m.%Y')}\n"
+        if order.truck:
+            truck_info = order.truck.license_plate
+            if order.truck.specific_model_name:
+                truck_info += f" ({order.truck.specific_model_name})"
+            text += f"🚚 Авто: {truck_info}\n"
+        if order.client:
+            text += f"👤 Клієнт: {order.client.name}\n"
+        if order.problem_description:
+            text += f"📋 Опис: {order.problem_description[:200]}\n"
+        if order.total_cost:
+            text += f"💰 Вартість: {order.total_cost} грн\n"
+        return text
+    except ServiceOrder.DoesNotExist:
+        return f"❌ Замовлення #{order_number} не знайдено."
 
 # --- 3. ОБРОБНИКИ (Handlers) ---
 
@@ -255,6 +273,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = await find_client_by_name(text)
         await update.message.reply_text(bot_reply)
         context.user_data['awaiting_client'] = False
+    elif context.user_data.get('awaiting_order'):
+        bot_reply = await get_order_status(text)
+        await update.message.reply_text(bot_reply, parse_mode='Markdown')
+        context.user_data['awaiting_order'] = False
+    elif "Перевірити статус замовлення" in text:
+        bot_reply = "Введіть номер замовлення:"
+        context.user_data['awaiting_order'] = True
+        await update.message.reply_text(bot_reply)
     else:
         bot_reply = "Оберіть дію з меню."
         await update.message.reply_text(bot_reply)
