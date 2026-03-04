@@ -98,6 +98,9 @@ class MaintenanceKitAdmin(admin.ModelAdmin):
     autocomplete_fields = ['truck', 'oil']
     inlines = [MaintenanceKitFilterInline]
 
+    class Media:
+        js = ('admin/js/maintenance_kit_autofill.js',)
+
 
 @admin.register(MaintenanceKitFilter)
 class MaintenanceKitFilterAdmin(admin.ModelAdmin):
