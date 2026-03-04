@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BotUser, BotMessageLog, ReminderSettings, MileageReport
+from .models import BotUser, BotMessageLog, ReminderSettings, MileageReport, BotSettings
 
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
@@ -49,3 +49,14 @@ class MileageReportAdmin(admin.ModelAdmin):
     list_filter = ('reported_at',)
     search_fields = ('truck__license_plate', 'bot_user__first_name')
     readonly_fields = ('bot_user', 'truck', 'mileage', 'reported_at')
+
+
+@admin.register(BotSettings)
+class BotSettingsAdmin(admin.ModelAdmin):
+    fields = ('ask_mileage_enabled',)
+
+    def has_add_permission(self, request):
+        return not BotSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
