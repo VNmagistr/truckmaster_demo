@@ -61,7 +61,9 @@ class ProductAdmin(admin.ModelAdmin):
             queryset = queryset.filter(
                 Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
                 Q(subcategory__category__name__icontains='фільтр') |
-                Q(name__iregex=r'^фільтр')
+                Q(name__iregex=r'^фільтр') |
+                Q(name__icontains='шайба пробки') |
+                Q(name__icontains='прокладка фільтра')
             ).filter(marked_for_deletion=False)
 
         return queryset, use_distinct
