@@ -9,7 +9,7 @@ from django.utils import timezone
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
-from .models import BotUser
+from .models import BotUser, BotSettings
 from maintenance.models import ServiceReminder
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ def ask_owners_for_mileage():
     Щотижнева задача: надсилає власникам запит на введення поточного пробігу.
     Вмикається через ASK_MILEAGE_ENABLED=True в .env
     """
-    if not getattr(settings, 'ASK_MILEAGE_ENABLED', False):
+    if not BotSettings.get().ask_mileage_enabled:
         return 0
 
     if not BOT_TOKEN:

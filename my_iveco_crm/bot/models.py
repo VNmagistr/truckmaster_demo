@@ -70,6 +70,27 @@ class MileageReport(models.Model):
         return f"{self.truck.license_plate} — {self.mileage} км ({self.reported_at.strftime('%d.%m.%Y')})"
 
 
+class BotSettings(models.Model):
+    """Глобальні налаштування бота. Завжди існує рівно один запис."""
+    ask_mileage_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Щотижневий запит пробігу",
+        help_text="Щопонеділка о 10:00 власникам надсилається запит на введення поточного пробігу."
+    )
+
+    class Meta:
+        verbose_name = "Налаштування бота"
+        verbose_name_plural = "Налаштування бота"
+
+    def __str__(self):
+        return "Налаштування бота"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class ReminderSettings(models.Model):
     """Налаштування нагадувань для користувача"""
     bot_user = models.ForeignKey(BotUser, on_delete=models.CASCADE, verbose_name="Користувач")
