@@ -117,6 +117,16 @@ class ServiceReminder(models.Model):
         'Цільова дата',
         null=True, blank=True
     )
+    interval_km = models.PositiveIntegerField(
+        'Інтервал за пробігом (км)',
+        null=True, blank=True,
+        help_text='Через скільки км створювати наступне нагадування. Порожньо — з типу ТО.'
+    )
+    interval_months = models.PositiveIntegerField(
+        'Інтервал за часом (місяців)',
+        null=True, blank=True,
+        help_text='Через скільки місяців створювати наступне нагадування. Порожньо — з типу ТО.'
+    )
     
     status = models.CharField(
         'Статус',
