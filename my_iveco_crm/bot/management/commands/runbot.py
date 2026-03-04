@@ -1,11 +1,13 @@
+import io
 import os
 import logging
 import asyncio
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from orders.models import ServiceOrder
+from orders.models import ServiceOrder, RepairPhoto
 from clients.models import Client, Truck
 from bot.models import BotUser, BotMessageLog
 from asgiref.sync import sync_to_async
@@ -25,9 +27,38 @@ ADMIN_KEYBOARD = [
     [KeyboardButton("Мої автомобілі 🚚"), KeyboardButton("Всі автомобілі 🚛")],
     [KeyboardButton("Перевірити статус замовлення 🧾"), KeyboardButton("Всі замовлення 📋")],
     [KeyboardButton("Знайти авто за номером 🔍"), KeyboardButton("Знайти клієнта 👤")],
-    [KeyboardButton("Статистика 📊")],
+    [KeyboardButton("📷 Фото замовлення"), KeyboardButton("Статистика 📊")],
 ]
 ADMIN_REPLY_MARKUP = ReplyKeyboardMarkup(ADMIN_KEYBOARD, resize_keyboard=True)
+
+# --- 1.5 Клавіатура вибору типу фото ---
+
+def get_photo_type_keyboard():
+    keyboard = [
+        [
+            InlineKeyboardButton("📷 Номерний знак", callback_data="photo_type_car"),
+            InlineKeyboardButton("🔢 Одометр", callback_data="photo_type_odometer"),
+        ],
+        [
+            InlineKeyboardButton("🎛 Панель приладів", callback_data="photo_type_dashboard"),
+            InlineKeyboardButton("🔧 Фото ремонту", callback_data="photo_type_repair"),
+        ],
+        [InlineKeyboardButton("❌ Скасувати", callback_data="photo_cancel")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_order_selection_keyboard(orders):
+    """Inline-клавіатура з переліком знайдених замовлень для вибору."""
+    keyboard = []
+    for order in orders:
+        plate = order.truck.license_plate if order.truck else '—'
+        date = order.created_at.strftime('%d.%m.%y')
+        label = f"№{order.order_number}  {plate}  {date}"
+        keyboard.append([InlineKeyboardButton(label, callback_data=f"photo_order_{order.id}")])
+    keyboard.append([InlineKeyboardButton("❌ Скасувати", callback_data="photo_cancel")])
+    return InlineKeyboardMarkup(keyboard)
+
 
 # --- 2. Допоміжні функції ---
 @sync_to_async
@@ -186,6 +217,42 @@ def find_client_by_name(name):
     return reply
 
 @sync_to_async
+def get_orders_for_photo(query):
+    """Повертає список замовлень за точним або частковим збігом номера."""
+    query = query.strip()
+    exact = ServiceOrder.objects.filter(order_number=query).select_related('truck')
+    if exact.exists():
+        return list(exact[:1])
+    return list(
+        ServiceOrder.objects.filter(order_number__endswith=query)
+        .select_related('truck')
+        .order_by('-created_at')[:10]
+    )
+
+
+@sync_to_async
+def save_order_photo(order_id, photo_type, photo_bytes, filename):
+    """Зберігає фото номерного знаку, одометра або панелі до полів ServiceOrder."""
+    order = ServiceOrder.objects.get(id=order_id)
+    content = ContentFile(photo_bytes, name=filename)
+    field_map = {
+        'car': 'car_photo',
+        'odometer': 'odometer_photo',
+        'dashboard': 'dashboard_photo',
+    }
+    field_name = field_map[photo_type]
+    getattr(order, field_name).save(filename, content, save=True)
+
+
+@sync_to_async
+def save_repair_photo(order_id, photo_bytes, filename):
+    """Створює новий запис RepairPhoto для фото ремонту."""
+    order = ServiceOrder.objects.get(id=order_id)
+    repair_photo = RepairPhoto(service_order=order)
+    repair_photo.image.save(filename, ContentFile(photo_bytes, name=filename), save=True)
+
+
+@sync_to_async
 def get_repair_history(truck_id):
     try:
         truck = Truck.objects.get(id=truck_id)
@@ -277,6 +344,28 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = await get_order_status(text)
         await update.message.reply_text(bot_reply, parse_mode='Markdown')
         context.user_data['awaiting_order'] = False
+    elif context.user_data.get('awaiting_photo_order'):
+        orders = await get_orders_for_photo(text)
+        if not orders:
+            bot_reply = f"❌ Замовлення '{text}' не знайдено. Спробуйте ще раз."
+            await update.message.reply_text(bot_reply)
+        elif len(orders) == 1:
+            order = orders[0]
+            plate = order.truck.license_plate if order.truck else '—'
+            context.user_data['photo_order_id'] = order.id
+            context.user_data['awaiting_photo_order'] = False
+            bot_reply = f"✅ Замовлення *{order.order_number}* ({plate})\n\nОберіть тип фото:"
+            await update.message.reply_text(
+                bot_reply,
+                parse_mode='Markdown',
+                reply_markup=get_photo_type_keyboard()
+            )
+        else:
+            bot_reply = f"Знайдено {len(orders)} замовлень. Оберіть потрібне:"
+            await update.message.reply_text(
+                bot_reply,
+                reply_markup=get_order_selection_keyboard(orders)
+            )
     elif "Перевірити статус замовлення" in text:
         bot_reply = "Введіть номер замовлення:"
         context.user_data['awaiting_order'] = True
@@ -318,16 +407,111 @@ async def admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = "Введіть ім'я:"
         context.user_data['awaiting_client'] = True
         await update.message.reply_text(bot_reply)
+    elif "Фото замовлення" in text:
+        bot_reply = "Введіть номер замовлення або останні цифри (наприклад: 0001):"
+        context.user_data['awaiting_photo_order'] = True
+        await update.message.reply_text(bot_reply)
 
     if bot_user:
         await log_message_to_db(bot_user, text, bot_reply)
 
+PHOTO_TYPE_LABELS = {
+    'car': 'Номерний знак',
+    'odometer': 'Одометр',
+    'dashboard': 'Панель приладів',
+    'repair': 'Фото ремонту',
+}
+
+
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
     if "history_" in query.data:
         truck_id = query.data.split("_")[1]
         await query.edit_message_text(await get_repair_history(truck_id))
+
+    elif query.data.startswith("photo_order_"):
+        order_id = int(query.data.replace("photo_order_", ""))
+        order = await sync_to_async(
+            lambda: ServiceOrder.objects.select_related('truck').get(id=order_id)
+        )()
+        plate = order.truck.license_plate if order.truck else '—'
+        context.user_data['photo_order_id'] = order_id
+        context.user_data['awaiting_photo_order'] = False
+        await query.edit_message_text(
+            f"✅ Замовлення *{order.order_number}* ({plate})\n\nОберіть тип фото:",
+            parse_mode='Markdown',
+            reply_markup=get_photo_type_keyboard()
+        )
+
+    elif query.data.startswith("photo_type_"):
+        photo_type = query.data.replace("photo_type_", "")
+        order_id = context.user_data.get('photo_order_id')
+        if not order_id:
+            await query.edit_message_text("❌ Сесія завершена. Почніть знову через «📷 Фото замовлення».")
+            return
+        context.user_data['pending_photo_type'] = photo_type
+        label = PHOTO_TYPE_LABELS.get(photo_type, photo_type)
+        await query.edit_message_text(
+            f"📸 Тип: *{label}*\n\nНадішліть фото:",
+            parse_mode='Markdown'
+        )
+
+    elif query.data == "photo_cancel":
+        context.user_data.pop('photo_order_id', None)
+        context.user_data.pop('pending_photo_type', None)
+        context.user_data.pop('awaiting_photo_order', None)
+        await query.edit_message_text("❌ Завантаження фото скасовано.")
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє фото від адміна і прив'язує до замовлення."""
+    user = update.message.from_user
+    is_linked, is_admin, bot_user = await check_if_user_is_linked(user.id)
+
+    if not is_admin:
+        await update.message.reply_text("❌ Завантаження фото доступне тільки адміністраторам.")
+        return
+
+    photo_type = context.user_data.get('pending_photo_type')
+    order_id = context.user_data.get('photo_order_id')
+
+    if not photo_type or not order_id:
+        await update.message.reply_text(
+            "ℹ️ Оберіть замовлення і тип фото через кнопку «📷 Фото замовлення»."
+        )
+        return
+
+    # Беремо найвищу якість (остання в списку = найбільша)
+    photo = update.message.photo[-1]
+    file_obj = await context.bot.get_file(photo.file_id)
+    photo_bytes = await file_obj.download_as_bytearray()
+
+    label = PHOTO_TYPE_LABELS.get(photo_type, photo_type)
+    filename = f"{photo_type}_{order_id}_{photo.file_id[-8:]}.jpg"
+
+    try:
+        if photo_type == 'repair':
+            await save_repair_photo(order_id, bytes(photo_bytes), filename)
+        else:
+            await save_order_photo(order_id, photo_type, bytes(photo_bytes), filename)
+
+        # Очищуємо стан — тип фото скидаємо, замовлення лишаємо для наступних фото
+        context.user_data.pop('pending_photo_type', None)
+
+        await update.message.reply_text(
+            f"✅ *{label}* збережено!\n\n"
+            "Оберіть наступний тип фото або натисніть іншу кнопку меню.",
+            parse_mode='Markdown',
+            reply_markup=get_photo_type_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Помилка збереження фото: {e}")
+        await update.message.reply_text("❌ Помилка при збереженні фото. Спробуйте ще раз.")
+
+    if bot_user:
+        await log_message_to_db(bot_user, f"[photo] {label} → order_id={order_id}", "photo saved", message_type='photo')
+
 
 # --- COMMAND ---
 class Command(BaseCommand):
@@ -341,9 +525,10 @@ class Command(BaseCommand):
         app.add_handler(MessageHandler(filters.Regex("^Мої автомобілі"), my_cars))
         
         # Адмінські кнопки
-        admin_regex = "^(Всі автомобілі|Всі замовлення|Статистика|Знайти авто|Знайти клієнта)"
+        admin_regex = "^(Всі автомобілі|Всі замовлення|Статистика|Знайти авто|Знайти клієнта|📷 Фото замовлення)"
         app.add_handler(MessageHandler(filters.Regex(admin_regex), admin_buttons))
         
+        app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
         app.add_handler(CallbackQueryHandler(callback_handler))
         
