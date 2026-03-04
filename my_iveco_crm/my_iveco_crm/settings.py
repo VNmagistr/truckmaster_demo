@@ -179,6 +179,9 @@ REST_FRAMEWORK = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Telegram бот: щотижневий запит пробігу у власників
+ASK_MILEAGE_ENABLED = config('ASK_MILEAGE_ENABLED', default=False, cast=bool)
+
 # Логування
 LOGGING = {
     'version': 1,

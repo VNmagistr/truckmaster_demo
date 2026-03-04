@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BotUser, BotMessageLog, ReminderSettings
+from .models import BotUser, BotMessageLog, ReminderSettings, MileageReport
 
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
@@ -41,3 +41,11 @@ class ReminderSettingsAdmin(admin.ModelAdmin):
     list_filter = ('is_enabled', 'reminder_type')
     search_fields = ('bot_user__first_name', 'truck__license_plate')
     autocomplete_fields = ['bot_user', 'truck']
+
+
+@admin.register(MileageReport)
+class MileageReportAdmin(admin.ModelAdmin):
+    list_display = ('truck', 'mileage', 'bot_user', 'reported_at')
+    list_filter = ('reported_at',)
+    search_fields = ('truck__license_plate', 'bot_user__first_name')
+    readonly_fields = ('bot_user', 'truck', 'mileage', 'reported_at')
