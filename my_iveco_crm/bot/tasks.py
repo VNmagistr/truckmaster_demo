@@ -1,10 +1,12 @@
+import asyncio
 import logging
 import os
 from datetime import timedelta
 
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
 from .models import BotUser
@@ -111,7 +113,6 @@ def send_daily_reminders():
 
             message = _build_reminder_message(reminder, current_mileage)
 
-            import asyncio
             asyncio.run(bot.send_message(
                 chat_id=bot_user.telegram_id,
                 text=message,
@@ -129,4 +130,64 @@ def send_daily_reminders():
             logger.error(f"Помилка обробки нагадування {reminder.id}: {e}")
 
     logger.info(f"Надіслано {sent_count} нагадувань")
+    return sent_count
+
+
+@shared_task
+def ask_owners_for_mileage():
+    """
+    Щотижнева задача: надсилає власникам запит на введення поточного пробігу.
+    Вмикається через ASK_MILEAGE_ENABLED=True в .env
+    """
+    if not getattr(settings, 'ASK_MILEAGE_ENABLED', False):
+        return 0
+
+    if not BOT_TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN не встановлений")
+        return 0
+
+    bot = Bot(token=BOT_TOKEN)
+
+    users = BotUser.objects.filter(
+        is_active=True,
+        is_blocked=False,
+        assigned_trucks__isnull=False,
+    ).prefetch_related('assigned_trucks').distinct()
+
+    sent_count = 0
+
+    for bot_user in users:
+        trucks = list(bot_user.assigned_trucks.all())
+        if not trucks:
+            continue
+
+        try:
+            keyboard = [
+                [InlineKeyboardButton(
+                    f"🚚 {t.license_plate} ({t.specific_model_name})",
+                    callback_data=f"mileage_truck_{t.id}"
+                )]
+                for t in trucks
+            ]
+            text = (
+                "🛣 *Щотижневий запит пробігу*\n\n"
+                "Будь ласка, оновіть поточний пробіг ваших автомобілів — "
+                "це допомагає своєчасно нагадувати про технічне обслуговування.\n\n"
+                "Оберіть автомобіль:"
+            )
+            asyncio.run(bot.send_message(
+                chat_id=bot_user.telegram_id,
+                text=text,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            ))
+            sent_count += 1
+            logger.info(f"Запит пробігу надіслано: {bot_user.telegram_id}")
+
+        except TelegramError as e:
+            logger.error(f"Помилка надсилання запиту пробігу {bot_user.telegram_id}: {e}")
+        except Exception as e:
+            logger.error(f"Помилка задачі ask_owners_for_mileage: {e}")
+
+    logger.info(f"Запити пробігу надіслано {sent_count} користувачам")
     return sent_count

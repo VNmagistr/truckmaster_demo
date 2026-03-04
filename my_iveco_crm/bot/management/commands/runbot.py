@@ -218,6 +218,20 @@ def find_client_by_name(name):
     return reply
 
 @sync_to_async
+def save_mileage_report(bot_user, truck_id, mileage):
+    """Зберігає введений пробіг і повертає (truck, повідомлення)."""
+    from bot.models import MileageReport
+    truck = Truck.objects.get(id=truck_id)
+    MileageReport.objects.create(bot_user=bot_user, truck=truck, mileage=mileage)
+    formatted = f"{mileage:,}".replace(",", " ")
+    reply = (
+        f"✅ Пробіг *{formatted} км* для *{truck.license_plate}* збережено. Дякуємо!\n\n"
+        "Ми повідомимо вас коли підійде час технічного обслуговування."
+    )
+    return truck, reply
+
+
+@sync_to_async
 def get_client_reminders(bot_user):
     """Повертає активні нагадування для всіх вантажівок клієнта."""
     from maintenance.models import ServiceReminder
@@ -372,7 +386,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     bot_user = await get_or_create_bot_user(user)
 
-    if context.user_data.get('awaiting_truck'):
+    if context.user_data.get('awaiting_mileage_truck_id') and text.strip().isdigit():
+        truck_id = context.user_data.pop('awaiting_mileage_truck_id')
+        mileage = int(text.strip())
+        truck, bot_reply = await save_mileage_report(bot_user, truck_id, mileage)
+        await update.message.reply_text(bot_reply, parse_mode='Markdown')
+    elif context.user_data.get('awaiting_truck'):
         bot_reply = await find_truck_by_plate(text)
         await update.message.reply_text(bot_reply)
         context.user_data['awaiting_truck'] = False
@@ -496,6 +515,18 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "history_" in query.data:
         truck_id = query.data.split("_")[1]
         await query.edit_message_text(await get_repair_history(truck_id))
+
+    elif query.data.startswith("mileage_truck_"):
+        truck_id = int(query.data.replace("mileage_truck_", ""))
+        truck = await sync_to_async(
+            lambda: Truck.objects.get(id=truck_id)
+        )()
+        context.user_data['awaiting_mileage_truck_id'] = truck_id
+        await query.edit_message_text(
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
+            "Введіть поточний пробіг в км (тільки число, наприклад: 185000):",
+            parse_mode='Markdown'
+        )
 
     elif query.data.startswith("photo_order_"):
         order_id = int(query.data.replace("photo_order_", ""))

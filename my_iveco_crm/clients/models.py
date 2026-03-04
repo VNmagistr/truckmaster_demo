@@ -126,14 +126,19 @@ class Truck(models.Model):
         super().save(*args, **kwargs)
 
     def get_latest_mileage(self):
-        """Отримує останній зафіксований пробіг"""
+        """Отримує останній зафіксований пробіг (з замовлень або звітів бота)."""
         from orders.models import ServiceOrder
+        from bot.models import MileageReport
 
         order_mileage = ServiceOrder.objects.filter(
             truck=self
-        ).aggregate(Max('current_mileage'))['current_mileage__max']
+        ).aggregate(Max('current_mileage'))['current_mileage__max'] or 0
 
-        return order_mileage or 0
+        report_mileage = MileageReport.objects.filter(
+            truck=self
+        ).aggregate(Max('mileage'))['mileage__max'] or 0
+
+        return max(order_mileage, report_mileage)
 
 # --- МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
 class OwnershipHistory(models.Model):
