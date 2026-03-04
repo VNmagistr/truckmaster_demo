@@ -117,6 +117,25 @@ class ServiceReminder(models.Model):
         'Цільова дата',
         null=True, blank=True
     )
+    NOTIFY_FREQUENCY_CHOICES = [
+        (1,  'Щодня'),
+        (2,  'Кожні 2 дні'),
+        (3,  'Кожні 3 дні'),
+        (7,  'Раз на тиждень'),
+        (14, 'Раз на 2 тижні'),
+    ]
+    notify_frequency_days = models.PositiveSmallIntegerField(
+        'Частота нагадувань',
+        choices=NOTIFY_FREQUENCY_CHOICES,
+        default=7,
+        help_text='Як часто повторювати повідомлення власнику поки ТО не виконано.'
+    )
+    last_notified_at = models.DateTimeField(
+        'Останнє надсилання',
+        null=True, blank=True,
+        editable=False,
+    )
+
     interval_km = models.PositiveIntegerField(
         'Інтервал за пробігом (км)',
         null=True, blank=True,

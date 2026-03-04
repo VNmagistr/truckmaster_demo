@@ -54,6 +54,7 @@ class ServiceReminderAdmin(admin.ModelAdmin):
     
     # Autocomplete
     autocomplete_fields = ['truck', 'completed_order', 'service_type']
+    readonly_fields = ('last_notified_at',)
     
     fieldsets = (
         ('Вантажівка', {
@@ -63,7 +64,8 @@ class ServiceReminderAdmin(admin.ModelAdmin):
             'fields': ('service_type', 'title', 'description')
         }),
         ('Параметри', {
-            'fields': ('reminder_type', 'target_mileage', 'target_date', 'priority')
+            'fields': ('reminder_type', 'target_mileage', 'target_date', 'priority',
+                       'notify_frequency_days')
         }),
         ('Інтервал повторення', {
             'fields': ('interval_km', 'interval_months'),
@@ -73,7 +75,7 @@ class ServiceReminderAdmin(admin.ModelAdmin):
             ),
         }),
         ('Статус', {
-            'fields': ('status', 'completed_order', 'completed_at')
+            'fields': ('status', 'completed_order', 'completed_at', 'last_notified_at')
         }),
     )
     
