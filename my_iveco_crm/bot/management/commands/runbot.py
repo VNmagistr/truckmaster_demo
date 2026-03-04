@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 MAIN_KEYBOARD = [
     [KeyboardButton("Мої автомобілі 🚚")],
     [KeyboardButton("Перевірити статус замовлення 🧾")],
+    [KeyboardButton("🔔 Нагадування")],
 ]
 MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 
@@ -217,6 +218,45 @@ def find_client_by_name(name):
     return reply
 
 @sync_to_async
+def get_client_reminders(bot_user):
+    """Повертає активні нагадування для всіх вантажівок клієнта."""
+    from maintenance.models import ServiceReminder
+    from django.utils import timezone
+
+    if not bot_user.client:
+        return []
+
+    trucks = list(bot_user.assigned_trucks.all())
+    if not trucks:
+        return []
+
+    reminders = list(
+        ServiceReminder.objects.filter(
+            truck__in=trucks,
+            status__in=['pending', 'notified', 'overdue'],
+        ).select_related('truck').order_by('status', 'target_mileage', 'target_date')
+    )
+
+    today = timezone.now().date()
+    result = []
+    for r in reminders:
+        current_mileage = r.truck.get_latest_mileage()
+        km_left = (r.target_mileage - current_mileage) if r.target_mileage and current_mileage else None
+        days_left = (r.target_date - today).days if r.target_date else None
+        result.append({
+            'title': r.title,
+            'plate': r.truck.license_plate,
+            'status': r.status,
+            'km_left': km_left,
+            'days_left': days_left,
+            'target_mileage': r.target_mileage,
+            'current_mileage': current_mileage,
+        })
+
+    return result
+
+
+@sync_to_async
 def get_orders_for_photo(query):
     """Повертає список замовлень за точним або частковим збігом номера."""
     query = query.strip()
@@ -366,6 +406,32 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 bot_reply,
                 reply_markup=get_order_selection_keyboard(orders)
             )
+    elif "Нагадування" in text:
+        reminders = await get_client_reminders(bot_user)
+        if not reminders:
+            bot_reply = "✅ Активних нагадувань немає."
+            await update.message.reply_text(bot_reply)
+        else:
+            lines = ["🔔 *Нагадування про обслуговування:*\n"]
+            for r in reminders:
+                status_icon = {"pending": "⏳", "notified": "📬", "overdue": "🚨"}.get(r['status'], "🔔")
+                lines.append(f"{status_icon} *{r['title']}*")
+                lines.append(f"   🚚 {r['plate']}")
+                if r['km_left'] is not None:
+                    if r['km_left'] > 0:
+                        lines.append(f"   📏 Залишилось: ~{r['km_left']:,} км".replace(",", " "))
+                    else:
+                        lines.append(f"   ⚠️ Пробіг перевищено на {abs(r['km_left']):,} км!".replace(",", " "))
+                if r['days_left'] is not None:
+                    if r['days_left'] > 0:
+                        lines.append(f"   📅 Залишилось: {r['days_left']} днів")
+                    elif r['days_left'] == 0:
+                        lines.append(f"   📅 Термін сьогодні!")
+                    else:
+                        lines.append(f"   📅 Прострочено на {abs(r['days_left'])} днів!")
+                lines.append("")
+            bot_reply = "\n".join(lines)
+            await update.message.reply_text(bot_reply, parse_mode='Markdown')
     elif "Перевірити статус замовлення" in text:
         bot_reply = "Введіть номер замовлення:"
         context.user_data['awaiting_order'] = True
