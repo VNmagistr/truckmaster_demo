@@ -65,6 +65,13 @@ class ServiceReminderAdmin(admin.ModelAdmin):
         ('Параметри', {
             'fields': ('reminder_type', 'target_mileage', 'target_date', 'priority')
         }),
+        ('Інтервал повторення', {
+            'fields': ('interval_km', 'interval_months'),
+            'description': (
+                'Через скільки км / місяців автоматично створювати наступне нагадування '
+                'після виконання. Якщо порожньо — береться з типу ТО.'
+            ),
+        }),
         ('Статус', {
             'fields': ('status', 'completed_order', 'completed_at')
         }),
@@ -75,7 +82,11 @@ class ServiceReminderAdmin(admin.ModelAdmin):
     @admin.action(description='Позначити як виконано')
     def mark_as_completed(self, request, queryset):
         from django.utils import timezone
-        queryset.update(status='completed', completed_at=timezone.now())
+        now = timezone.now()
+        for reminder in queryset:
+            reminder.status = 'completed'
+            reminder.completed_at = now
+            reminder.save()  # потрібен save() щоб спрацював сигнал
     
     @admin.action(description='Відхилити')
     def mark_as_dismissed(self, request, queryset):
