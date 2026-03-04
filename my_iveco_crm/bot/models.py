@@ -54,6 +54,22 @@ class BotMessageLog(models.Model):
         verbose_name_plural = "Логи повідомлень"
 
 
+class MileageReport(models.Model):
+    """Пробіг вантажівки, введений власником через бот."""
+    bot_user = models.ForeignKey(BotUser, on_delete=models.CASCADE, verbose_name="Користувач")
+    truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка", related_name='mileage_reports')
+    mileage = models.PositiveIntegerField(verbose_name="Пробіг (км)")
+    reported_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата введення")
+
+    class Meta:
+        verbose_name = "Звіт про пробіг"
+        verbose_name_plural = "Звіти про пробіг"
+        ordering = ['-reported_at']
+
+    def __str__(self):
+        return f"{self.truck.license_plate} — {self.mileage} км ({self.reported_at.strftime('%d.%m.%Y')})"
+
+
 class ReminderSettings(models.Model):
     """Налаштування нагадувань для користувача"""
     bot_user = models.ForeignKey(BotUser, on_delete=models.CASCADE, verbose_name="Користувач")
