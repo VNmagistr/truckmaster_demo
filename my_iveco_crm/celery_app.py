@@ -19,10 +19,6 @@ app.conf.beat_schedule = {
         'task': 'bot.tasks.send_daily_reminders',
         'schedule': crontab(hour=9, minute=0),  # Щодня о 9:00
     },
-    'check-maintenance-reminders': {
-        'task': 'bot.tasks.check_maintenance_reminders',
-        'schedule': crontab(hour='*/6'),  # Кожні 6 годин
-    },
 }
 
 @app.task(bind=True)
