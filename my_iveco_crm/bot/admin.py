@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BotUser, BotMessageLog, ReminderSettings, MileageReport, BotSettings
+from .models import BotUser, BotMessageLog, MileageReport, BotSettings
 
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
@@ -34,13 +34,6 @@ class BotMessageLogAdmin(admin.ModelAdmin):
     def message_text_preview(self, obj):
         return obj.message_text[:50] + "..." if len(obj.message_text) > 50 else obj.message_text
     message_text_preview.short_description = "Текст"
-
-@admin.register(ReminderSettings)
-class ReminderSettingsAdmin(admin.ModelAdmin):
-    list_display = ('bot_user', 'truck', 'reminder_type', 'is_enabled')
-    list_filter = ('is_enabled', 'reminder_type')
-    search_fields = ('bot_user__first_name', 'truck__license_plate')
-    autocomplete_fields = ['bot_user', 'truck']
 
 
 @admin.register(MileageReport)
