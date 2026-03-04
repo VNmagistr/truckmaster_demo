@@ -85,14 +85,15 @@ def send_daily_reminders():
 
     bot = Bot(token=BOT_TOKEN)
 
-    pending = ServiceReminder.objects.filter(
-        status='pending',
+    active = ServiceReminder.objects.filter(
+        status__in=['pending', 'notified'],
         truck__client__isnull=False,
     ).select_related('truck', 'truck__client', 'service_type')
 
+    today = timezone.now().date()
     sent_count = 0
 
-    for reminder in pending:
+    for reminder in active:
         try:
             truck = reminder.truck
             current_mileage = truck.get_latest_mileage()
@@ -100,7 +101,12 @@ def send_daily_reminders():
             if not _is_due(reminder, current_mileage):
                 continue
 
-            # Знаходимо BotUser власника
+            # Перевіряємо частоту повторення для вже надісланих
+            if reminder.status == 'notified' and reminder.last_notified_at:
+                next_notify = reminder.last_notified_at.date() + timedelta(days=reminder.notify_frequency_days)
+                if today < next_notify:
+                    continue
+
             bot_user = BotUser.objects.filter(
                 client=truck.client,
                 is_active=True,
@@ -120,7 +126,8 @@ def send_daily_reminders():
             ))
 
             reminder.status = 'notified'
-            reminder.save(update_fields=['status'])
+            reminder.last_notified_at = timezone.now()
+            reminder.save(update_fields=['status', 'last_notified_at'])
             sent_count += 1
             logger.info(f"Нагадування надіслано: {reminder} → {bot_user.telegram_id}")
 
