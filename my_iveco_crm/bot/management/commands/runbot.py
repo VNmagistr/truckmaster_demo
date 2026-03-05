@@ -614,7 +614,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 class Command(BaseCommand):
     help = 'Run Bot'
     def handle(self, *args, **options):
-        if not BOT_TOKEN: return
+        if not BOT_TOKEN:
+            raise ValueError("TELEGRAM_BOT_TOKEN не встановлений у змінних середовища")
         app = Application.builder().token(BOT_TOKEN).build()
         
         app.add_handler(CommandHandler("start", start))

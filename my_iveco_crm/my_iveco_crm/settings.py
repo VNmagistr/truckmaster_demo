@@ -154,8 +154,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "https://dk2itrfnh33kx.cloudfront.net",
-    "http://157.230.114.19",
     "https://157.230.114.19",
+    "https://ital-truck.com.ua",
+    "https://www.ital-truck.com.ua",
+    "https://api.ital-truck.com.ua",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
