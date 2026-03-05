@@ -245,6 +245,17 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+# HTTPS Security Headers (production only)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 рік
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
 # JWT налаштування
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
