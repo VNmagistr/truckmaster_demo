@@ -2,10 +2,21 @@ from django.db import models
 from django.conf import settings
 from django.db.models import Sum, F
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 # Імпортуємо тільки існуючі моделі
 from clients.models import Client, Truck, IvecoBaseModel
 from inventory.models import UsedPart, Product
+
+
+def validate_image(file):
+    max_size_mb = 10
+    allowed_extensions = ['jpg', 'jpeg', 'png', 'webp']
+    ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+    if ext not in allowed_extensions:
+        raise ValidationError(f'Дозволені формати: {", ".join(allowed_extensions)}')
+    if file.size > max_size_mb * 1024 * 1024:
+        raise ValidationError(f'Максимальний розмір файлу — {max_size_mb} МБ')
 
 
 def get_repair_photo_path(instance, filename):
@@ -69,9 +80,9 @@ class ServiceOrder(models.Model):
     current_mileage = models.PositiveIntegerField(null=True, blank=True, verbose_name="Поточний пробіг")
     problem_description = models.TextField(blank=True, verbose_name="Опис проблеми")
     recommendations = models.TextField(blank=True, verbose_name="Рекомендації")
-    car_photo = models.ImageField(upload_to='order_photos/cars/', blank=True, null=True)
-    odometer_photo = models.ImageField(upload_to='order_photos/odometers/', blank=True, null=True)
-    dashboard_photo = models.ImageField(upload_to='order_photos/dashboards/', blank=True, null=True)
+    car_photo = models.ImageField(upload_to='order_photos/cars/', blank=True, null=True, validators=[validate_image])
+    odometer_photo = models.ImageField(upload_to='order_photos/odometers/', blank=True, null=True, validators=[validate_image])
+    dashboard_photo = models.ImageField(upload_to='order_photos/dashboards/', blank=True, null=True, validators=[validate_image])
     
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.OPEN, verbose_name="Статус")
     total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Загальна вартість")
@@ -177,7 +188,7 @@ class ServiceWork(models.Model):
 
 class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos')
-    image = models.ImageField(upload_to='repair_photos/')
+    image = models.ImageField(upload_to='repair_photos/', validators=[validate_image])
     description = models.CharField(max_length=255, blank=True)
 
     class Meta:
