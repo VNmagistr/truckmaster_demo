@@ -4,7 +4,7 @@ from .models import Client, Truck, IvecoBaseModel
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ['id', 'name', 'phone', 'email', 'address', 'telegram_chat_id', 'marked_for_deletion']
+        fields = ['id', 'name', 'phone', 'email', 'address', 'marked_for_deletion']
 
 class IvecoBaseModelSerializer(serializers.ModelSerializer):
     class Meta:
