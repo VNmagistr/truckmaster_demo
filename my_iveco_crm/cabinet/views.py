@@ -60,6 +60,7 @@ class CabinetTrucksView(generics.ListAPIView):
     """Список вантажівок клієнта."""
     permission_classes = [IsClientUser]
     serializer_class = CabinetTruckSerializer
+    pagination_class = None  # Клієнт бачить тільки свої авто — пагінація не потрібна
 
     def get_queryset(self):
         return Truck.objects.filter(
@@ -72,6 +73,7 @@ class CabinetOrdersView(generics.ListAPIView):
     """Список замовлень клієнта. Фільтр: ?truck=<id>"""
     permission_classes = [IsClientUser]
     serializer_class = CabinetOrderListSerializer
+    pagination_class = None  # Повертаємо всі замовлення клієнта без пагінації
 
     def get_queryset(self):
         client = self.request.user.client_profile
