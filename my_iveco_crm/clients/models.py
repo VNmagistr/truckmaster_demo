@@ -3,6 +3,14 @@ from django.db.models import Max
 from django.contrib.auth.models import User
 
 class Client(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='client_profile',
+        verbose_name="Акаунт клієнта"
+    )
     name = models.CharField(max_length=255, verbose_name="Ім'я")
     phone = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name="Основний номер телефону")
     email = models.EmailField(blank=True, null=True)
