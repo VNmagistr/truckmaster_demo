@@ -35,8 +35,8 @@
         const source = document.querySelector(SOURCE_SELECTOR);
         if (!source) return;
 
-        // Підписуємось на зміну головного поля
-        source.addEventListener('input', function () {
+        // Підписуємось на зміну головного поля (change — після завершення вводу)
+        source.addEventListener('change', function () {
             autofillEmptyTargets(source.value.trim());
         });
 
