@@ -26,6 +26,9 @@ urlpatterns = [
 
     # Bot API
     path('api/bot/', include('bot.urls')),
+
+    # Client cabinet
+    path('api/cabinet/', include('cabinet.urls')),
 ]
 
 if settings.DEBUG:

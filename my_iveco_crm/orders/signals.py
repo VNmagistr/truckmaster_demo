@@ -1,7 +1,11 @@
+import asyncio
+import logging
+import os
+
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
-from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder
-import logging
+
+from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder, RepairPhoto
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +130,43 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
 
     logger.info(f"Автоматично додано набір ТО для {truck.license_plate}")
     instance.service_order.update_total_cost()
+
+
+@receiver(post_save, sender=RepairPhoto)
+def notify_client_on_new_photo(sender, instance, created, **kwargs):
+    """
+    Після додавання фото ремонту надсилає сповіщення клієнту в Telegram,
+    якщо у нього є telegram_chat_id.
+    """
+    if not created:
+        return
+
+    client = instance.service_order.client
+    if not client or not client.telegram_chat_id:
+        return
+
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        return
+
+    try:
+        from telegram import Bot
+        order = instance.service_order
+        text = (
+            f"📸 *Нове фото ремонту*\n\n"
+            f"Замовлення: №{order.order_number}\n"
+            f"Автомобіль: {order.truck.license_plate}\n\n"
+            f"Переглянути деталі у особистому кабінеті:\n"
+            f"https://ital-truck.com.ua/cabinet/orders/{order.id}"
+        )
+        bot = Bot(token=bot_token)
+        asyncio.run(bot.send_message(
+            chat_id=client.telegram_chat_id,
+            text=text,
+            parse_mode='Markdown',
+        ))
+    except Exception as e:
+        logger.error(f"Помилка сповіщення клієнта {client.id} про фото: {e}")
 
 
 def auto_save_maintenance_kit(sender, instance, created, **kwargs):
