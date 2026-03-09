@@ -169,7 +169,7 @@ EURO_STANDARDS = ['EURO3', 'EURO4', 'EURO5', 'EURO6']
 
 # Статуси: DONE і CLOSED домінують — реалістично для архіву
 ORDER_STATUSES = ['OPEN', 'IN_PROGRESS', 'DONE', 'CLOSED', 'CANCELED']
-STATUS_WEIGHTS  = [3,     7,             30,     55,       5]
+STATUS_WEIGHTS = [3, 7, 30, 55, 5]
 
 
 def _rand_vin():
@@ -306,7 +306,7 @@ class Command(BaseCommand):
 
             username = f'demo_{i+1:04d}'
             while username in used_usernames:
-                username = f'demo_{i+1:04d}_{random.randint(1,999)}'
+                username = f'demo_{i+1:04d}_{random.randint(1, 999)}'
             used_usernames.add(username)
 
             users_to_create.append(User(
@@ -391,7 +391,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Створюємо {count} замовлень...')
 
         start_date = date(2023, 1, 1)
-        end_date   = date(2024, 12, 31)
+        end_date = date(2024, 12, 31)
 
         # Попередньо генеруємо дати та призначаємо порядкові номери по дням
         from collections import defaultdict
