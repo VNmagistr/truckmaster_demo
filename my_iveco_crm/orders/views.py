@@ -98,6 +98,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return queryset
             
         if self.action == 'list':
+            queryset = queryset.prefetch_related('photos')
             marked_param = self.request.query_params.get('marked_for_deletion')
             if str(marked_param).lower() != 'true':
                 queryset = queryset.filter(marked_for_deletion=False)
@@ -266,6 +267,166 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.save()
         return Response({'status': 'success'})
     
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def export_pdf(self, request, pk=None):
+        """Генерує PDF-документ наряду-замовлення."""
+        from django.http import HttpResponse
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, HRFlowable
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        import io
+        import os
+
+        order = self.get_object()
+
+        # Реєструємо шрифт з підтримкою кирилиці
+        font_paths = [
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/usr/share/fonts/TTF/DejaVuSans.ttf',
+            'C:/Windows/Fonts/arial.ttf',
+        ]
+        font_name = 'Helvetica'
+        for fp in font_paths:
+            if os.path.exists(fp):
+                try:
+                    pdfmetrics.registerFont(TTFont('CustomFont', fp))
+                    font_name = 'CustomFont'
+                except Exception:
+                    pass
+                break
+
+        Y_COLOR = colors.HexColor('#f5c518')
+        INK = colors.HexColor('#1a1a1a')
+        GRAY = colors.HexColor('#888888')
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buf, pagesize=A4,
+            leftMargin=15*mm, rightMargin=15*mm,
+            topMargin=15*mm, bottomMargin=15*mm,
+        )
+
+        styles = getSampleStyleSheet()
+        h1 = ParagraphStyle('h1', fontName=font_name, fontSize=16, textColor=INK, spaceAfter=4)
+        h2 = ParagraphStyle('h2', fontName=font_name, fontSize=11, textColor=INK, spaceAfter=2, spaceBefore=8)
+        normal = ParagraphStyle('normal', fontName=font_name, fontSize=9, textColor=INK, leading=14)
+        small = ParagraphStyle('small', fontName=font_name, fontSize=8, textColor=GRAY)
+
+        status_labels = {
+            'OPEN': 'Відкрито', 'IN_PROGRESS': 'В роботі',
+            'DONE': 'Виконано', 'CLOSED': 'Закрито', 'CANCELED': 'Скасовано',
+        }
+
+        story = []
+
+        # ── Шапка ─────────────────────────────────────────────────────────
+        header_data = [
+            [Paragraph('<b>Іта́л Трак</b> — Сервісний центр Iveco', ParagraphStyle('brand', fontName=font_name, fontSize=13, textColor=INK)),
+             Paragraph(f'<b>Наряд-замовлення</b><br/>№ {order.order_number or order.id}', ParagraphStyle('num', fontName=font_name, fontSize=12, textColor=INK, alignment=2))],
+        ]
+        header_table = Table(header_data, colWidths=[100*mm, 80*mm])
+        header_table.setStyle(TableStyle([
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LINEBELOW', (0, 0), (-1, -1), 2, Y_COLOR),
+        ]))
+        story.append(header_table)
+        story.append(Spacer(1, 6*mm))
+
+        # ── Інформація про замовлення ──────────────────────────────────────
+        story.append(Paragraph('Інформація про замовлення', h2))
+        info_rows = [
+            ['Статус', status_labels.get(order.status, order.status)],
+            ['Дата створення', order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else '—'],
+            ['Клієнт', order.client.name if order.client else '—'],
+            ['Телефон', order.client.phone or '—' if order.client else '—'],
+            ['Вантажівка', str(order.truck) if order.truck else '—'],
+            ['Номерний знак', order.truck.license_plate if order.truck else '—'],
+            ['Пробіг', f'{order.current_mileage:,} км'.replace(',', ' ') if order.current_mileage else '—'],
+        ]
+        info_table = Table(
+            [[Paragraph(f'<b>{r[0]}</b>', normal), Paragraph(str(r[1]), normal)] for r in info_rows],
+            colWidths=[50*mm, 130*mm],
+        )
+        info_table.setStyle(TableStyle([
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f7f7f7')]),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(info_table)
+
+        # ── Опис проблеми ────────────────────────────────────────────────
+        if order.problem_description:
+            story.append(Spacer(1, 4*mm))
+            story.append(Paragraph('Опис проблеми', h2))
+            story.append(Paragraph(order.problem_description, normal))
+
+        # ── Виконані роботи ──────────────────────────────────────────────
+        works = list(order.works.select_related('work__work_group').all())
+        if works:
+            story.append(Spacer(1, 4*mm))
+            story.append(Paragraph('Виконані роботи', h2))
+            work_data = [
+                [Paragraph('<b>Найменування роботи</b>', normal),
+                 Paragraph('<b>Год.</b>', normal),
+                 Paragraph('<b>Ціна/год.</b>', normal),
+                 Paragraph('<b>Сума</b>', normal)],
+            ]
+            for w in works:
+                name = w.work.name if w.work else (w.description or '—')
+                work_data.append([
+                    Paragraph(name, normal),
+                    Paragraph(str(w.hours_spent), normal),
+                    Paragraph(f'{float(w.price_at_moment):,.0f} ₴', normal),
+                    Paragraph(f'{float(w.amount):,.0f} ₴', normal),
+                ])
+            work_data.append([
+                Paragraph('<b>Разом</b>', normal), '', '',
+                Paragraph(f'<b>{float(order.total_cost):,.0f} ₴</b>', normal),
+            ])
+            wt = Table(work_data, colWidths=[95*mm, 20*mm, 30*mm, 35*mm])
+            wt.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), Y_COLOR),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f7f7f7')]),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fffbea')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('SPAN', (0, -1), (2, -1)),
+                ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ]))
+            story.append(wt)
+
+        # ── Рекомендації ─────────────────────────────────────────────────
+        if order.recommendations:
+            story.append(Spacer(1, 4*mm))
+            story.append(Paragraph('Рекомендації', h2))
+            story.append(Paragraph(order.recommendations, normal))
+
+        # ── Підпис ───────────────────────────────────────────────────────
+        story.append(Spacer(1, 10*mm))
+        story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#e0e0e0')))
+        story.append(Spacer(1, 4*mm))
+        sign_data = [
+            [Paragraph('Підпис клієнта: ____________________', small),
+             Paragraph('Підпис майстра: ____________________', small)],
+        ]
+        st = Table(sign_data, colWidths=[90*mm, 90*mm])
+        story.append(st)
+
+        doc.build(story)
+        buf.seek(0)
+        filename = f'order_{order.order_number or order.id}.pdf'
+        response = HttpResponse(buf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
     @action(detail=True, methods=['post'])
     def add_work(self, request, pk=None):
         """Додати роботу до замовлення."""
