@@ -159,20 +159,25 @@ class ServiceOrderListSerializer(serializers.ModelSerializer):
     client = ClientSerializerForOrder(read_only=True)
     truck = TruckSerializerForOrder(read_only=True)
     marked_for_deletion_by_name = serializers.SerializerMethodField()
+    photos_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceOrder
         fields = [
-            'id', 
-            'order_number', 
-            'client', 
-            'truck', 
-            'status', 
+            'id',
+            'order_number',
+            'client',
+            'truck',
+            'status',
             'total_cost',
-            'created_at', 
+            'created_at',
             'marked_for_deletion',
-            'marked_for_deletion_by_name'
+            'marked_for_deletion_by_name',
+            'photos_count',
         ]
+
+    def get_photos_count(self, obj):
+        return obj.photos.count()
 
     def get_marked_for_deletion_by_name(self, obj):
         """Безпечне отримання імені користувача, який позначив на видалення."""
