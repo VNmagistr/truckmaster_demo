@@ -1,12 +1,17 @@
 # accounts/views.py
 import asyncio
+import io
 import json
 import logging
 import os
 import urllib.request
 
+import qrcode
+import qrcode.image.svg
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.http import HttpResponse
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -146,3 +151,32 @@ class PlacesReviewsView(APIView):
         }
         cache.set(self._CACHE_KEY, payload, self._CACHE_TTL)
         return Response(payload)
+
+
+class MapsQRView(APIView):
+    """
+    Повертає SVG QR-код з посиланням на Google Maps.
+    GET /api/accounts/qr/maps/
+    """
+    permission_classes = [AllowAny]
+    _MAPS_URL = 'https://maps.app.goo.gl/mw4fVkobK3tsrpQ88'
+
+    def get(self, request):
+        svg_bytes = _generate_maps_qr_svg()
+        return HttpResponse(svg_bytes, content_type='image/svg+xml')
+
+
+def _generate_maps_qr_svg():
+    factory = qrcode.image.svg.SvgPathImage
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=4,
+        image_factory=factory,
+    )
+    qr.add_data(MapsQRView._MAPS_URL)
+    qr.make(fit=True)
+    img = qr.make_image()
+    buf = io.BytesIO()
+    img.save(buf)
+    return buf.getvalue()
