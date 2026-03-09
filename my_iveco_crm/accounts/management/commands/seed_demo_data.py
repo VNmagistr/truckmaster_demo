@@ -3,7 +3,6 @@ Management command: seed_demo_data
 Генерує демо-дані: 1000 клієнтів, 3000 вантажівок, 5000 замовлень.
 """
 import io
-import os
 import random
 import string
 from datetime import timedelta, date
@@ -172,7 +171,7 @@ EURO_STANDARDS = ['EURO3', 'EURO4', 'EURO5', 'EURO6']
 
 # Статуси: DONE і CLOSED домінують — реалістично для архіву
 ORDER_STATUSES = ['OPEN', 'IN_PROGRESS', 'DONE', 'CLOSED', 'CANCELED']
-STATUS_WEIGHTS  = [3,     7,             30,     55,       5]
+STATUS_WEIGHTS = [3, 7, 30, 55, 5]
 
 
 def _rand_vin():
@@ -312,7 +311,7 @@ class Command(BaseCommand):
 
             username = f'demo_{i+1:04d}'
             while username in used_usernames:
-                username = f'demo_{i+1:04d}_{random.randint(1,999)}'
+                username = f'demo_{i+1:04d}_{random.randint(1, 999)}'
             used_usernames.add(username)
 
             users_to_create.append(User(
@@ -397,7 +396,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Створюємо {count} замовлень...')
 
         start_date = date(2023, 1, 1)
-        end_date   = date(2024, 12, 31)
+        end_date = date(2024, 12, 31)
 
         # Попередньо генеруємо дати та призначаємо порядкові номери по дням
         from collections import defaultdict
@@ -489,7 +488,7 @@ class Command(BaseCommand):
     def _create_repair_photos(self):
         self.stdout.write('Генеруємо фото ремонтів...')
         try:
-            from PIL import Image, ImageDraw, ImageFont
+            from PIL import Image, ImageDraw
         except ImportError:
             self.stdout.write('  Pillow не встановлено — пропускаємо фото.')
             return
@@ -545,7 +544,7 @@ class Command(BaseCommand):
 
                 # Текст опису
                 desc = PHOTO_DESCRIPTIONS[j % len(PHOTO_DESCRIPTIONS)]
-                draw.text((10, 10), f'Iveco Service', fill=(255, 200, 24))
+                draw.text((10, 10), 'Iveco Service', fill=(255, 200, 24))
                 draw.text((10, 275), desc, fill=(200, 200, 200))
 
                 buf = io.BytesIO()
