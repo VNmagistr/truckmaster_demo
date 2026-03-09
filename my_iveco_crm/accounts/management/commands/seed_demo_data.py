@@ -2,18 +2,21 @@
 Management command: seed_demo_data
 Генерує демо-дані: 1000 клієнтів, 3000 вантажівок, 5000 замовлень.
 """
+import io
+import os
 import random
 import string
 from datetime import timedelta, date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
 from clients.models import Client, IvecoBaseModel, Truck
-from orders.models import ServiceOrder, WorkGroup, WorkPrice, ServiceWork
+from orders.models import ServiceOrder, WorkGroup, WorkPrice, ServiceWork, RepairPhoto
 
 
 # ── Iveco моделі ────────────────────────────────────────────────────────────
@@ -237,18 +240,21 @@ class Command(BaseCommand):
             clients = self._create_clients(1000)
             trucks = self._create_trucks(clients, base_models, 3000)
             self._create_orders(clients, trucks, work_prices, 5000)
+            self._create_repair_photos()
 
         self.stdout.write(self.style.SUCCESS(
             '\n✓ Готово! Створено:\n'
             '  • 1000 клієнтів\n'
             '  • 3000 вантажівок\n'
             '  • 5000 замовлень\n'
+            '  • фото ремонтів для ~30% замовлень\n'
         ))
 
     # ── Очищення ────────────────────────────────────────────────────────────
 
     def _clear(self):
         self.stdout.write('Видаляємо існуючі демо-дані...')
+        RepairPhoto.objects.all().delete()
         ServiceWork.objects.all().delete()
         ServiceOrder.objects.all().delete()
         Truck.objects.all().delete()
@@ -471,3 +477,81 @@ class Command(BaseCommand):
         ServiceOrder.objects.bulk_update(orders_to_update, ['total_cost'], batch_size=200)
 
         self.stdout.write(f'  {len(all_orders)} замовлень + {len(works_to_create)} виконаних робіт.')
+
+    # ── Фото ремонтів ────────────────────────────────────────────────────────
+
+    def _create_repair_photos(self):
+        self.stdout.write('Генеруємо фото ремонтів...')
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except ImportError:
+            self.stdout.write('  Pillow не встановлено — пропускаємо фото.')
+            return
+
+        PHOTO_DESCRIPTIONS = [
+            'Стан двигуна до ремонту',
+            'Знятий повітряний фільтр',
+            'Заміна оливи двигуна',
+            'Гальмівні колодки — знос',
+            'Стан підвіски',
+            'Заміна паливного фільтра',
+            'Діагностика системи',
+            'Ремонт турбіни',
+            'Стан після ремонту',
+            'Перевірка рівня рідин',
+            'Ходова частина',
+            'Знятий елемент трансмісії',
+        ]
+
+        # Палітра кольорів для placeholder-фото (імітує реальні фото ремонту)
+        COLORS = [
+            (45, 45, 45), (60, 60, 80), (80, 60, 40),
+            (40, 60, 40), (70, 50, 50), (50, 70, 80),
+        ]
+
+        done_orders = list(ServiceOrder.objects.filter(
+            status__in=['DONE', 'CLOSED'],
+            client__user__username__startswith='demo_',
+        ).values_list('id', flat=True))
+
+        # Беремо ~30% замовлень
+        sample_count = max(1, len(done_orders) * 30 // 100)
+        selected_ids = random.sample(done_orders, min(sample_count, len(done_orders)))
+
+        total_photos = 0
+        for order_id in selected_ids:
+            num_photos = random.randint(1, 4)
+            for j in range(num_photos):
+                color = random.choice(COLORS)
+                # Генеруємо 400×300 PNG з кольоровим фоном і написом
+                img = Image.new('RGB', (400, 300), color=color)
+                draw = ImageDraw.Draw(img)
+
+                # Сітка (імітація реального фото техніки)
+                for x in range(0, 400, 40):
+                    draw.line([(x, 0), (x, 300)], fill=tuple(min(c + 20, 255) for c in color), width=1)
+                for y in range(0, 300, 40):
+                    draw.line([(0, y), (400, y)], fill=tuple(min(c + 20, 255) for c in color), width=1)
+
+                # Центральний прямокутник (деталь)
+                box_color = tuple(min(c + 40, 255) for c in color)
+                draw.rectangle([80, 80, 320, 220], fill=box_color, outline=(200, 200, 200), width=2)
+
+                # Текст опису
+                desc = PHOTO_DESCRIPTIONS[j % len(PHOTO_DESCRIPTIONS)]
+                draw.text((10, 10), f'Iveco Service', fill=(255, 200, 24))
+                draw.text((10, 275), desc, fill=(200, 200, 200))
+
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=75)
+                buf.seek(0)
+
+                photo = RepairPhoto(service_order_id=order_id, description=desc)
+                photo.image.save(
+                    f'demo_order_{order_id}_photo_{j+1}.jpg',
+                    ContentFile(buf.read()),
+                    save=True,
+                )
+                total_photos += 1
+
+        self.stdout.write(f'  {total_photos} фото для {len(selected_ids)} замовлень.')
