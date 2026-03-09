@@ -5,7 +5,7 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 
 logger = logging.getLogger(__name__)
@@ -168,13 +168,50 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Статистика для дашборду."""
-        queryset = ServiceOrder.objects.all()
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        start_of_year = today.replace(month=1, day=1)
+
+        qs = ServiceOrder.objects.filter(marked_for_deletion=False)
+        closed_qs = qs.filter(status__in=['DONE', 'CLOSED'])
+
+        # Виторг за поточний місяць і рік
+        monthly_revenue = closed_qs.filter(
+            created_at__date__gte=start_of_month
+        ).aggregate(total=Sum('total_cost'))['total'] or 0
+
+        yearly_revenue = closed_qs.filter(
+            created_at__date__gte=start_of_year
+        ).aggregate(total=Sum('total_cost'))['total'] or 0
+
+        # Графік виторгу за останні 12 місяців
+        revenue_chart = []
+        for i in range(11, -1, -1):
+            month_date = (today.replace(day=1) - datetime.timedelta(days=i * 28)).replace(day=1)
+            if month_date.month == 12:
+                next_month = month_date.replace(year=month_date.year + 1, month=1)
+            else:
+                next_month = month_date.replace(month=month_date.month + 1)
+            revenue = closed_qs.filter(
+                created_at__date__gte=month_date,
+                created_at__date__lt=next_month,
+            ).aggregate(total=Sum('total_cost'))['total'] or 0
+            ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
+                         'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
+            revenue_chart.append({
+                'name': ua_months[month_date.month - 1],
+                'revenue': float(revenue),
+            })
+
         stats = {
-            'total_orders': queryset.count(),
-            'open_orders': queryset.filter(status='OPEN').count(),
-            'in_progress_orders': queryset.filter(status='IN_PROGRESS').count(),
-            'closed_orders': queryset.filter(status='CLOSED').count(),
-            'canceled_orders': queryset.filter(status='CANCELED').count(),
+            'total_orders': qs.count(),
+            'open_orders': qs.filter(status='OPEN').count(),
+            'in_progress_orders': qs.filter(status='IN_PROGRESS').count(),
+            'closed_orders': qs.filter(status='CLOSED').count(),
+            'canceled_orders': qs.filter(status='CANCELED').count(),
+            'monthly_revenue': float(monthly_revenue),
+            'yearly_revenue': float(yearly_revenue),
+            'revenue_chart': revenue_chart,
         }
         return Response(stats)
 
