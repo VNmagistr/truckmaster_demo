@@ -1,29 +1,15 @@
 import logging
 import datetime
 
-from rest_framework import viewsets, permissions, filters, status
+from django.db.models import Q, Sum
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.utils import timezone
-from django.db.models import Q, Sum
-from django_filters.rest_framework import DjangoFilterBackend
 
-logger = logging.getLogger(__name__)
-
-
-def _filters_for_service_type(kit_filters_qs, service_type):
-    """Повертає фільтри набору ТО залежно від виду ТО.
-
-    full    → service_type in ('full', 'both')
-    partial → service_type in ('partial', 'both')
-    None    → всі фільтри (зворотна сумісність)
-    """
-    if service_type == 'full':
-        return kit_filters_qs.filter(service_type__in=['full', 'both'])
-    if service_type == 'partial':
-        return kit_filters_qs.filter(service_type__in=['partial', 'both'])
-    return kit_filters_qs.all()
-
+from clients.models import Truck
+from inventory.models import UsedPart
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
@@ -31,8 +17,6 @@ from .models import (
     TruckMaintenanceIntervals,
     OrderStatusHistory,
 )
-from clients.models import Truck
-from inventory.models import UsedPart
 from .serializers import (
     ServiceOrderListSerializer,
     ServiceOrderDetailSerializer,
@@ -55,6 +39,22 @@ from .serializers import (
     OrderStatusHistorySerializer,
 )
 
+logger = logging.getLogger(__name__)
+
+
+def _filters_for_service_type(kit_filters_qs, service_type):
+    """Повертає фільтри набору ТО залежно від виду ТО.
+
+    full    → service_type in ('full', 'both')
+    partial → service_type in ('partial', 'both')
+    None    → всі фільтри (зворотна сумісність)
+    """
+    if service_type == 'full':
+        return kit_filters_qs.filter(service_type__in=['full', 'both'])
+    if service_type == 'partial':
+        return kit_filters_qs.filter(service_type__in=['partial', 'both'])
+    return kit_filters_qs.all()
+
 
 class ServiceOrderViewSet(viewsets.ModelViewSet):
     """
@@ -62,33 +62,33 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     Виправлено: додано truck__client до select_related для оптимізації запитів.
     """
     queryset = ServiceOrder.objects.select_related(
-        'client', 
+        'client',
         'truck',
         'truck__client',  # Додано для оптимізації запитів до клієнта вантажівки
         'marked_for_deletion_by'
     ).all().order_by('-created_at')
-    
+
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    
+
     search_fields = [
         'order_number',
-        'truck__license_plate', 
+        'truck__license_plate',
         'client__name',
     ]
     filterset_fields = ['status', 'client', 'truck', 'marked_for_deletion']
     ordering_fields = ['created_at', 'order_number', 'status']
-    
+
     def get_serializer_class(self):
         if self.action == 'list':
             return ServiceOrderListSerializer
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceOrderWriteSerializer
         return ServiceOrderDetailSerializer
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        
+
         if self.action == 'retrieve':
             queryset = queryset.prefetch_related(
                 'works', 'works__work', 'works__mechanic',
@@ -96,13 +96,13 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'direct_parts', 'direct_parts__part',
             )
             return queryset
-            
+
         if self.action == 'list':
             queryset = queryset.prefetch_related('photos')
             marked_param = self.request.query_params.get('marked_for_deletion')
             if str(marked_param).lower() != 'true':
                 queryset = queryset.filter(marked_for_deletion=False)
-            
+
         global_search = self.request.query_params.get('global_search', None)
         if global_search:
             queryset = queryset.filter(
@@ -255,7 +255,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.deletion_reason = request.data.get('reason', '')
         order.save()
         return Response({'status': 'success'})
-    
+
     @action(detail=True, methods=['post'])
     def unmark_for_deletion(self, request, pk=None):
         """Зняти позначку на видалення."""
@@ -266,14 +266,14 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.marked_for_deletion_at = None
         order.save()
         return Response({'status': 'success'})
-    
+
     @action(detail=True, methods=['get'], url_path='pdf')
     def export_pdf(self, request, pk=None):
         """Генерує PDF-документ наряду-замовлення."""
         from django.http import HttpResponse
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib import colors
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, HRFlowable
         from reportlab.pdfbase import pdfmetrics
@@ -310,8 +310,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             topMargin=15*mm, bottomMargin=15*mm,
         )
 
-        styles = getSampleStyleSheet()
-        h1 = ParagraphStyle('h1', fontName=font_name, fontSize=16, textColor=INK, spaceAfter=4)
         h2 = ParagraphStyle('h2', fontName=font_name, fontSize=11, textColor=INK, spaceAfter=2, spaceBefore=8)
         normal = ParagraphStyle('normal', fontName=font_name, fontSize=9, textColor=INK, leading=14)
         small = ParagraphStyle('small', fontName=font_name, fontSize=8, textColor=GRAY)
@@ -324,9 +322,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         story = []
 
         # ── Шапка ─────────────────────────────────────────────────────────
+        brand_style = ParagraphStyle('brand', fontName=font_name, fontSize=13, textColor=INK)
+        num_style = ParagraphStyle('num', fontName=font_name, fontSize=12, textColor=INK, alignment=2)
         header_data = [
-            [Paragraph('<b>Іта́л Трак</b> — Сервісний центр Iveco', ParagraphStyle('brand', fontName=font_name, fontSize=13, textColor=INK)),
-             Paragraph(f'<b>Наряд-замовлення</b><br/>№ {order.order_number or order.id}', ParagraphStyle('num', fontName=font_name, fontSize=12, textColor=INK, alignment=2))],
+            [
+                Paragraph('<b>Іта́л Трак</b> — Сервісний центр Iveco', brand_style),
+                Paragraph(
+                    f'<b>Наряд-замовлення</b><br/>№ {order.order_number or order.id}',
+                    num_style,
+                ),
+            ],
         ]
         header_table = Table(header_data, colWidths=[100*mm, 80*mm])
         header_table.setStyle(TableStyle([
@@ -453,7 +458,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
 
         if service_type and service_type not in ('full', 'partial'):
-            return Response({'detail': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': "service_type має бути 'full' або 'partial'"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             rule = MaintenanceRule.objects.get(id=rule_id)
@@ -542,7 +550,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         result = []
         for key, label in TYPES:
             interval = getattr(intervals, f'{key}_interval', None) if intervals else None
-            last_km  = getattr(intervals, f'{key}_last_km', None) if intervals else None
+            last_km = getattr(intervals, f'{key}_last_km', None) if intervals else None
 
             if interval is not None and last_km is not None and current_km is not None:
                 remaining = last_km + interval - current_km
@@ -570,7 +578,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = ServiceWorkSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return ServiceWorkWriteSerializer
@@ -583,7 +591,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         part_id = request.data.get('part')
         quantity = request.data.get('quantity', 1)
         unit_price = request.data.get('unit_price')
-        
+
         try:
             used_part = UsedPart.objects.create(
                 service_work=service_work,
@@ -594,7 +602,7 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return Response(UsedPartSerializer(used_part).data, status=201)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
-            
+
     @action(detail=True, methods=['delete'], url_path='remove-part/(?P<part_id>[^/.]+)')
     def remove_part(self, request, pk=None, part_id=None):
         """Видалити запчастину з роботи."""

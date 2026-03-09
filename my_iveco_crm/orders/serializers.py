@@ -15,7 +15,7 @@ User = get_user_model()
 
 class ClientSerializerForOrder(serializers.ModelSerializer):
     """Серіалізатор клієнта для відображення в замовленні."""
-    
+
     class Meta:
         model = Client
         fields = ['id', 'name', 'phone']
@@ -59,7 +59,7 @@ class MechanicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'full_name']
-        
+
     def get_full_name(self, obj):
         """Отримання повного імені механіка."""
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
@@ -67,7 +67,7 @@ class MechanicSerializer(serializers.ModelSerializer):
 
 class WorkGroupSerializer(serializers.ModelSerializer):
     """Серіалізатор групи робіт."""
-    
+
     class Meta:
         model = WorkGroup
         fields = '__all__'
@@ -76,11 +76,11 @@ class WorkGroupSerializer(serializers.ModelSerializer):
 class WorkPriceSerializer(serializers.ModelSerializer):
     """Серіалізатор ціни роботи."""
     calculated_price = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = WorkPrice
         fields = '__all__'
-    
+
     def get_calculated_price(self, obj):
         """Отримання розрахованої ціни."""
         try:
@@ -110,7 +110,7 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceWork
         fields = '__all__'
-    
+
     def get_amount(self, obj):
         """Отримання суми за роботу."""
         try:
@@ -121,7 +121,7 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     """Серіалізатор виконаної роботи для запису."""
-    
+
     class Meta:
         model = ServiceWork
         fields = ['service_order', 'work', 'description', 'mechanic', 'hours_spent']
@@ -129,7 +129,7 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
     """Серіалізатор фото ремонту."""
-    
+
     class Meta:
         model = RepairPhoto
         fields = '__all__'
@@ -225,7 +225,7 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'marked_for_deletion_at',
             'deletion_reason',
         ]
-        
+
     def get_marked_for_deletion_by_name(self, obj):
         """Безпечне отримання імені користувача, який позначив на видалення."""
         try:
@@ -272,7 +272,7 @@ class OrderStatusHistorySerializer(serializers.ModelSerializer):
 
 class MaintenanceRuleSerializer(serializers.ModelSerializer):
     """Серіалізатор правила ТО."""
-    
+
     class Meta:
         model = MaintenanceRule
         fields = '__all__'
@@ -320,7 +320,10 @@ class MaintenanceKitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceKit
-        fields = ['id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'oil_change_interval_km', 'filters']
+        fields = [
+            'id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku',
+            'oil_quantity', 'oil_change_interval_km', 'filters',
+        ]
 
 
 class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
