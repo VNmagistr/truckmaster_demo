@@ -29,11 +29,10 @@ class IvecoBaseModelViewSet(viewsets.ModelViewSet):
 class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
     
-    # 🔥 ОНОВЛЕНО: Додано SearchFilter до списку фільтрів
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['client']
-    # Вказуємо поля для пошуку вантажівок
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['client', 'euro_standard', 'base_model']
     search_fields = ['license_plate', 'full_vin', 'last_seven_vin', 'specific_model_name']
+    ordering_fields = ['license_plate', 'specific_model_name', 'euro_standard']
 
     # Ця функція дозволяє нам вибирати серіалізатор в залежності від дії
     def get_serializer_class(self):
