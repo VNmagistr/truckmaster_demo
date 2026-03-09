@@ -318,8 +318,14 @@ class Command(BaseCommand):
             ))
             clients_to_create.append((name, phone, city))
 
-        # Bulk create users
+        # Bulk create users (без паролів — встановимо нижче)
         created_users = User.objects.bulk_create(users_to_create, batch_size=200)
+
+        # Встановлюємо демо-пароль (bulk_create не викликає set_password)
+        demo_password = 'demo1234'
+        from django.contrib.auth.hashers import make_password
+        hashed = make_password(demo_password)
+        User.objects.filter(username__startswith='demo_').update(password=hashed)
 
         # Bulk create clients
         client_objs = []
