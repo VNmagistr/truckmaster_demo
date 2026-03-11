@@ -2,9 +2,18 @@ from rest_framework import serializers
 from .models import Client, Truck, IvecoBaseModel
 
 class ClientSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True, default=None)
+
     class Meta:
         model = Client
         fields = ['id', 'name', 'phone', 'email', 'address', 'marked_for_deletion']
+
+    def validate_phone(self, value):
+        return value if value else None
+
+    def validate_email(self, value):
+        return value if value else None
 
 class IvecoBaseModelSerializer(serializers.ModelSerializer):
     class Meta:
