@@ -23,6 +23,10 @@ app.conf.beat_schedule = {
         'task': 'bot.tasks.ask_owners_for_mileage',
         'schedule': crontab(hour=10, minute=0, day_of_week=1),  # Щопонеділка о 10:00
     },
+    'send-appointment-reminders': {
+        'task': 'appointments.tasks.send_appointment_reminders',
+        'schedule': crontab(minute=0),  # every hour
+    },
 }
 
 @app.task(bind=True)
