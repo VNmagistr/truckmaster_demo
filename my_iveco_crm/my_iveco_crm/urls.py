@@ -29,6 +29,9 @@ urlpatterns = [
 
     # Client cabinet
     path('api/cabinet/', include('cabinet.urls')),
+
+    # Appointments
+    path('api/', include('appointments.urls')),
 ]
 
 if settings.DEBUG:
