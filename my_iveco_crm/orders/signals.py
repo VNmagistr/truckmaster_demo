@@ -135,38 +135,48 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
 @receiver(post_save, sender=RepairPhoto)
 def notify_client_on_new_photo(sender, instance, created, **kwargs):
     """
-    Після додавання фото ремонту надсилає сповіщення клієнту в Telegram,
-    якщо у нього є telegram_chat_id.
+    Після додавання фото ремонту надсилає сповіщення клієнту
+    через Telegram (якщо є telegram_chat_id) та WhatsApp (якщо є телефон).
     """
     if not created:
         return
 
     client = instance.service_order.client
-    if not client or not client.telegram_chat_id:
+    if not client:
         return
 
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        return
+    order = instance.service_order
+    cabinet_url = f"https://ital-truck.com.ua/cabinet/orders/{order.id}"
+    base_text = (
+        f"📸 Нове фото ремонту\n\n"
+        f"Замовлення: №{order.order_number}\n"
+        f"Автомобіль: {order.truck.license_plate}\n\n"
+        f"Переглянути деталі у особистому кабінеті:\n{cabinet_url}"
+    )
 
-    try:
-        from telegram import Bot
-        order = instance.service_order
-        text = (
-            f"📸 *Нове фото ремонту*\n\n"
-            f"Замовлення: №{order.order_number}\n"
-            f"Автомобіль: {order.truck.license_plate}\n\n"
-            f"Переглянути деталі у особистому кабінеті:\n"
-            f"https://ital-truck.com.ua/cabinet/orders/{order.id}"
-        )
-        bot = Bot(token=bot_token)
-        asyncio.run(bot.send_message(
-            chat_id=client.telegram_chat_id,
-            text=text,
-            parse_mode='Markdown',
-        ))
-    except Exception as e:
-        logger.error(f"Помилка сповіщення клієнта {client.id} про фото: {e}")
+    # --- Telegram ---
+    if client.telegram_chat_id:
+        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        if bot_token:
+            try:
+                from telegram import Bot
+                tg_text = base_text.replace("📸 Нове фото ремонту", "📸 *Нове фото ремонту*")
+                bot = Bot(token=bot_token)
+                asyncio.run(bot.send_message(
+                    chat_id=client.telegram_chat_id,
+                    text=tg_text,
+                    parse_mode='Markdown',
+                ))
+            except Exception as e:
+                logger.error(f"Telegram photo notify error for client {client.id}: {e}")
+
+    # --- WhatsApp ---
+    if client.phone:
+        try:
+            from my_iveco_crm.whatsapp import send_whatsapp_text
+            send_whatsapp_text(client.phone, base_text)
+        except Exception as e:
+            logger.error(f"WhatsApp photo notify error for client {client.id}: {e}")
 
 
 def auto_save_maintenance_kit(sender, instance, created, **kwargs):
