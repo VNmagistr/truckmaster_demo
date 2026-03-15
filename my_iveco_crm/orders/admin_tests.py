@@ -8,7 +8,7 @@ from django.urls import reverse
 from decimal import Decimal
 
 from orders.models import (
-    Employee, WorkGroup, WorkPrice, ServiceOrder, ServiceWork
+    WorkGroup, WorkPrice, ServiceOrder, ServiceWork
 )
 from orders.admin import ServiceOrderAdmin
 from clients.models import Client, IvecoBaseModel, Truck
@@ -40,7 +40,6 @@ class ServiceOrderAdminTest(TestCase):
             license_plate='AA1234BB'
         )
         
-        self.employee = Employee.objects.create(name='Mechanic', position='Mechanic')
         self.work_group = WorkGroup.objects.create(name='Engine', hourly_rate=Decimal('500'))
         self.work_price = WorkPrice.objects.create(
             work_group=self.work_group,

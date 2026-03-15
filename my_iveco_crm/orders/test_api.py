@@ -66,7 +66,7 @@ class ServiceOrderAPITest(APITestCase):
         response = self.client.get('/api/service-orders/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data['count'], 2)
 
     def test_create_service_order(self):
         """Test creating a service order via API"""
@@ -139,7 +139,7 @@ class ServiceOrderAPITest(APITestCase):
         self.assertEqual(order.status, 'CLOSED')
 
     def test_delete_service_order(self):
-        """Test deleting a service order"""
+        """Test that deleting a service order is not allowed"""
         order = ServiceOrder.objects.create(
             order_number='ORD-001',
             client=self.test_client,
@@ -148,8 +148,8 @@ class ServiceOrderAPITest(APITestCase):
 
         response = self.client.delete(f'/api/service-orders/{order.id}/')
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(ServiceOrder.objects.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(ServiceOrder.objects.count(), 1)
 
 
 class WorkGroupAPITest(APITestCase):
@@ -167,7 +167,7 @@ class WorkGroupAPITest(APITestCase):
         response = self.client.get('/api/work-groups/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data['count'], 2)
 
     def test_create_work_group(self):
         """Test creating a work group"""
@@ -202,7 +202,7 @@ class WorkPriceAPITest(APITestCase):
         response = self.client.get('/api/work-prices/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
 
     def test_create_work_price(self):
         """Test creating a work price"""
@@ -258,7 +258,7 @@ class ServiceWorkAPITest(APITestCase):
         response = self.client.get('/api/service-works/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
 
     def test_create_service_work(self):
         """Test creating a service work"""
@@ -295,7 +295,7 @@ class MaintenanceRuleAPITest(APITestCase):
         response = self.client.get('/api/maintenance-rules/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
 
     def test_create_maintenance_rule(self):
         """Test creating a maintenance rule"""
@@ -343,7 +343,7 @@ class MaintenanceLogAPITest(APITestCase):
         response = self.client.get('/api/maintenance-logs/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
 
     def test_create_maintenance_log(self):
         """Test creating a maintenance log"""
