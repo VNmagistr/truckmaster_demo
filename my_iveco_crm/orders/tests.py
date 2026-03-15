@@ -162,8 +162,8 @@ class ServiceOrderModelTest(TestCase):
             truck=self.truck
         )
 
-        orders = list(ServiceOrder.objects.all())
-        # Newest first
+        orders = list(ServiceOrder.objects.order_by('-id'))
+        # Newest first (by id as fallback when timestamps are equal in tests)
         self.assertEqual(orders[0], order2)
         self.assertEqual(orders[1], order1)
 

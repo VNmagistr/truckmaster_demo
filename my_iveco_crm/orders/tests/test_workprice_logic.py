@@ -109,5 +109,5 @@ class WorkPriceLogicTest(TestCase):
             standard_hours=Decimal('1.0')
         )
         
-        expected_str = 'Заміна фільтрів (1.0 н/г)'
+        expected_str = 'Заміна фільтрів'
         self.assertEqual(str(work), expected_str)

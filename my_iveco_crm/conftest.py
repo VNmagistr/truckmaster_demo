@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from clients.models import Client, IvecoBaseModel, Truck
 from inventory.models import Product
-from orders.models import Employee, WorkGroup, WorkPrice, ServiceOrder
+from orders.models import WorkGroup, WorkPrice, ServiceOrder
 
 
 @pytest.fixture
@@ -53,13 +53,6 @@ def truck(db, client_obj, base_model):
         euro_standard='EURO5'
     )
 
-
-@pytest.fixture
-def employee(db):
-    return Employee.objects.create(
-        name='Іван Механік',
-        position='Механік'
-    )
 
 
 @pytest.fixture
