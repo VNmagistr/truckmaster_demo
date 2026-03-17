@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "maintenance",
     "cabinet",
     "appointments",
+    "alpr",
 ]
 
 MIDDLEWARE = [
