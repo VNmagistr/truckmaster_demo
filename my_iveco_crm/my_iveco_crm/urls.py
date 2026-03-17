@@ -32,6 +32,9 @@ urlpatterns = [
 
     # Appointments
     path('api/', include('appointments.urls')),
+
+    # ALPR — розпізнавання номерів
+    path('api/', include('alpr.urls')),
 ]
 
 if settings.DEBUG:
