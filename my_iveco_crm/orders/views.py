@@ -267,23 +267,24 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order.save()
         return Response({'status': 'success'})
     
-    @action(detail=True, methods=['get'], url_path='pdf')
-    def export_pdf(self, request, pk=None):
-        """Генерує PDF-документ наряду-замовлення."""
+    def _build_order_pdf(self, order, mode='client'):
+        """
+        Будує PDF наряду-замовлення.
+        mode='client'   — з цінами, підсумками, рекомендаціями та підписами
+        mode='mechanic' — без цін, запчастини згруповані під кожною роботою
+        """
         from django.http import HttpResponse
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib import colors
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, HRFlowable
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
+        from inventory.models import UsedPart
         import io
         import os
 
-        order = self.get_object()
-
-        # Реєструємо шрифт з підтримкою кирилиці
         font_paths = [
             '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
             '/usr/share/fonts/TTF/DejaVuSans.ttf',
@@ -302,6 +303,18 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         Y_COLOR = colors.HexColor('#f5c518')
         INK = colors.HexColor('#1a1a1a')
         GRAY = colors.HexColor('#888888')
+        LIGHT = colors.HexColor('#f7f7f7')
+        GRID_COLOR = colors.HexColor('#e0e0e0')
+
+        h2 = ParagraphStyle('h2', fontName=font_name, fontSize=11, textColor=INK, spaceAfter=2, spaceBefore=8)
+        normal = ParagraphStyle('normal', fontName=font_name, fontSize=9, textColor=INK, leading=14)
+        small = ParagraphStyle('small', fontName=font_name, fontSize=8, textColor=GRAY)
+        indent = ParagraphStyle('indent', fontName=font_name, fontSize=8, textColor=GRAY, leftIndent=4)
+
+        status_labels = {
+            'OPEN': 'Відкрито', 'IN_PROGRESS': 'В роботі',
+            'DONE': 'Виконано', 'CLOSED': 'Закрито', 'CANCELED': 'Скасовано',
+        }
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -310,33 +323,25 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             topMargin=15*mm, bottomMargin=15*mm,
         )
 
-        styles = getSampleStyleSheet()
-        h1 = ParagraphStyle('h1', fontName=font_name, fontSize=16, textColor=INK, spaceAfter=4)
-        h2 = ParagraphStyle('h2', fontName=font_name, fontSize=11, textColor=INK, spaceAfter=2, spaceBefore=8)
-        normal = ParagraphStyle('normal', fontName=font_name, fontSize=9, textColor=INK, leading=14)
-        small = ParagraphStyle('small', fontName=font_name, fontSize=8, textColor=GRAY)
-
-        status_labels = {
-            'OPEN': 'Відкрито', 'IN_PROGRESS': 'В роботі',
-            'DONE': 'Виконано', 'CLOSED': 'Закрито', 'CANCELED': 'Скасовано',
-        }
-
         story = []
 
-        # ── Шапка ─────────────────────────────────────────────────────────
-        header_data = [
-            [Paragraph('<b>Іта́л Трак</b> — Сервісний центр Iveco', ParagraphStyle('brand', fontName=font_name, fontSize=13, textColor=INK)),
-             Paragraph(f'<b>Наряд-замовлення</b><br/>№ {order.order_number or order.id}', ParagraphStyle('num', fontName=font_name, fontSize=12, textColor=INK, alignment=2))],
-        ]
-        header_table = Table(header_data, colWidths=[100*mm, 80*mm])
-        header_table.setStyle(TableStyle([
+        # ── Шапка ────────────────────────────────────────────────────────
+        subtitle = 'Завдання механіку' if mode == 'mechanic' else 'Наряд-замовлення'
+        header_data = [[
+            Paragraph('<b>Іта́л Трак</b> — Сервісний центр Iveco',
+                      ParagraphStyle('brand', fontName=font_name, fontSize=13, textColor=INK)),
+            Paragraph(f'<b>{subtitle}</b><br/>№ {order.order_number or order.id}',
+                      ParagraphStyle('num', fontName=font_name, fontSize=12, textColor=INK, alignment=2)),
+        ]]
+        ht = Table(header_data, colWidths=[100*mm, 80*mm])
+        ht.setStyle(TableStyle([
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('LINEBELOW', (0, 0), (-1, -1), 2, Y_COLOR),
         ]))
-        story.append(header_table)
+        story.append(ht)
         story.append(Spacer(1, 6*mm))
 
-        # ── Інформація про замовлення ──────────────────────────────────────
+        # ── Інформація про замовлення ─────────────────────────────────────
         story.append(Paragraph('Інформація про замовлення', h2))
         info_rows = [
             ['Статус', status_labels.get(order.status, order.status)],
@@ -347,85 +352,250 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             ['Номерний знак', order.truck.license_plate if order.truck else '—'],
             ['Пробіг', f'{order.current_mileage:,} км'.replace(',', ' ') if order.current_mileage else '—'],
         ]
-        info_table = Table(
+        it = Table(
             [[Paragraph(f'<b>{r[0]}</b>', normal), Paragraph(str(r[1]), normal)] for r in info_rows],
             colWidths=[50*mm, 130*mm],
         )
-        info_table.setStyle(TableStyle([
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f7f7f7')]),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
+        it.setStyle(TableStyle([
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, LIGHT]),
+            ('GRID', (0, 0), (-1, -1), 0.5, GRID_COLOR),
             ('TOPPADDING', (0, 0), (-1, -1), 4),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ]))
-        story.append(info_table)
+        story.append(it)
 
-        # ── Опис проблеми ────────────────────────────────────────────────
+        # ── Опис проблеми ─────────────────────────────────────────────────
         if order.problem_description:
             story.append(Spacer(1, 4*mm))
             story.append(Paragraph('Опис проблеми', h2))
             story.append(Paragraph(order.problem_description, normal))
 
-        # ── Виконані роботи ──────────────────────────────────────────────
-        works = list(order.works.select_related('work__work_group').all())
-        if works:
-            story.append(Spacer(1, 4*mm))
-            story.append(Paragraph('Виконані роботи', h2))
-            work_data = [
-                [Paragraph('<b>Найменування роботи</b>', normal),
-                 Paragraph('<b>Год.</b>', normal),
-                 Paragraph('<b>Ціна/год.</b>', normal),
-                 Paragraph('<b>Сума</b>', normal)],
-            ]
-            for w in works:
-                name = w.work.name if w.work else (w.description or '—')
+        # ── Вибірка даних ─────────────────────────────────────────────────
+        works = list(order.works.select_related('work__work_group').prefetch_related('used_parts__part').all())
+        direct_parts = list(
+            UsedPart.objects.filter(service_order=order, service_work__isnull=True)
+            .select_related('part')
+        )
+
+        # ══════════════════════════════════════════════════════════════════
+        if mode == 'mechanic':
+            # ── Роботи та матеріали (для механіка) ───────────────────────
+            if works or direct_parts:
+                story.append(Spacer(1, 4*mm))
+                story.append(Paragraph('Роботи та матеріали', h2))
+
+            for idx, w in enumerate(works, 1):
+                work_name = w.work.name if w.work else (w.description or '—')
+                # Рядок роботи
+                wrow = Table(
+                    [[Paragraph(f'<b>{idx}. {work_name}</b>', normal),
+                      Paragraph(f'{w.hours_spent} год.', normal)]],
+                    colWidths=[150*mm, 30*mm],
+                )
+                wrow.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), Y_COLOR),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                    ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                    ('RIGHTPADDING', (1, 0), (1, 0), 8),
+                ]))
+                story.append(wrow)
+
+                # Запчастини для цієї роботи
+                parts = list(w.used_parts.all())
+                if parts:
+                    parts_data = [[
+                        Paragraph('<b>Артикул</b>', indent),
+                        Paragraph('<b>Найменування</b>', indent),
+                        Paragraph('<b>К-сть</b>', indent),
+                    ]]
+                    for p in parts:
+                        parts_data.append([
+                            Paragraph(p.part.sku_code or '—', indent),
+                            Paragraph(p.part.name, indent),
+                            Paragraph(str(p.quantity), indent),
+                        ])
+                    pt = Table(parts_data, colWidths=[35*mm, 120*mm, 25*mm])
+                    pt.setStyle(TableStyle([
+                        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [LIGHT, colors.white]),
+                        ('GRID', (0, 0), (-1, -1), 0.3, GRID_COLOR),
+                        ('TOPPADDING', (0, 0), (-1, -1), 3),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                        ('RIGHTPADDING', (2, 0), (2, -1), 8),
+                    ]))
+                    story.append(pt)
+                else:
+                    story.append(Table(
+                        [[Paragraph('— запчастини не вказані —', indent)]],
+                        colWidths=[180*mm],
+                    ))
+                story.append(Spacer(1, 2*mm))
+
+            # Запчастини без прив'язки до роботи
+            if direct_parts:
+                story.append(Spacer(1, 2*mm))
+                story.append(Paragraph('Додаткові матеріали', h2))
+                dp_data = [[
+                    Paragraph('<b>Артикул</b>', normal),
+                    Paragraph('<b>Найменування</b>', normal),
+                    Paragraph('<b>К-сть</b>', normal),
+                ]]
+                for p in direct_parts:
+                    dp_data.append([
+                        Paragraph(p.part.sku_code or '—', normal),
+                        Paragraph(p.part.name, normal),
+                        Paragraph(str(p.quantity), normal),
+                    ])
+                dpt = Table(dp_data, colWidths=[35*mm, 120*mm, 25*mm])
+                dpt.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), Y_COLOR),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT]),
+                    ('GRID', (0, 0), (-1, -1), 0.5, GRID_COLOR),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                ]))
+                story.append(dpt)
+
+        # ══════════════════════════════════════════════════════════════════
+        else:  # mode == 'client'
+            # ── Виконані роботи (для клієнта) ────────────────────────────
+            if works:
+                story.append(Spacer(1, 4*mm))
+                story.append(Paragraph('Виконані роботи', h2))
+                work_data = [[
+                    Paragraph('<b>Найменування роботи</b>', normal),
+                    Paragraph('<b>Год.</b>', normal),
+                    Paragraph('<b>Ціна/год.</b>', normal),
+                    Paragraph('<b>Сума</b>', normal),
+                ]]
+                works_total = sum(w.amount for w in works)
+                for w in works:
+                    name = w.work.name if w.work else (w.description or '—')
+                    work_data.append([
+                        Paragraph(name, normal),
+                        Paragraph(str(w.hours_spent), normal),
+                        Paragraph(f'{float(w.price_at_moment):,.0f} ₴', normal),
+                        Paragraph(f'{float(w.amount):,.0f} ₴', normal),
+                    ])
                 work_data.append([
-                    Paragraph(name, normal),
-                    Paragraph(str(w.hours_spent), normal),
-                    Paragraph(f'{float(w.price_at_moment):,.0f} ₴', normal),
-                    Paragraph(f'{float(w.amount):,.0f} ₴', normal),
+                    Paragraph('<b>Разом за роботи</b>', normal), '', '',
+                    Paragraph(f'<b>{float(works_total):,.0f} ₴</b>', normal),
                 ])
-            work_data.append([
-                Paragraph('<b>Разом</b>', normal), '', '',
-                Paragraph(f'<b>{float(order.total_cost):,.0f} ₴</b>', normal),
-            ])
-            wt = Table(work_data, colWidths=[95*mm, 20*mm, 30*mm, 35*mm])
-            wt.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), Y_COLOR),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f7f7f7')]),
-                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fffbea')),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('SPAN', (0, -1), (2, -1)),
-                ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ]))
-            story.append(wt)
+                wt = Table(work_data, colWidths=[95*mm, 20*mm, 30*mm, 35*mm])
+                wt.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), Y_COLOR),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, LIGHT]),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fffbea')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, GRID_COLOR),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('SPAN', (0, -1), (2, -1)),
+                    ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+                ]))
+                story.append(wt)
 
-        # ── Рекомендації ─────────────────────────────────────────────────
-        if order.recommendations:
-            story.append(Spacer(1, 4*mm))
-            story.append(Paragraph('Рекомендації', h2))
-            story.append(Paragraph(order.recommendations, normal))
+            # ── Використані запчастини (для клієнта) ─────────────────────
+            all_parts = [p for w in works for p in w.used_parts.all()] + direct_parts
+            if all_parts:
+                story.append(Spacer(1, 4*mm))
+                story.append(Paragraph('Використані запчастини', h2))
+                parts_data = [[
+                    Paragraph('<b>Артикул</b>', normal),
+                    Paragraph('<b>Найменування</b>', normal),
+                    Paragraph('<b>К-сть</b>', normal),
+                    Paragraph('<b>Ціна</b>', normal),
+                    Paragraph('<b>Сума</b>', normal),
+                ]]
+                parts_total = 0
+                for p in all_parts:
+                    unit_price = float(p.unit_price or p.part.selling_price or 0)
+                    total = float(p.quantity) * unit_price
+                    parts_total += total
+                    parts_data.append([
+                        Paragraph(p.part.sku_code or '—', normal),
+                        Paragraph(p.part.name, normal),
+                        Paragraph(str(p.quantity), normal),
+                        Paragraph(f'{unit_price:,.0f} ₴', normal),
+                        Paragraph(f'{total:,.0f} ₴', normal),
+                    ])
+                parts_data.append([
+                    Paragraph('<b>Разом за запчастини</b>', normal), '', '', '',
+                    Paragraph(f'<b>{parts_total:,.0f} ₴</b>', normal),
+                ])
+                pt = Table(parts_data, colWidths=[30*mm, 75*mm, 15*mm, 25*mm, 35*mm])
+                pt.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), Y_COLOR),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, LIGHT]),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fffbea')),
+                    ('GRID', (0, 0), (-1, -1), 0.5, GRID_COLOR),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('SPAN', (0, -1), (3, -1)),
+                    ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+                ]))
+                story.append(pt)
 
-        # ── Підпис ───────────────────────────────────────────────────────
+            # ── Загальна сума ─────────────────────────────────────────────
+            if works or all_parts:
+                story.append(Spacer(1, 3*mm))
+                tt = Table([[
+                    Paragraph('<b>ЗАГАЛЬНА СУМА</b>',
+                              ParagraphStyle('tl', fontName=font_name, fontSize=11, textColor=INK)),
+                    Paragraph(f'<b>{float(order.total_cost):,.0f} ₴</b>',
+                              ParagraphStyle('tv', fontName=font_name, fontSize=11, textColor=INK, alignment=2)),
+                ]], colWidths=[140*mm, 40*mm])
+                tt.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), Y_COLOR),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ]))
+                story.append(tt)
+
+            # ── Рекомендації ──────────────────────────────────────────────
+            if order.recommendations:
+                story.append(Spacer(1, 4*mm))
+                story.append(Paragraph('Рекомендації', h2))
+                story.append(Paragraph(order.recommendations, normal))
+
+        # ── Підпис (обидва режими) ────────────────────────────────────────
         story.append(Spacer(1, 10*mm))
-        story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#e0e0e0')))
+        story.append(HRFlowable(width='100%', thickness=1, color=GRID_COLOR))
         story.append(Spacer(1, 4*mm))
-        sign_data = [
-            [Paragraph('Підпис клієнта: ____________________', small),
-             Paragraph('Підпис майстра: ____________________', small)],
-        ]
-        st = Table(sign_data, colWidths=[90*mm, 90*mm])
+        left_label = 'Підпис клієнта: ____________________' if mode == 'client' else 'Перевірив майстер: ____________________'
+        st = Table(
+            [[Paragraph(left_label, small),
+              Paragraph('Виконавець (механік): ____________________', small)]],
+            colWidths=[90*mm, 90*mm],
+        )
         story.append(st)
 
         doc.build(story)
         buf.seek(0)
-        filename = f'order_{order.order_number or order.id}.pdf'
+        suffix = 'mechanic' if mode == 'mechanic' else 'client'
+        filename = f'order_{order.order_number or order.id}_{suffix}.pdf'
         response = HttpResponse(buf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+    @action(detail=True, methods=['get'], url_path='pdf')
+    def export_pdf(self, request, pk=None):
+        """PDF для клієнта — з цінами, підсумками та рекомендаціями."""
+        return self._build_order_pdf(self.get_object(), mode='client')
+
+    @action(detail=True, methods=['get'], url_path='pdf-mechanic')
+    def export_pdf_mechanic(self, request, pk=None):
+        """PDF для механіка — без цін, запчастини під кожною роботою."""
+        return self._build_order_pdf(self.get_object(), mode='mechanic')
 
     @action(detail=True, methods=['post'])
     def add_work(self, request, pk=None):
