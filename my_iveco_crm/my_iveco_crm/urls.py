@@ -35,6 +35,9 @@ urlpatterns = [
 
     # ALPR — розпізнавання номерів
     path('api/', include('alpr.urls')),
+
+    # Рахунки на запчастини
+    path('api/', include('invoices.urls')),
 ]
 
 if settings.DEBUG:

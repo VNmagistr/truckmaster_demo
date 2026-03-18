@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "cabinet",
     "appointments",
     "alpr",
+    "invoices",
 ]
 
 MIDDLEWARE = [
