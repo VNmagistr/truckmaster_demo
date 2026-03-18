@@ -179,6 +179,94 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
             logger.error(f"WhatsApp photo notify error for client {client.id}: {e}")
 
 
+@receiver(post_save, sender=ServiceOrder)
+def auto_complete_reminders_on_order_completion(sender, instance, created, **kwargs):
+    """
+    Коли наряд-замовлення переходить у статус 'completed' — автоматично
+    завершує відповідні ServiceReminder для цієї вантажівки.
+    Після цього signals.py у maintenance автоматично створює наступне нагадування.
+
+    Алгоритм збігу:
+    1. ServiceReminder.service_type має related_subcategories → перевіряємо чи
+       використані запчастини з цих підкатегорій (найнадійніший збіг).
+    2. ServiceType.name або Reminder.title збігається з назвою роботи в замовленні.
+    """
+    if created:
+        return
+
+    previous_status = getattr(instance, '_previous_status', None)
+    if previous_status == instance.status or instance.status != 'completed':
+        return
+
+    try:
+        from maintenance.models import ServiceReminder
+        from django.utils import timezone
+
+        active_reminders = ServiceReminder.objects.filter(
+            truck=instance.truck,
+            status__in=['pending', 'notified', 'overdue'],
+        ).select_related('service_type').prefetch_related('service_type__related_subcategories')
+
+        if not active_reminders.exists():
+            return
+
+        # Збираємо назви робіт (нижній регістр)
+        work_names = [
+            sw.work.name.lower()
+            for sw in instance.service_works.select_related('work').all()
+            if sw.work
+        ]
+
+        # Збираємо ID підкатегорій використаних запчастин
+        used_sub_ids = set()
+        for sw in instance.service_works.prefetch_related('used_parts__part').all():
+            for up in sw.used_parts.select_related('part').all():
+                try:
+                    sub_id = up.part.subcategory_id
+                    if sub_id:
+                        used_sub_ids.add(sub_id)
+                except AttributeError:
+                    pass
+
+        for reminder in active_reminders:
+            matched = False
+
+            if reminder.service_type:
+                # Збіг за підкатегоріями пов'язаних товарів
+                related_ids = set(
+                    reminder.service_type.related_subcategories.values_list('id', flat=True)
+                )
+                if related_ids and related_ids & used_sub_ids:
+                    matched = True
+
+                # Збіг за назвою типу ТО у назвах робіт
+                if not matched:
+                    type_name = reminder.service_type.name.lower()
+                    if any(type_name in wn or wn in type_name for wn in work_names):
+                        matched = True
+
+            # Збіг за ключовими словами назви нагадування
+            if not matched:
+                title_words = [w for w in reminder.title.lower().split() if len(w) > 3]
+                for wn in work_names:
+                    if any(word in wn for word in title_words):
+                        matched = True
+                        break
+
+            if matched:
+                reminder.status = 'completed'
+                reminder.completed_at = timezone.now()
+                reminder.completed_order = instance
+                reminder.save()
+                logger.info(
+                    f"Авто-завершено нагадування '{reminder.title}' "
+                    f"для {instance.truck.license_plate} (замовлення #{instance.order_number})"
+                )
+
+    except Exception as e:
+        logger.error(f"auto_complete_reminders_on_order_completion error: {e}")
+
+
 def auto_save_maintenance_kit(sender, instance, created, **kwargs):
     # Підключається вручну в orders/apps.py після завантаження всіх застосунків
     """
