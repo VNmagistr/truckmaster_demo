@@ -137,21 +137,40 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     instance.service_order.update_total_cost()
 
 
-@receiver(post_save, sender=ServiceWork)
+@receiver(post_save, sender=ServiceOrder)
 def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
     """
-    Коли додається робота типу ТО/заміна оливи — автоматично закриває активне
-    нагадування ServiceReminder для цієї вантажівки і перезапускає відлік.
+    Коли наряд переходить у статус DONE — перевіряємо чи є в ньому робота
+    типу ТО/заміна оливи і автоматично закриваємо активне нагадування для цієї
+    вантажівки. Це запускає auto_create_next_reminder і перезапускає відлік.
     """
     from core.registry import is_module_enabled
 
-    if not created:
+    if created:
+        return
+    if instance.status != ServiceOrder.StatusChoices.DONE:
         return
     if not is_module_enabled('maintenance'):
         return
 
-    truck = instance.service_order.truck
-    if not truck or not _is_maintenance_work(instance.work):
+    # Перевіряємо попередній статус — реагуємо лише на перехід в DONE
+    previous_status = getattr(instance, '_previous_status', None)
+    if previous_status == ServiceOrder.StatusChoices.DONE:
+        return
+
+    truck = instance.truck
+    if not truck:
+        return
+
+    # Перевіряємо чи є в наряді хоча б одна робота типу ТО
+    has_maintenance_work = instance.works.select_related('work__work_group').filter(
+        work__isnull=False
+    ).exists() and any(
+        _is_maintenance_work(sw.work)
+        for sw in instance.works.select_related('work__work_group').all()
+    )
+
+    if not has_maintenance_work:
         return
 
     try:
@@ -168,12 +187,12 @@ def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
 
         reminder.status = 'completed'
         reminder.completed_at = timezone.now()
-        reminder.completed_order = instance.service_order
+        reminder.completed_order = instance
         reminder.save()
 
         logger.info(
-            f"Нагадування #{reminder.pk} закрито автоматично після роботи ТО "
-            f"для {truck.license_plate}"
+            f"Нагадування #{reminder.pk} закрито автоматично при закритті наряду "
+            f"#{instance.order_number} для {truck.license_plate}"
         )
     except Exception as e:
         logger.error(f"Помилка авто-закриття нагадування ТО: {e}")
