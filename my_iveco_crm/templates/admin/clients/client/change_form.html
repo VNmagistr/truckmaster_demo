@@ -3,79 +3,91 @@
 {% block extrahead %}
 {{ block.super }}
 <style>
-/* ── Toggle switches для ClientFeature inline ──────────────────────────── */
-
-.feature-toggle-label {
+/* ── Toggle switch ──────────────────────────────────────────────────────── */
+.ft-label {
   display: inline-flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
   user-select: none;
-  margin: 4px 0;
+  padding: 4px 0;
 }
-
-.feature-toggle-track {
+.ft-track {
   position: relative;
+  flex-shrink: 0;
   width: 46px;
   height: 26px;
-  background: #d0d0d0;
   border-radius: 13px;
-  transition: background-color .22s ease;
-  flex-shrink: 0;
+  background: var(--ft-off, #bbb);
+  transition: background .2s;
 }
-
-.feature-toggle-thumb {
+.ft-thumb {
   position: absolute;
   top: 3px;
   left: 3px;
   width: 20px;
   height: 20px;
-  background: #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0,0,0,.25);
-  transition: transform .22s ease;
+  background: var(--ft-thumb, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .2s;
 }
+.ft-label.on .ft-track { background: #f5c518; }
+.ft-label.on .ft-thumb { transform: translateX(20px); }
 
-.feature-toggle-label.is-on .feature-toggle-track { background: #f5c518; }
-.feature-toggle-label.is-on .feature-toggle-thumb { transform: translateX(20px); }
-
-.feature-toggle-name {
+.ft-name {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
-  min-width: 200px;
+  color: var(--ft-fg, #333);
+  min-width: 210px;
 }
-
-.feature-toggle-status {
+.ft-status {
   font-size: 12px;
   font-weight: 600;
-  color: #aaa;
-  min-width: 64px;
+  color: var(--ft-muted, #999);
 }
-.feature-toggle-label.is-on .feature-toggle-status { color: #c9a000; }
+.ft-label.on .ft-status { color: #c9a000; }
 
-/* ── Темна тема ────────────────────────────────────────────────────────── */
+.ft-help {
+  font-size: 12px;
+  color: var(--ft-muted, #999);
+  margin: 2px 0 6px 58px;
+}
+
+/* ── Темна тема (Django 4.2+ data-theme + media fallback) ────────────── */
+[data-theme="dark"],
+[data-theme="auto"] {
+  --ft-off:   #555;
+  --ft-thumb: #ddd;
+  --ft-fg:    #ddd;
+  --ft-muted: #888;
+}
 @media (prefers-color-scheme: dark) {
-  .feature-toggle-track {
-    background: #4a4a4a;
+  :root:not([data-theme="light"]) {
+    --ft-off:   #555;
+    --ft-thumb: #ddd;
+    --ft-fg:    #ddd;
+    --ft-muted: #888;
   }
-  .feature-toggle-thumb {
-    background: #c8c8c8;
-    box-shadow: 0 1px 4px rgba(0,0,0,.5);
-  }
-  .feature-toggle-label.is-on .feature-toggle-track {
-    background: #f5c518;
-  }
-  .feature-toggle-label.is-on .feature-toggle-thumb {
+}
+.ft-label.on .ft-thumb {
+  background: #fff;
+}
+[data-theme="dark"] .ft-label.on .ft-thumb,
+[data-theme="auto"] .ft-label.on .ft-thumb {
+  background: #1a1a1a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ft-label.on .ft-thumb {
     background: #1a1a1a;
   }
-  .feature-toggle-name {
-    color: #d0d0d0;
-  }
-  .feature-toggle-status {
-    color: #666;
-  }
-  .feature-toggle-label.is-on .feature-toggle-status {
+}
+[data-theme="dark"] .ft-label.on .ft-status,
+[data-theme="auto"] .ft-label.on .ft-status {
+  color: #f5c518;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ft-label.on .ft-status {
     color: #f5c518;
   }
 }
@@ -83,56 +95,49 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Шукаємо всі inline-групи ClientFeature
-  document.querySelectorAll('.inline-group').forEach(function (group) {
+  document.querySelectorAll('.inline-group .form-row').forEach(function (row) {
+    var cb = row.querySelector('input[type="checkbox"]');
+    if (!cb) return;
 
-    group.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+    var origLabel = document.querySelector('label[for="' + cb.id + '"]');
+    if (!origLabel) return;
 
-      // 1. Знаходимо оригінальний <label> для цього checkbox
-      var origLabel = document.querySelector('label[for="' + cb.id + '"]');
-      if (!origLabel) return;
+    var name    = origLabel.textContent.replace(/:$/, '').trim();
+    var helpEl  = row.querySelector('.help, .helptext');
+    var hint    = helpEl ? helpEl.textContent.trim() : '';
+    var checked = cb.checked;
 
-      var name = origLabel.textContent.replace(/:$/, '').trim();
+    /* ── Повністю ховаємо оригінальні елементи ── */
+    cb.style.cssText        = 'position:absolute;clip:rect(0 0 0 0);width:1px;height:1px;overflow:hidden;';
+    origLabel.style.display = 'none';
+    if (helpEl) helpEl.style.display = 'none';
 
-      // 2. Повністю ховаємо оригінальний checkbox і його label
-      cb.style.cssText = 'position:absolute;opacity:0;width:0;height:0;pointer-events:none;';
-      origLabel.style.display = 'none';
+    /* ── Будуємо toggle ── */
+    var lbl = document.createElement('label');
+    lbl.className     = 'ft-label' + (checked ? ' on' : '');
+    lbl.setAttribute('for', cb.id);
+    lbl.innerHTML =
+      '<span class="ft-track"><span class="ft-thumb"></span></span>' +
+      '<span class="ft-name">' + name + '</span>' +
+      '<span class="ft-status">' + (checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
 
-      // 3. Ховаємо help-текст (покажемо окремо під toggleм)
-      var fieldBox = cb.closest('.field-box');
-      var helpEl = fieldBox ? fieldBox.querySelector('.help') : null;
-      if (helpEl) helpEl.style.display = 'none';
-
-      // 4. Будуємо toggle-label
-      var toggle = document.createElement('label');
-      toggle.className = 'feature-toggle-label' + (cb.checked ? ' is-on' : '');
-      toggle.setAttribute('for', cb.id);
-      toggle.innerHTML =
-        '<span class="feature-toggle-track"><span class="feature-toggle-thumb"></span></span>' +
-        '<span class="feature-toggle-name">' + name + '</span>' +
-        '<span class="feature-toggle-status">' + (cb.checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
-
-      // 5. Оновлюємо вигляд після кліку (браузер перемикає cb сам)
-      toggle.addEventListener('click', function () {
-        setTimeout(function () {
-          var on = cb.checked;
-          toggle.classList.toggle('is-on', on);
-          toggle.querySelector('.feature-toggle-status').textContent = on ? 'Увімкнено' : 'Вимкнено';
-        }, 10);
-      });
-
-      // 6. Вставляємо toggle одразу після прихованого checkbox
-      cb.parentNode.insertBefore(toggle, cb.nextSibling);
-
-      // 7. Повертаємо help-текст під toggle
-      if (helpEl) {
-        var newHelp = document.createElement('p');
-        newHelp.className = 'help';
-        newHelp.style.cssText = 'margin:2px 0 8px 58px;font-size:12px;color:#999;';
-        newHelp.textContent = helpEl.textContent;
-        toggle.parentNode.insertBefore(newHelp, toggle.nextSibling);
-      }
+    lbl.addEventListener('click', function () {
+      setTimeout(function () {
+        lbl.classList.toggle('on', cb.checked);
+        lbl.querySelector('.ft-status').textContent = cb.checked ? 'Увімкнено' : 'Вимкнено';
+      }, 10);
     });
+
+    /* ── Вставляємо у внутрішній контейнер рядка ── */
+    var inner = row.querySelector(':scope > div') || row;
+    inner.appendChild(lbl);
+
+    if (hint) {
+      var p = document.createElement('p');
+      p.className   = 'ft-help';
+      p.textContent = hint;
+      inner.appendChild(p);
+    }
   });
 });
 </script>
