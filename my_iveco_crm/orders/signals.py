@@ -99,6 +99,14 @@ def record_status_change(sender, instance, created, **kwargs):
     ):
         _revert_maintenance_intervals(instance)
 
+    # Фінальні статуси — знімок більше не потрібен, видаляємо
+    if instance.status in (
+        ServiceOrder.StatusChoices.CLOSED,
+        ServiceOrder.StatusChoices.CANCELED,
+    ) and instance.intervals_snapshot:
+        instance.intervals_snapshot = None
+        instance.save(update_fields=['intervals_snapshot'])
+
 
 @receiver([post_save, post_delete], sender=ServiceWork)
 def update_order_on_work_change(sender, instance, **kwargs):
