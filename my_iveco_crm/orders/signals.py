@@ -9,6 +9,16 @@ from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOr
 
 logger = logging.getLogger(__name__)
 
+_DBG_FILE = '/tmp/to_reminder_debug.log'
+
+
+def _dbg(msg):
+    import datetime
+    line = f"{datetime.datetime.now().isoformat()} {msg}\n"
+    with open(_DBG_FILE, 'a') as f:
+        f.write(line)
+
+
 # Типи категорій, що вважаються оливою
 OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
 
@@ -72,7 +82,7 @@ def record_status_change(sender, instance, created, **kwargs):
         return
 
     previous_status = getattr(instance, '_previous_status', None)
-    print(f"[STATUS] Наряд #{instance.order_number}: {previous_status!r} → {instance.status!r}")
+    _dbg(f"Наряд #{instance.order_number}: {previous_status!r} → {instance.status!r}")
 
     if previous_status is not None and previous_status != instance.status:
         OrderStatusHistory.objects.create(
@@ -153,7 +163,7 @@ def _try_complete_maintenance_reminder(order):
     Закриває активне нагадування ТО для вантажівки якщо в наряді є
     робота по заміні оливи/ТО. Викликається з record_status_change.
     """
-    print(f"[TO_REMINDER] Наряд #{order.order_number} → DONE, перевіряємо нагадування ТО")
+    _dbg(f" Наряд #{order.order_number} → DONE, перевіряємо нагадування ТО")
 
     from core.registry import is_module_enabled
     if not is_module_enabled('maintenance'):
@@ -166,11 +176,11 @@ def _try_complete_maintenance_reminder(order):
         return
 
     works = list(order.works.select_related('work__work_group').all())
-    print(f"[TO_REMINDER] Робіт у наряді: {len(works)}")
+    _dbg(f" Робіт у наряді: {len(works)}")
     for sw in works:
         name = sw.work.name if sw.work else 'None'
         matched = _is_maintenance_work(sw.work)
-        print(f"[TO_REMINDER]   робота: '{name}' → ТО-матч: {matched}")
+        _dbg(f"   робота: '{name}' → ТО-матч: {matched}")
 
     has_maintenance = any(_is_maintenance_work(sw.work) for sw in works)
     if not has_maintenance:
@@ -187,18 +197,18 @@ def _try_complete_maintenance_reminder(order):
         ).order_by('target_mileage').first()
 
         if not reminder:
-            print(f"[TO_REMINDER] Активних нагадувань для {truck.license_plate} не знайдено — виходимо")
+            _dbg(f" Активних нагадувань для {truck.license_plate} не знайдено — виходимо")
             return
 
-        print(f"[TO_REMINDER] Закриваємо нагадування #{reminder.pk} для {truck.license_plate}")
+        _dbg(f" Закриваємо нагадування #{reminder.pk} для {truck.license_plate}")
         reminder.status = 'completed'
         reminder.completed_at = timezone.now()
         reminder.completed_order = order
         reminder.save()
-        print(f"[TO_REMINDER] ✓ Нагадування #{reminder.pk} закрито, відлік перезапущено")
+        _dbg(f" ✓ Нагадування #{reminder.pk} закрито, відлік перезапущено")
 
     except Exception as e:
-        print(f"[TO_REMINDER] ПОМИЛКА: {e}")
+        _dbg(f" ПОМИЛКА: {e}")
 
 
 @receiver(post_save, sender=RepairPhoto)
