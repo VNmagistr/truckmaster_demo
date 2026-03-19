@@ -9,16 +9,6 @@ from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOr
 
 logger = logging.getLogger(__name__)
 
-_DBG_FILE = '/tmp/to_reminder_debug.log'
-
-
-def _dbg(msg):
-    import datetime
-    line = f"{datetime.datetime.now().isoformat()} {msg}\n"
-    with open(_DBG_FILE, 'a') as f:
-        f.write(line)
-
-
 # Типи категорій, що вважаються оливою
 OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
 
@@ -82,7 +72,6 @@ def record_status_change(sender, instance, created, **kwargs):
         return
 
     previous_status = getattr(instance, '_previous_status', None)
-    _dbg(f"Наряд #{instance.order_number}: {previous_status!r} → {instance.status!r}")
 
     if previous_status is not None and previous_status != instance.status:
         OrderStatusHistory.objects.create(
@@ -92,13 +81,13 @@ def record_status_change(sender, instance, created, **kwargs):
             changed_by=changed_by,
         )
 
-    # Якщо статус змінився на DONE — закриваємо нагадування ТО
+    # Якщо статус змінився на DONE — оновлюємо інтервали ТО
     if (
         previous_status is not None
         and previous_status != ServiceOrder.StatusChoices.DONE
         and instance.status == ServiceOrder.StatusChoices.DONE
     ):
-        _try_complete_maintenance_reminder(instance)
+        _update_maintenance_intervals(instance)
 
 
 @receiver([post_save, post_delete], sender=ServiceWork)
@@ -158,57 +147,63 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     instance.service_order.update_total_cost()
 
 
-def _try_complete_maintenance_reminder(order):
+def _update_maintenance_intervals(order):
     """
-    Закриває активне нагадування ТО для вантажівки якщо в наряді є
-    робота по заміні оливи/ТО. Викликається з record_status_change.
+    При переході наряду в DONE оновлює TruckMaintenanceIntervals:
+    встановлює *_last_km = поточний пробіг для відповідних типів робіт.
     """
-    _dbg(f" Наряд #{order.order_number} → DONE, перевіряємо нагадування ТО")
-
-    from core.registry import is_module_enabled
-    if not is_module_enabled('maintenance'):
-        print("[TO_REMINDER] Модуль maintenance ВИМКНЕНО — виходимо")
-        return
-
     truck = order.truck
-    if not truck:
-        print("[TO_REMINDER] Вантажівка не вказана — виходимо")
+    current_km = order.current_mileage
+    if not truck or not current_km:
         return
 
     works = list(order.works.select_related('work__work_group').all())
-    _dbg(f" Робіт у наряді: {len(works)}")
-    for sw in works:
-        name = sw.work.name if sw.work else 'None'
-        matched = _is_maintenance_work(sw.work)
-        _dbg(f"   робота: '{name}' → ТО-матч: {matched}")
-
-    has_maintenance = any(_is_maintenance_work(sw.work) for sw in works)
-    if not has_maintenance:
-        print("[TO_REMINDER] Жодна робота не відповідає ТО-ключовим словам — виходимо")
+    if not any(_is_maintenance_work(sw.work) for sw in works):
         return
 
+    ENGINE_KW  = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW = ('кпп', 'акпп', 'коробк', 'трансміс', 'gearbox')
+    AXLE_KW    = ('міст', 'мост', 'axle')
+    BELTS_KW   = ('ремін', 'ролик', 'belt')
+    CHAINS_KW  = ('ланцюг', 'chain')
+
+    def matches(text, keywords):
+        return any(kw in text for kw in keywords)
+
+    fields_to_update = {}
+    for sw in works:
+        if not _is_maintenance_work(sw.work):
+            continue
+        name = sw.work.name.lower() if sw.work else ''
+        group = sw.work.work_group.name.lower() if sw.work and sw.work.work_group else ''
+        text = name + ' ' + group
+
+        if matches(text, ENGINE_KW) or 'заміна оливи' in text or 'заміна масла' in text:
+            fields_to_update['engine_oil_last_km'] = current_km
+        if matches(text, GEARBOX_KW):
+            fields_to_update['gearbox_oil_last_km'] = current_km
+        if matches(text, AXLE_KW):
+            fields_to_update['rear_axle_oil_last_km'] = current_km
+        if matches(text, BELTS_KW):
+            fields_to_update['belts_last_km'] = current_km
+        if matches(text, CHAINS_KW):
+            fields_to_update['chains_last_km'] = current_km
+
+    # Загальне ТО без конкретики → оновлюємо оливу двигуна
+    if not fields_to_update:
+        fields_to_update['engine_oil_last_km'] = current_km
+
     try:
-        from maintenance.models import ServiceReminder
-        from django.utils import timezone
-
-        reminder = ServiceReminder.objects.filter(
-            truck=truck,
-            status__in=['pending', 'notified', 'overdue'],
-        ).order_by('target_mileage').first()
-
-        if not reminder:
-            _dbg(f" Активних нагадувань для {truck.license_plate} не знайдено — виходимо")
-            return
-
-        _dbg(f" Закриваємо нагадування #{reminder.pk} для {truck.license_plate}")
-        reminder.status = 'completed'
-        reminder.completed_at = timezone.now()
-        reminder.completed_order = order
-        reminder.save()
-        _dbg(f" ✓ Нагадування #{reminder.pk} закрито, відлік перезапущено")
-
+        intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck=truck)
+        for field, value in fields_to_update.items():
+            setattr(intervals, field, value)
+        intervals.save(update_fields=list(fields_to_update.keys()))
+        logger.info(
+            f"Інтервали ТО оновлено для {truck.license_plate}: "
+            f"{fields_to_update} (наряд #{order.order_number})"
+        )
     except Exception as e:
-        _dbg(f" ПОМИЛКА: {e}")
+        logger.error(f"Помилка оновлення інтервалів ТО: {e}")
 
 
 @receiver(post_save, sender=RepairPhoto)
