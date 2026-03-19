@@ -5,34 +5,15 @@
 <style>
 /* ── Toggle switches для ClientFeature inline ──────────────────────────── */
 
-/* Приховуємо стандартний checkbox, залишаємо label */
-.feature-toggle-row input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-/* Обгортка одного перемикача */
-.feature-toggle-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 6px 0;
-}
-
-/* Лейбл-перемикач */
 .feature-toggle-label {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
+  margin: 4px 0;
 }
 
-/* Трек */
 .feature-toggle-track {
   position: relative;
   width: 46px;
@@ -43,7 +24,6 @@
   flex-shrink: 0;
 }
 
-/* Повзунок */
 .feature-toggle-thumb {
   position: absolute;
   top: 3px;
@@ -56,107 +36,77 @@
   transition: transform .22s ease;
 }
 
-/* Стан: увімкнено */
-.feature-toggle-label.is-on .feature-toggle-track {
-  background: #f5c518;
-}
-.feature-toggle-label.is-on .feature-toggle-thumb {
-  transform: translateX(20px);
-}
+.feature-toggle-label.is-on .feature-toggle-track { background: #f5c518; }
+.feature-toggle-label.is-on .feature-toggle-thumb { transform: translateX(20px); }
 
-/* Назва фічі */
 .feature-toggle-name {
   font-size: 14px;
   font-weight: 500;
   color: #333;
-  min-width: 180px;
+  min-width: 200px;
 }
 
-/* Підказка */
-.feature-toggle-hint {
-  font-size: 12px;
-  color: #999;
-}
-
-/* Статус-текст */
 .feature-toggle-status {
   font-size: 12px;
   font-weight: 600;
-  color: #888;
-  min-width: 60px;
+  color: #aaa;
+  min-width: 64px;
 }
-.feature-toggle-label.is-on .feature-toggle-status {
-  color: #c9a000;
-}
-
-/* Відступ блоку фічей */
-#features-group {
-  margin-top: 8px;
-}
+.feature-toggle-label.is-on .feature-toggle-status { color: #c9a000; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Знаходимо всі checkbox-и в inline ClientFeature
-  var inline = document.querySelector('.inline-group');
-  if (!inline) return;
+  // Шукаємо всі inline-групи ClientFeature
+  document.querySelectorAll('.inline-group').forEach(function (group) {
 
-  // Назви полів → підписи (беремо з labels у формі)
-  var checkboxes = inline.querySelectorAll('input[type="checkbox"]');
+    group.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 
-  checkboxes.forEach(function (cb) {
-    var row = cb.closest('.field-box, .form-row, p, div');
-    if (!row) return;
+      // 1. Знаходимо оригінальний <label> для цього checkbox
+      var origLabel = document.querySelector('label[for="' + cb.id + '"]');
+      if (!origLabel) return;
 
-    var label = document.querySelector('label[for="' + cb.id + '"]');
-    var name = label ? label.textContent.trim() : cb.name;
-    var hint = '';
+      var name = origLabel.textContent.replace(/:$/, '').trim();
 
-    // Шукаємо help_text
-    var helpEl = row.querySelector('.help');
-    if (helpEl) hint = helpEl.textContent.trim();
+      // 2. Повністю ховаємо оригінальний checkbox і його label
+      cb.style.cssText = 'position:absolute;opacity:0;width:0;height:0;pointer-events:none;';
+      origLabel.style.display = 'none';
 
-    // Будуємо toggle
-    var wrap = document.createElement('div');
-    wrap.className = 'feature-toggle-wrap feature-toggle-row';
+      // 3. Ховаємо help-текст (покажемо окремо під toggleм)
+      var fieldBox = cb.closest('.field-box');
+      var helpEl = fieldBox ? fieldBox.querySelector('.help') : null;
+      if (helpEl) helpEl.style.display = 'none';
 
-    var lbl = document.createElement('label');
-    lbl.className = 'feature-toggle-label' + (cb.checked ? ' is-on' : '');
-    lbl.setAttribute('for', cb.id);
+      // 4. Будуємо toggle-label
+      var toggle = document.createElement('label');
+      toggle.className = 'feature-toggle-label' + (cb.checked ? ' is-on' : '');
+      toggle.setAttribute('for', cb.id);
+      toggle.innerHTML =
+        '<span class="feature-toggle-track"><span class="feature-toggle-thumb"></span></span>' +
+        '<span class="feature-toggle-name">' + name + '</span>' +
+        '<span class="feature-toggle-status">' + (cb.checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
 
-    lbl.innerHTML =
-      '<span class="feature-toggle-track"><span class="feature-toggle-thumb"></span></span>' +
-      '<span class="feature-toggle-name">' + name + '</span>' +
-      '<span class="feature-toggle-status">' + (cb.checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
+      // 5. Оновлюємо вигляд після кліку (браузер перемикає cb сам)
+      toggle.addEventListener('click', function () {
+        setTimeout(function () {
+          var on = cb.checked;
+          toggle.classList.toggle('is-on', on);
+          toggle.querySelector('.feature-toggle-status').textContent = on ? 'Увімкнено' : 'Вимкнено';
+        }, 10);
+      });
 
-    // Оновлюємо вигляд при кліку
-    lbl.addEventListener('click', function () {
-      // Даємо браузеру перемкнути checkbox, потім оновлюємо UI
-      setTimeout(function () {
-        if (cb.checked) {
-          lbl.classList.add('is-on');
-          lbl.querySelector('.feature-toggle-status').textContent = 'Увімкнено';
-        } else {
-          lbl.classList.remove('is-on');
-          lbl.querySelector('.feature-toggle-status').textContent = 'Вимкнено';
-        }
-      }, 10);
+      // 6. Вставляємо toggle одразу після прихованого checkbox
+      cb.parentNode.insertBefore(toggle, cb.nextSibling);
+
+      // 7. Повертаємо help-текст під toggle
+      if (helpEl) {
+        var newHelp = document.createElement('p');
+        newHelp.className = 'help';
+        newHelp.style.cssText = 'margin:2px 0 8px 58px;font-size:12px;color:#999;';
+        newHelp.textContent = helpEl.textContent;
+        toggle.parentNode.insertBefore(newHelp, toggle.nextSibling);
+      }
     });
-
-    wrap.appendChild(cb.cloneNode());  // невидимий checkbox залишається в DOM
-    wrap.appendChild(lbl);
-
-    if (hint) {
-      var hintEl = document.createElement('span');
-      hintEl.className = 'feature-toggle-hint';
-      hintEl.textContent = hint;
-      wrap.appendChild(hintEl);
-    }
-
-    // Замінюємо оригінальний вміст рядка
-    row.innerHTML = '';
-    row.appendChild(cb);  // оригінальний checkbox (невидимий)
-    row.appendChild(lbl);
   });
 });
 </script>
