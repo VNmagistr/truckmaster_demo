@@ -85,9 +85,29 @@ class ClientRegisterSerializer(serializers.Serializer):
 # ── Cabinet read serializers ─────────────────────────────────────────────────
 
 class CabinetClientSerializer(serializers.ModelSerializer):
+    features = serializers.SerializerMethodField()
+
+    def get_features(self, obj):
+        try:
+            f = obj.features
+            return {
+                'cabinet':                f.cabinet,
+                'bot':                    f.bot,
+                'invoices':               f.invoices,
+                'appointments':           f.appointments,
+                'notifications_telegram': f.notifications_telegram,
+                'notifications_whatsapp': f.notifications_whatsapp,
+            }
+        except Exception:
+            return {
+                'cabinet': True, 'bot': True, 'invoices': True,
+                'appointments': True, 'notifications_telegram': True,
+                'notifications_whatsapp': True,
+            }
+
     class Meta:
         model = Client
-        fields = ['id', 'name', 'phone', 'email', 'address']
+        fields = ['id', 'name', 'phone', 'email', 'address', 'features']
 
 
 class CabinetTruckSerializer(serializers.ModelSerializer):

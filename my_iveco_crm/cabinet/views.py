@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from clients.models import Truck
 from orders.models import ServiceOrder
 
-from .permissions import IsClientUser
+from .permissions import IsClientUser, ClientHasCabinetAccess
 from .serializers import (
     ClientRegisterSerializer,
     ClientTokenObtainPairSerializer,
@@ -49,7 +49,7 @@ class ClientRegisterView(generics.CreateAPIView):
 
 class CabinetMeView(APIView):
     """Профіль поточного клієнта."""
-    permission_classes = [IsClientUser]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess]
 
     def get(self, request):
         client = request.user.client_profile
@@ -58,7 +58,7 @@ class CabinetMeView(APIView):
 
 class CabinetTrucksView(generics.ListAPIView):
     """Список вантажівок клієнта."""
-    permission_classes = [IsClientUser]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess]
     serializer_class = CabinetTruckSerializer
     pagination_class = None  # Клієнт бачить тільки свої авто — пагінація не потрібна
 
@@ -71,7 +71,7 @@ class CabinetTrucksView(generics.ListAPIView):
 
 class CabinetOrdersView(generics.ListAPIView):
     """Список замовлень клієнта. Фільтр: ?truck=<id>"""
-    permission_classes = [IsClientUser]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess]
     serializer_class = CabinetOrderListSerializer
     pagination_class = None  # Повертаємо всі замовлення клієнта без пагінації
 
@@ -90,7 +90,7 @@ class CabinetOrdersView(generics.ListAPIView):
 
 class CabinetOrderDetailView(generics.RetrieveAPIView):
     """Деталі конкретного замовлення клієнта."""
-    permission_classes = [IsClientUser]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess]
     serializer_class = CabinetOrderDetailSerializer
 
     def get_object(self):
