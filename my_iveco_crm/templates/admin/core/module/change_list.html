@@ -1,0 +1,120 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+/* ── Toggle switch ─────────────────────────────────────────── */
+.module-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+
+.module-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.module-toggle__track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  background: #d0d0d0;
+  border-radius: 13px;
+  transition: background-color .22s ease;
+  flex-shrink: 0;
+}
+
+.module-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  transition: transform .22s ease;
+}
+
+/* Увімкнено */
+.module-toggle__input:checked + .module-toggle__track {
+  background: #f5c518;
+}
+.module-toggle__input:checked + .module-toggle__track .module-toggle__thumb {
+  transform: translateX(20px);
+}
+
+/* Стан-підпис */
+.module-toggle__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  min-width: 60px;
+}
+.module-toggle__input:checked ~ .module-toggle__label {
+  color: #c9a000;
+}
+
+/* Базовий (core) — не можна вимкнути */
+.module-toggle--core {
+  opacity: .55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Анімація під час запиту */
+.module-toggle--loading .module-toggle__track {
+  opacity: .6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.module-toggle__input:not(:disabled)').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var label   = this.closest('.module-toggle');
+      var pk      = label.dataset.pk;
+      var caption = label.querySelector('.module-toggle__label');
+      var self    = this;
+
+      label.classList.add('module-toggle--loading');
+      self.disabled = true;
+
+      var csrfMatch = document.cookie.match(/csrftoken=([^;]+)/);
+      var csrf = csrfMatch ? csrfMatch[1] : '';
+
+      fetch('/admin/core/module/' + pk + '/toggle/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        self.disabled = false;
+        label.classList.remove('module-toggle--loading');
+
+        if (data.error) {
+          self.checked = !self.checked;
+          alert(data.error);
+        } else {
+          if (caption) {
+            caption.textContent = data.is_enabled ? 'Увімкнено' : 'Вимкнено';
+          }
+        }
+      })
+      .catch(function () {
+        self.disabled = false;
+        self.checked = !self.checked;
+        label.classList.remove('module-toggle--loading');
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

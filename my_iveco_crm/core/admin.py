@@ -1,6 +1,9 @@
 # core/admin.py
 
 from django.contrib import admin
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.urls import path
 from django.utils.html import format_html
 
 from .models import Module
@@ -8,8 +11,9 @@ from .models import Module
 
 @admin.register(Module)
 class ModuleAdmin(admin.ModelAdmin):
-    list_display = ['label', 'name', 'status_badge', 'is_core', 'deps_display', 'updated_at']
-    list_editable = []  # редагування через форму, щоб тригерити save() і очищати кеш
+    change_list_template = 'admin/core/module/change_list.html'
+
+    list_display = ['label', 'name', 'toggle_switch', 'is_core', 'deps_display', 'updated_at']
     list_filter = ['is_enabled', 'is_core']
     ordering = ['order', 'name']
     readonly_fields = ['name', 'is_core', 'url_prefixes', 'dependencies', 'order', 'updated_at']
@@ -31,17 +35,26 @@ class ModuleAdmin(admin.ModelAdmin):
         return fields
 
     @admin.display(description='Стан')
-    def status_badge(self, obj):
+    def toggle_switch(self, obj):
         if obj.is_core:
             return format_html(
-                '<span style="color:#888; font-weight:bold;">⚙ Базовий</span>'
+                '<label class="module-toggle module-toggle--core" title="Базовий модуль — не можна вимкнути">'
+                '<input type="checkbox" class="module-toggle__input" checked disabled>'
+                '<span class="module-toggle__track"><span class="module-toggle__thumb"></span></span>'
+                '<span class="module-toggle__label">Базовий</span>'
+                '</label>',
             )
-        if obj.is_enabled:
-            return format_html(
-                '<span style="color:green; font-weight:bold;">✔ Увімкнено</span>'
-            )
+
+        checked = 'checked' if obj.is_enabled else ''
+        caption = 'Увімкнено' if obj.is_enabled else 'Вимкнено'
+
         return format_html(
-            '<span style="color:red; font-weight:bold;">✘ Вимкнено</span>'
+            '<label class="module-toggle" data-pk="{}" title="{}">'
+            '<input type="checkbox" class="module-toggle__input" {}>'
+            '<span class="module-toggle__track"><span class="module-toggle__thumb"></span></span>'
+            '<span class="module-toggle__label">{}</span>'
+            '</label>',
+            obj.pk, caption, checked, caption,
         )
 
     @admin.display(description='Залежності')
@@ -49,6 +62,41 @@ class ModuleAdmin(admin.ModelAdmin):
         if not obj.dependencies:
             return '—'
         return ', '.join(obj.dependencies)
+
+    # ── AJAX toggle endpoint ─────────────────────────────────
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:pk>/toggle/',
+                self.admin_site.admin_view(self.toggle_view),
+                name='core_module_toggle',
+            ),
+        ]
+        return custom_urls + urls
+
+    def toggle_view(self, request, pk):
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+        module = get_object_or_404(Module, pk=pk)
+
+        if module.is_core:
+            return JsonResponse(
+                {'error': f'Модуль "{module.label}" є базовим — не можна вимкнути.'},
+                status=400,
+            )
+
+        module.is_enabled = not module.is_enabled
+        module.save()
+
+        return JsonResponse({
+            'is_enabled': module.is_enabled,
+            'label': module.label,
+        })
+
+    # ── Permissions ──────────────────────────────────────────
 
     def has_add_permission(self, request):
         return False
