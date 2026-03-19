@@ -148,6 +148,52 @@ class Truck(models.Model):
 
         return max(order_mileage, report_mileage)
 
+# --- ДОСТУП ДО ФУНКЦІЙ ---
+
+class ClientFeature(models.Model):
+    """
+    Індивідуальний доступ клієнта до функцій системи.
+    Створюється автоматично разом з Client.
+    """
+    client = models.OneToOneField(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='features',
+        verbose_name='Клієнт',
+    )
+    cabinet = models.BooleanField(
+        default=True, verbose_name='Особистий кабінет',
+        help_text='Доступ до /cabinet/ — перегляд замовлень та авто.',
+    )
+    bot = models.BooleanField(
+        default=True, verbose_name='Telegram бот',
+        help_text='Участь у Telegram боті (звіти пробігу, команди).',
+    )
+    invoices = models.BooleanField(
+        default=True, verbose_name='Рахунки',
+        help_text='Перегляд виставлених рахунків на запчастини.',
+    )
+    appointments = models.BooleanField(
+        default=True, verbose_name='Онлайн-запис',
+        help_text='Самостійний запис на СТО через кабінет.',
+    )
+    notifications_telegram = models.BooleanField(
+        default=True, verbose_name='Сповіщення Telegram',
+        help_text='Надсилати Telegram-сповіщення при додаванні фото ремонту.',
+    )
+    notifications_whatsapp = models.BooleanField(
+        default=True, verbose_name='Сповіщення WhatsApp',
+        help_text='Надсилати WhatsApp-сповіщення при додаванні фото ремонту.',
+    )
+
+    class Meta:
+        verbose_name = 'Доступ до функцій'
+        verbose_name_plural = 'Доступ до функцій'
+
+    def __str__(self):
+        return f'Функції: {self.client.name}'
+
+
 # --- МОДЕЛЬ ДЛЯ ІСТОРІЇ ---
 class OwnershipHistory(models.Model):
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, related_name="ownership_history", verbose_name="Вантажівка")

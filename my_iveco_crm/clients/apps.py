@@ -18,3 +18,12 @@ class ClientsConfig(AppConfig):
     def ready(self):
         from core.registry import register_module
         register_module(self.MODULE_INFO)
+
+        from django.db.models.signals import post_save
+        from django.dispatch import receiver
+        from clients.models import Client, ClientFeature
+
+        @receiver(post_save, sender=Client)
+        def auto_create_client_features(sender, instance, created, **kwargs):
+            if created:
+                ClientFeature.objects.get_or_create(client=instance)
