@@ -137,6 +137,48 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     instance.service_order.update_total_cost()
 
 
+@receiver(post_save, sender=ServiceWork)
+def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
+    """
+    Коли додається робота типу ТО/заміна оливи — автоматично закриває активне
+    нагадування ServiceReminder для цієї вантажівки і перезапускає відлік.
+    """
+    from core.registry import is_module_enabled
+
+    if not created:
+        return
+    if not is_module_enabled('maintenance'):
+        return
+
+    truck = instance.service_order.truck
+    if not truck or not _is_maintenance_work(instance.work):
+        return
+
+    try:
+        from maintenance.models import ServiceReminder
+        from django.utils import timezone
+
+        reminder = ServiceReminder.objects.filter(
+            truck=truck,
+            status__in=['pending', 'notified', 'overdue'],
+        ).order_by('target_mileage').first()
+
+        if not reminder:
+            return
+
+        reminder.status = 'completed'
+        reminder.completed_at = timezone.now()
+        reminder.completed_order = instance.service_order
+        reminder.save()
+
+        logger.info(
+            f"Нагадування #{reminder.pk} закрито автоматично після роботи ТО "
+            f"для {truck.license_plate}"
+        )
+    except Exception as e:
+        logger.error(f"Помилка авто-закриття нагадування ТО: {e}")
+
+
 @receiver(post_save, sender=RepairPhoto)
 def notify_client_on_new_photo(sender, instance, created, **kwargs):
     """
