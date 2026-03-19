@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "bot",
     "appointments",
     "alpr",
+    "invoices",
 ]
 
 MIDDLEWARE = [
