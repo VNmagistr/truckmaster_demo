@@ -89,6 +89,16 @@ def record_status_change(sender, instance, created, **kwargs):
     ):
         _update_maintenance_intervals(instance)
 
+    # Якщо статус повернувся з DONE на OPEN/IN_PROGRESS — відновлюємо інтервали
+    if (
+        previous_status == ServiceOrder.StatusChoices.DONE
+        and instance.status in (
+            ServiceOrder.StatusChoices.OPEN,
+            ServiceOrder.StatusChoices.IN_PROGRESS,
+        )
+    ):
+        _revert_maintenance_intervals(instance)
+
 
 @receiver([post_save, post_delete], sender=ServiceWork)
 def update_order_on_work_change(sender, instance, **kwargs):
@@ -195,6 +205,12 @@ def _update_maintenance_intervals(order):
 
     try:
         intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck=truck)
+
+        # Зберігаємо знімок OLD значень перед оновленням
+        snapshot = {f: getattr(intervals, f) for f in fields_to_update}
+        order.intervals_snapshot = snapshot
+        order.save(update_fields=['intervals_snapshot'])
+
         for field, value in fields_to_update.items():
             setattr(intervals, field, value)
         intervals.save(update_fields=list(fields_to_update.keys()))
@@ -204,6 +220,29 @@ def _update_maintenance_intervals(order):
         )
     except Exception as e:
         logger.error(f"Помилка оновлення інтервалів ТО: {e}")
+
+
+def _revert_maintenance_intervals(order):
+    """Відновлює *_last_km зі знімку при відкаті статусу з DONE."""
+    snapshot = order.intervals_snapshot
+    if not snapshot:
+        return
+    truck = order.truck
+    if not truck:
+        return
+    try:
+        intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck=truck)
+        for field, value in snapshot.items():
+            setattr(intervals, field, value)
+        intervals.save(update_fields=list(snapshot.keys()))
+        order.intervals_snapshot = None
+        order.save(update_fields=['intervals_snapshot'])
+        logger.info(
+            f"Інтервали ТО відновлено для {truck.license_plate} "
+            f"(відкат наряду #{order.order_number})"
+        )
+    except Exception as e:
+        logger.error(f"Помилка відновлення інтервалів ТО: {e}")
 
 
 @receiver(post_save, sender=RepairPhoto)
