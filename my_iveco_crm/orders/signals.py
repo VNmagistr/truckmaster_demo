@@ -137,40 +137,44 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     instance.service_order.update_total_cost()
 
 
+@receiver(pre_save, sender=ServiceOrder)
+def capture_done_transition(sender, instance, **kwargs):
+    """Запам'ятовуємо чи відбувся перехід саме в DONE (не повторний save)."""
+    if not instance.pk:
+        instance._transitioning_to_done = False
+        return
+    try:
+        old_status = ServiceOrder.objects.only('status').get(pk=instance.pk).status
+        instance._transitioning_to_done = (
+            old_status != ServiceOrder.StatusChoices.DONE
+            and instance.status == ServiceOrder.StatusChoices.DONE
+        )
+    except ServiceOrder.DoesNotExist:
+        instance._transitioning_to_done = False
+
+
 @receiver(post_save, sender=ServiceOrder)
 def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
     """
-    Коли наряд переходить у статус DONE — перевіряємо чи є в ньому робота
-    типу ТО/заміна оливи і автоматично закриваємо активне нагадування для цієї
-    вантажівки. Це запускає auto_create_next_reminder і перезапускає відлік.
+    Коли наряд переходить у статус DONE вперше — закриваємо активне
+    нагадування ТО для цієї вантажівки і перезапускаємо відлік.
     """
+    if created or not getattr(instance, '_transitioning_to_done', False):
+        return
+
     from core.registry import is_module_enabled
-
-    if created:
-        return
-    if instance.status != ServiceOrder.StatusChoices.DONE:
-        return
     if not is_module_enabled('maintenance'):
-        return
-
-    # Перевіряємо попередній статус — реагуємо лише на перехід в DONE
-    previous_status = getattr(instance, '_previous_status', None)
-    if previous_status == ServiceOrder.StatusChoices.DONE:
         return
 
     truck = instance.truck
     if not truck:
         return
 
-    # Перевіряємо чи є в наряді хоча б одна робота типу ТО
-    has_maintenance_work = instance.works.select_related('work__work_group').filter(
-        work__isnull=False
-    ).exists() and any(
+    # Чи є в наряді робота типу ТО/заміна оливи?
+    if not any(
         _is_maintenance_work(sw.work)
         for sw in instance.works.select_related('work__work_group').all()
-    )
-
-    if not has_maintenance_work:
+    ):
         return
 
     try:
@@ -191,7 +195,7 @@ def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
         reminder.save()
 
         logger.info(
-            f"Нагадування #{reminder.pk} закрито автоматично при закритті наряду "
+            f"Нагадування #{reminder.pk} закрито автоматично при виконанні наряду "
             f"#{instance.order_number} для {truck.license_plate}"
         )
     except Exception as e:
