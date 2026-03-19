@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/bot/', include('bot.urls')),
     path('api/', include('appointments.urls')),
     path('api/', include('alpr.urls')),
+    path('api/', include('invoices.urls')),
 ]
 
 if settings.DEBUG:
