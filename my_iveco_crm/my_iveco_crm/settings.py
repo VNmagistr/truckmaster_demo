@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "django_celery_beat",
     # Система модулів (має бути перед кастомними застосунками)
     "core",
     # Core-модулі (завжди увімкнені)
