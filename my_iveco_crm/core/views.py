@@ -1,6 +1,6 @@
 # core/views.py
 
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,7 +12,7 @@ class ModuleListView(APIView):
     """
     GET  /api/modules/  — список усіх модулів (тільки адміністратор).
     """
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         modules = Module.objects.all()
