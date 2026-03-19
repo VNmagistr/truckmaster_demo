@@ -1,7 +1,33 @@
+from django import forms
 from django.contrib import admin
+from django.db import models
 from django.utils.html import format_html
 
 from .models import Client, ClientFeature, IvecoBaseModel, Truck, OwnershipHistory
+
+
+# ── Custom toggle widget ──────────────────────────────────────────────────────
+
+class ToggleBooleanWidget(forms.CheckboxInput):
+    """Рендерить checkbox + стилізований toggle-перемикач."""
+
+    def render(self, name, value, attrs=None, renderer=None):
+        final_attrs = self.build_attrs(self.attrs, attrs or {})
+        final_attrs['class'] = (final_attrs.get('class', '') + ' ft-cb').strip()
+        cb_id = final_attrs.get('id', '')
+        checked = self.check_test(value)
+
+        checkbox_html = super().render(name, value, final_attrs, renderer)
+        on_class = ' on' if checked else ''
+        status = 'Увімкнено' if checked else 'Вимкнено'
+
+        return checkbox_html + format_html(
+            '<label class="ft-label{}" for="{}">'
+            '<span class="ft-track"><span class="ft-thumb"></span></span>'
+            '<span class="ft-status">{}</span>'
+            '</label>',
+            on_class, cb_id, status,
+        )
 
 
 # ── ClientFeature inline ──────────────────────────────────────────────────────
@@ -23,6 +49,11 @@ class ClientFeatureInline(admin.StackedInline):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('client')
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if isinstance(db_field, models.BooleanField):
+            kwargs['widget'] = ToggleBooleanWidget
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 # ── Client admin ──────────────────────────────────────────────────────────────
