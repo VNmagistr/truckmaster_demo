@@ -159,11 +159,21 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
         f"Переглянути деталі у особистому кабінеті:\n{cabinet_url}"
     )
 
-    # --- Telegram (потребує модуль 'bot') ---
+    # Перевіряємо індивідуальні фічі клієнта
+    try:
+        client_features = client.features
+    except Exception:
+        client_features = None
+
+    # --- Telegram (потребує модуль 'bot' + фічу клієнта 'notifications_telegram') ---
     if client.telegram_chat_id:
         from core.registry import is_module_enabled
+        tg_allowed = (
+            is_module_enabled('bot')
+            and (client_features is None or client_features.notifications_telegram)
+        )
         bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-        if bot_token and is_module_enabled('bot'):
+        if bot_token and tg_allowed:
             try:
                 from telegram import Bot
                 tg_text = base_text.replace("📸 Нове фото ремонту", "📸 *Нове фото ремонту*")
@@ -176,13 +186,15 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
             except Exception as e:
                 logger.error(f"Telegram photo notify error for client {client.id}: {e}")
 
-    # --- WhatsApp ---
+    # --- WhatsApp (перевіряємо фічу клієнта 'notifications_whatsapp') ---
     if client.phone:
-        try:
-            from my_iveco_crm.whatsapp import send_whatsapp_text
-            send_whatsapp_text(client.phone, base_text)
-        except Exception as e:
-            logger.error(f"WhatsApp photo notify error for client {client.id}: {e}")
+        wa_allowed = client_features is None or client_features.notifications_whatsapp
+        if wa_allowed:
+            try:
+                from my_iveco_crm.whatsapp import send_whatsapp_text
+                send_whatsapp_text(client.phone, base_text)
+            except Exception as e:
+                logger.error(f"WhatsApp photo notify error for client {client.id}: {e}")
 
 
 def auto_save_maintenance_kit(sender, instance, created, **kwargs):
