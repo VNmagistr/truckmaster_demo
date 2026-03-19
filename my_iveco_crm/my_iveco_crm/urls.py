@@ -7,37 +7,23 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # Аутентифікація
-    path('api/', include('accounts.urls')),
 
-    # Користувачі
+    # Система модулів
+    path('api/', include('core.urls')),
+
+    # Core-модулі (завжди доступні)
+    path('api/', include('accounts.urls')),
     path('api/', include('users.urls')),
-    
-    # Основні модулі
     path('api/', include('clients.urls')),
     path('api/', include('orders.urls')),
-    
-    # Склад та товари
+
+    # Optional-модулі (доступні якщо увімкнені в адмінці)
     path('api/inventory/', include('inventory.urls')),
-    
-    # Обслуговування
     path('api/maintenance/', include('maintenance.urls')),
-
-    # Bot API
-    path('api/bot/', include('bot.urls')),
-
-    # Client cabinet
     path('api/cabinet/', include('cabinet.urls')),
-
-    # Appointments
+    path('api/bot/', include('bot.urls')),
     path('api/', include('appointments.urls')),
-
-    # ALPR — розпізнавання номерів
     path('api/', include('alpr.urls')),
-
-    # Рахунки на запчастини
-    path('api/', include('invoices.urls')),
 ]
 
 if settings.DEBUG:

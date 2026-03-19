@@ -51,15 +51,11 @@ class ServiceReminderSerializer(serializers.ModelSerializer):
             'priority_display',
             'completed_order',
             'completed_at',
-            'notify_frequency_days',
-            'last_notified_at',
-            'interval_km',
-            'interval_months',
             'is_overdue',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['created_at', 'updated_at', 'last_notified_at']
+        read_only_fields = ['created_at', 'updated_at']
     
     def get_is_overdue(self, obj):
         """Перевірка чи прострочено"""
