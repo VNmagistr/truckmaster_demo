@@ -18,7 +18,7 @@
   width: 46px;
   height: 26px;
   border-radius: 13px;
-  background: var(--ft-off, #bbb);
+  background: #bbb;
   transition: background .2s;
 }
 .ft-thumb {
@@ -28,116 +28,108 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--ft-thumb, #fff);
+  background: #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,.3);
   transition: transform .2s;
 }
-.ft-label.on .ft-track { background: #f5c518; }
-.ft-label.on .ft-thumb { transform: translateX(20px); }
+.ft-label.on .ft-track  { background: #f5c518; }
+.ft-label.on .ft-thumb  { transform: translateX(20px); }
 
 .ft-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--ft-fg, #333);
   min-width: 210px;
 }
 .ft-status {
   font-size: 12px;
   font-weight: 600;
-  color: var(--ft-muted, #999);
+  color: #999;
 }
-.ft-label.on .ft-status { color: #c9a000; }
+.ft-label.on .ft-status { color: #b89000; }
 
 .ft-help {
   font-size: 12px;
-  color: var(--ft-muted, #999);
+  color: #999;
   margin: 2px 0 6px 58px;
 }
 
-/* ── Темна тема (Django 4.2+ data-theme + media fallback) ────────────── */
-[data-theme="dark"],
-[data-theme="auto"] {
-  --ft-off:   #555;
-  --ft-thumb: #ddd;
-  --ft-fg:    #ddd;
-  --ft-muted: #888;
-}
+/* ── Темна тема ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] .ft-track                          { background: #555; }
+[data-theme="dark"] .ft-thumb                          { background: #ccc; }
+[data-theme="dark"] .ft-label.on .ft-thumb             { background: #1a1a1a; }
+[data-theme="dark"] .ft-name                           { color: #ddd; }
+[data-theme="dark"] .ft-status                         { color: #666; }
+[data-theme="dark"] .ft-label.on .ft-status            { color: #f5c518; }
+[data-theme="dark"] .ft-help                           { color: #666; }
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ft-off:   #555;
-    --ft-thumb: #ddd;
-    --ft-fg:    #ddd;
-    --ft-muted: #888;
-  }
-}
-.ft-label.on .ft-thumb {
-  background: #fff;
-}
-[data-theme="dark"] .ft-label.on .ft-thumb,
-[data-theme="auto"] .ft-label.on .ft-thumb {
-  background: #1a1a1a;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ft-label.on .ft-thumb {
-    background: #1a1a1a;
-  }
-}
-[data-theme="dark"] .ft-label.on .ft-status,
-[data-theme="auto"] .ft-label.on .ft-status {
-  color: #f5c518;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ft-label.on .ft-status {
-    color: #f5c518;
-  }
+  [data-theme="auto"] .ft-track               { background: #555; }
+  [data-theme="auto"] .ft-thumb               { background: #ccc; }
+  [data-theme="auto"] .ft-label.on .ft-thumb  { background: #1a1a1a; }
+  [data-theme="auto"] .ft-name                { color: #ddd; }
+  [data-theme="auto"] .ft-status              { color: #666; }
+  [data-theme="auto"] .ft-label.on .ft-status { color: #f5c518; }
+  [data-theme="auto"] .ft-help                { color: #666; }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.inline-group .form-row').forEach(function (row) {
-    var cb = row.querySelector('input[type="checkbox"]');
-    if (!cb) return;
+  document.querySelectorAll('.inline-group').forEach(function (group) {
+    group.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 
-    var origLabel = document.querySelector('label[for="' + cb.id + '"]');
-    if (!origLabel) return;
+      var row = cb.closest('.form-row');
+      if (!row) return;
 
-    var name    = origLabel.textContent.replace(/:$/, '').trim();
-    var helpEl  = row.querySelector('.help, .helptext');
-    var hint    = helpEl ? helpEl.textContent.trim() : '';
-    var checked = cb.checked;
+      /* ── Збираємо дані ДО будь-яких змін ── */
+      var checked = cb.checked;
+      var cbId    = cb.id;
 
-    /* ── Повністю ховаємо оригінальні елементи ── */
-    cb.style.cssText        = 'position:absolute;clip:rect(0 0 0 0);width:1px;height:1px;overflow:hidden;';
-    origLabel.style.display = 'none';
-    if (helpEl) helpEl.style.display = 'none';
+      // Ім'я: шукаємо label в межах рядка (не по всьому документу)
+      var labelEl = row.querySelector('label');
+      var name    = labelEl ? labelEl.textContent.replace(/:$/, '').trim() : '';
 
-    /* ── Будуємо toggle ── */
-    var lbl = document.createElement('label');
-    lbl.className     = 'ft-label' + (checked ? ' on' : '');
-    lbl.setAttribute('for', cb.id);
-    lbl.innerHTML =
-      '<span class="ft-track"><span class="ft-thumb"></span></span>' +
-      '<span class="ft-name">' + name + '</span>' +
-      '<span class="ft-status">' + (checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
+      // Help text
+      var helpEl = row.querySelector('.help, .helptext');
+      var hint   = helpEl ? helpEl.textContent.trim() : '';
 
-    lbl.addEventListener('click', function () {
-      setTimeout(function () {
-        lbl.classList.toggle('on', cb.checked);
-        lbl.querySelector('.ft-status').textContent = cb.checked ? 'Увімкнено' : 'Вимкнено';
-      }, 10);
+      /* ── Очищаємо inner div і перебудовуємо зміст ── */
+      var inner = row.querySelector(':scope > div') || row;
+      inner.innerHTML = '';   // прибираємо ВСЕ: checkbox, label, help
+
+      // Прихований checkbox — залишаємо для відправки форми
+      cb.style.cssText =
+        'position:absolute;width:1px;height:1px;margin:-1px;' +
+        'padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+      inner.appendChild(cb);
+
+      // Toggle label
+      var lbl = document.createElement('label');
+      lbl.className = 'ft-label' + (checked ? ' on' : '');
+      lbl.setAttribute('for', cbId);
+      lbl.innerHTML =
+        '<span class="ft-track"><span class="ft-thumb"></span></span>' +
+        '<span class="ft-name">' + name + '</span>' +
+        '<span class="ft-status">' + (checked ? 'Увімкнено' : 'Вимкнено') + '</span>';
+
+      lbl.addEventListener('click', function () {
+        setTimeout(function () {
+          lbl.classList.toggle('on', cb.checked);
+          lbl.querySelector('.ft-status').textContent =
+            cb.checked ? 'Увімкнено' : 'Вимкнено';
+        }, 10);
+      });
+
+      inner.appendChild(lbl);
+
+      // Help text під toggleм
+      if (hint) {
+        var p = document.createElement('p');
+        p.className   = 'ft-help';
+        p.textContent = hint;
+        inner.appendChild(p);
+      }
     });
-
-    /* ── Вставляємо у внутрішній контейнер рядка ── */
-    var inner = row.querySelector(':scope > div') || row;
-    inner.appendChild(lbl);
-
-    if (hint) {
-      var p = document.createElement('p');
-      p.className   = 'ft-help';
-      p.textContent = hint;
-      inner.appendChild(p);
-    }
   });
 });
 </script>
