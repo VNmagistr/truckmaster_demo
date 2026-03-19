@@ -33,17 +33,20 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    # Система модулів (має бути перед кастомними застосунками)
+    "core",
+    # Core-модулі (завжди увімкнені)
+    "accounts",
     "users",
     "clients",
     "orders",
+    # Optional-модулі (можна вимкнути через адмінку)
     "inventory",
-    "accounts",
-    "bot",
     "maintenance",
     "cabinet",
+    "bot",
     "appointments",
     "alpr",
-    "invoices",
 ]
 
 MIDDLEWARE = [
@@ -55,6 +58,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Перевірка увімкнених модулів (після auth, щоб мати доступ до request.user)
+    "core.middleware.ModuleMiddleware",
 ]
 
 ROOT_URLCONF = "my_iveco_crm.urls"
