@@ -166,23 +166,23 @@ class ClientFeature(models.Model):
         help_text='Доступ до /cabinet/ — перегляд замовлень та авто.',
     )
     bot = models.BooleanField(
-        default=True, verbose_name='Telegram бот',
+        default=False, verbose_name='Telegram бот',
         help_text='Участь у Telegram боті (звіти пробігу, команди).',
     )
     invoices = models.BooleanField(
-        default=True, verbose_name='Рахунки',
+        default=False, verbose_name='Рахунки',
         help_text='Перегляд виставлених рахунків на запчастини.',
     )
     appointments = models.BooleanField(
-        default=True, verbose_name='Онлайн-запис',
+        default=False, verbose_name='Онлайн-запис',
         help_text='Самостійний запис на СТО через кабінет.',
     )
     notifications_telegram = models.BooleanField(
-        default=True, verbose_name='Сповіщення Telegram',
+        default=False, verbose_name='Сповіщення Telegram',
         help_text='Надсилати Telegram-сповіщення при додаванні фото ремонту.',
     )
     notifications_whatsapp = models.BooleanField(
-        default=True, verbose_name='Сповіщення WhatsApp',
+        default=False, verbose_name='Сповіщення WhatsApp',
         help_text='Надсилати WhatsApp-сповіщення при додаванні фото ремонту.',
     )
 
