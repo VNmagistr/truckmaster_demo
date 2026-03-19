@@ -56,6 +56,7 @@ def record_status_change(sender, instance, created, **kwargs):
     Після збереження фіксує зміну статусу в OrderStatusHistory.
     При створенні — записує початковий статус.
     При оновленні — записує лише якщо статус змінився.
+    При переході в DONE — закриває нагадування ТО (якщо є робота по заміні оливи).
     """
     from .models import OrderStatusHistory
 
@@ -78,6 +79,14 @@ def record_status_change(sender, instance, created, **kwargs):
             to_status=instance.status,
             changed_by=changed_by,
         )
+
+    # Якщо статус змінився на DONE — закриваємо нагадування ТО
+    if (
+        previous_status is not None
+        and previous_status != ServiceOrder.StatusChoices.DONE
+        and instance.status == ServiceOrder.StatusChoices.DONE
+    ):
+        _try_complete_maintenance_reminder(instance)
 
 
 @receiver([post_save, post_delete], sender=ServiceWork)
@@ -137,44 +146,26 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     instance.service_order.update_total_cost()
 
 
-@receiver(pre_save, sender=ServiceOrder)
-def capture_done_transition(sender, instance, **kwargs):
-    """Запам'ятовуємо чи відбувся перехід саме в DONE (не повторний save)."""
-    if not instance.pk:
-        instance._transitioning_to_done = False
-        return
-    try:
-        old_status = ServiceOrder.objects.only('status').get(pk=instance.pk).status
-        instance._transitioning_to_done = (
-            old_status != ServiceOrder.StatusChoices.DONE
-            and instance.status == ServiceOrder.StatusChoices.DONE
-        )
-    except ServiceOrder.DoesNotExist:
-        instance._transitioning_to_done = False
-
-
-@receiver(post_save, sender=ServiceOrder)
-def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
+def _try_complete_maintenance_reminder(order):
     """
-    Коли наряд переходить у статус DONE вперше — закриваємо активне
-    нагадування ТО для цієї вантажівки і перезапускаємо відлік.
+    Закриває активне нагадування ТО для вантажівки якщо в наряді є
+    робота по заміні оливи/ТО. Викликається з record_status_change.
     """
-    if created or not getattr(instance, '_transitioning_to_done', False):
-        return
-
     from core.registry import is_module_enabled
     if not is_module_enabled('maintenance'):
+        logger.debug("Модуль maintenance вимкнено — пропускаємо закриття нагадування")
         return
 
-    truck = instance.truck
+    truck = order.truck
     if not truck:
         return
 
-    # Чи є в наряді робота типу ТО/заміна оливи?
-    if not any(
+    has_maintenance = any(
         _is_maintenance_work(sw.work)
-        for sw in instance.works.select_related('work__work_group').all()
-    ):
+        for sw in order.works.select_related('work__work_group').all()
+    )
+    if not has_maintenance:
+        logger.debug(f"Наряд #{order.order_number}: роботи ТО не знайдено — пропускаємо")
         return
 
     try:
@@ -187,16 +178,17 @@ def auto_complete_maintenance_reminder(sender, instance, created, **kwargs):
         ).order_by('target_mileage').first()
 
         if not reminder:
+            logger.info(f"Наряд #{order.order_number}: активних нагадувань ТО для {truck.license_plate} не знайдено")
             return
 
         reminder.status = 'completed'
         reminder.completed_at = timezone.now()
-        reminder.completed_order = instance
+        reminder.completed_order = order
         reminder.save()
 
         logger.info(
-            f"Нагадування #{reminder.pk} закрито автоматично при виконанні наряду "
-            f"#{instance.order_number} для {truck.license_plate}"
+            f"Нагадування #{reminder.pk} закрито автоматично — "
+            f"наряд #{order.order_number}, авто {truck.license_plate}"
         )
     except Exception as e:
         logger.error(f"Помилка авто-закриття нагадування ТО: {e}")
