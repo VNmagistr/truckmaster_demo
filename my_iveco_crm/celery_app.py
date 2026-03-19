@@ -27,6 +27,10 @@ app.conf.beat_schedule = {
         'task': 'appointments.tasks.send_appointment_reminders',
         'schedule': crontab(minute=0),  # every hour
     },
+    'auto-close-done-orders': {
+        'task': 'orders.tasks.auto_close_done_orders',
+        'schedule': crontab(hour=3, minute=0),  # щодня о 3:00 ночі
+    },
 }
 
 @app.task(bind=True)
