@@ -42,6 +42,10 @@ class Invoice(models.Model):
         max_length=20, choices=STATUS_CHOICES, default='draft',
         verbose_name='Статус',
     )
+    nova_poshta_declaration = models.CharField(
+        max_length=30, blank=True,
+        verbose_name='Декларація Нової Пошти',
+    )
     notes = models.TextField(blank=True, verbose_name='Примітки')
     total = models.DecimalField(
         max_digits=12, decimal_places=2, default=0,

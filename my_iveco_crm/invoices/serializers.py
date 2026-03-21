@@ -31,7 +31,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'number', 'client', 'client_name', 'client_phone',
             'truck', 'truck_display', 'date', 'status', 'status_display',
-            'notes', 'total', 'items', 'created_at', 'updated_at',
+            'nova_poshta_declaration', 'notes', 'total', 'items', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'number', 'total', 'created_at', 'updated_at',
                             'client_name', 'client_phone', 'truck_display',
