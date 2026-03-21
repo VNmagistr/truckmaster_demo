@@ -227,3 +227,21 @@ class UsedPartSerializer(serializers.ModelSerializer):
             'unit_price',
             'total_price',
         ]
+
+    def validate(self, data):
+        part = data.get('part', getattr(self.instance, 'part', None))
+        quantity = data.get('quantity', getattr(self.instance, 'quantity', None))
+
+        if part is not None and quantity is not None:
+            available = part.current_stock
+            if self.instance:
+                available += self.instance.quantity
+            if quantity > available:
+                raise serializers.ValidationError({
+                    'quantity': (
+                        f'Недостатньо на складі. '
+                        f'Запитано: {quantity} {part.unit}, '
+                        f'доступно: {available} {part.unit}.'
+                    )
+                })
+        return data
