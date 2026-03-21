@@ -1,7 +1,9 @@
 import logging
+import requests
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -112,3 +114,55 @@ class InvoiceItemViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # invoice передається у полі invoice через серіалізатор
         serializer.save()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def track_nova_poshta(request, number):
+    """Відстеження посилки Нової Пошти за номером декларації."""
+    api_key = getattr(settings, 'NP_API_KEY', '')
+    if not api_key:
+        return Response(
+            {'detail': 'NP_API_KEY не налаштовано.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    payload = {
+        'apiKey': api_key,
+        'modelName': 'TrackingDocument',
+        'calledMethod': 'getStatusDocuments',
+        'methodProperties': {
+            'Documents': [{'DocumentNumber': number}],
+        },
+    }
+
+    try:
+        resp = requests.post(
+            'https://api.novaposhta.ua/v2.0/json/',
+            json=payload,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException as e:
+        logger.error(f'Nova Poshta API error: {e}')
+        return Response(
+            {'detail': 'Помилка зв\'язку з API Нової Пошти.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    if not data.get('success'):
+        errors = data.get('errors', [])
+        return Response(
+            {'detail': errors[0] if errors else 'Помилка API Нової Пошти.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    docs = data.get('data', [])
+    if not docs:
+        return Response(
+            {'detail': 'Декларацію не знайдено.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(docs[0])
