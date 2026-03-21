@@ -285,3 +285,5 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+
+NP_API_KEY = config('NP_API_KEY', default='')
