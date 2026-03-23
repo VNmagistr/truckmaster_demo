@@ -171,7 +171,7 @@ class TruckModelTest(TestCase):
             full_vin='ZCFC35A0005678901',
             license_plate='AA1111BB'
         )
-        
+
         with self.assertRaises(Exception):
             Truck.objects.create(
                 base_model=self.base_model,
@@ -179,6 +179,47 @@ class TruckModelTest(TestCase):
                 full_vin='ZCFC35A0005678901',
                 license_plate='AA2222BB'
             )
+
+    def test_vin_exactly_17_chars_is_valid(self):
+        """VIN with exactly 17 characters must pass validation."""
+        from django.core.exceptions import ValidationError
+        truck = Truck(
+            base_model=self.base_model,
+            specific_model_name='35C15',
+            full_vin='ZCFC35A0005678901',  # 17 chars
+            license_plate='AA9999BB',
+        )
+        try:
+            truck.full_clean()
+        except ValidationError as e:
+            if 'full_vin' in e.message_dict:
+                self.fail(f"Valid 17-char VIN raised ValidationError: {e}")
+
+    def test_vin_shorter_than_17_chars_is_invalid(self):
+        """VIN shorter than 17 characters must fail validation."""
+        from django.core.exceptions import ValidationError
+        truck = Truck(
+            base_model=self.base_model,
+            specific_model_name='35C15',
+            full_vin='ZCFC35A000567',  # 13 chars
+            license_plate='AA9999BB',
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            truck.full_clean()
+        self.assertIn('full_vin', ctx.exception.message_dict)
+
+    def test_vin_longer_than_17_chars_is_invalid(self):
+        """VIN longer than 17 characters must fail validation (max_length=17)."""
+        from django.core.exceptions import ValidationError
+        truck = Truck(
+            base_model=self.base_model,
+            specific_model_name='35C15',
+            full_vin='ZCFC35A000567890123',  # 19 chars
+            license_plate='AA9999BB',
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            truck.full_clean()
+        self.assertIn('full_vin', ctx.exception.message_dict)
 
 
 class OwnershipHistoryTest(TestCase):
