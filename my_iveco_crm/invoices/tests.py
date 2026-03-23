@@ -1,4 +1,6 @@
+import sys
 from decimal import Decimal
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.contrib.auth.models import User
 from rest_framework import status
@@ -100,3 +102,116 @@ class InvoiceMarkPaidTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         invoice.refresh_from_db()
         self.assertEqual(invoice.status, 'cancelled')
+
+
+class SendTtnTest(APITestCase):
+    """Tests for send_ttn: TTN notification via Telegram and WhatsApp."""
+
+    def setUp(self):
+        self.user = User.objects.create_superuser('admin_ttn', password='pass')
+        self.client.force_authenticate(user=self.user)
+
+        self.buyer = Client.objects.create(name='TTN Client', phone='+380991234567')
+        self.invoice = Invoice.objects.create(
+            number='INV-TTN-001',
+            client=self.buyer,
+            nova_poshta_declaration='20450000000001',
+        )
+
+    def _url(self, pk=None):
+        return f'/api/invoices/{pk or self.invoice.pk}/send_ttn/'
+
+    # ── Validation guards ────────────────────────────────────────────────────
+
+    def test_no_declaration_returns_400(self):
+        inv = Invoice.objects.create(number='INV-TTN-002', client=self.buyer)
+        response = self.client.post(self._url(inv.pk))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('декларації', response.data['detail'])
+
+    def test_no_channels_returns_400(self):
+        """Client has neither telegram_chat_id nor phone → 400."""
+        buyer = Client.objects.create(name='No Channels Client')
+        inv = Invoice.objects.create(
+            number='INV-TTN-004',
+            client=buyer,
+            nova_poshta_declaration='20450000000003',
+        )
+        response = self.client.post(self._url(inv.pk))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # ── Telegram ─────────────────────────────────────────────────────────────
+
+    def _mock_telegram(self):
+        """Return a sys.modules patch that stubs out python-telegram-bot."""
+        mock_bot_instance = MagicMock()
+        mock_bot_instance.send_message = AsyncMock()
+        mock_telegram_module = MagicMock()
+        mock_telegram_module.Bot.return_value = mock_bot_instance
+        return patch.dict('sys.modules', {'telegram': mock_telegram_module}), mock_telegram_module
+
+    def test_sends_via_telegram_when_configured(self):
+        self.buyer.telegram_chat_id = 123456789
+        self.buyer.save(update_fields=['telegram_chat_id'])
+        self.buyer.features.notifications_telegram = True
+        self.buyer.features.save(update_fields=['notifications_telegram'])
+
+        tg_patch, _ = self._mock_telegram()
+        with tg_patch, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN': 'fake-token'}):
+            response = self.client.post(self._url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('telegram', response.data['sent_to'])
+
+    def test_telegram_not_sent_when_feature_disabled(self):
+        self.buyer.telegram_chat_id = 123456789
+        self.buyer.save(update_fields=['telegram_chat_id'])
+        # notifications_telegram defaults to False — no change needed
+
+        tg_patch, mock_tg = self._mock_telegram()
+        with tg_patch, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN': 'fake-token'}):
+            response = self.client.post(self._url())
+
+        mock_tg.Bot.assert_not_called()
+        self.assertNotIn('telegram', response.data.get('sent_to', []))
+
+    # ── WhatsApp ─────────────────────────────────────────────────────────────
+
+    def test_sends_via_whatsapp_when_configured(self):
+        self.buyer.features.notifications_whatsapp = True
+        self.buyer.features.save(update_fields=['notifications_whatsapp'])
+
+        with patch('my_iveco_crm.whatsapp.send_whatsapp_text') as mock_wa:
+            response = self.client.post(self._url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('whatsapp', response.data['sent_to'])
+        mock_wa.assert_called_once()
+
+    def test_whatsapp_not_sent_when_feature_disabled(self):
+        # notifications_whatsapp defaults to False
+        with patch('my_iveco_crm.whatsapp.send_whatsapp_text') as mock_wa:
+            self.client.post(self._url())
+
+        mock_wa.assert_not_called()
+
+    # ── Response structure ───────────────────────────────────────────────────
+
+    def test_response_contains_declaration_number(self):
+        self.buyer.features.notifications_whatsapp = True
+        self.buyer.features.save(update_fields=['notifications_whatsapp'])
+
+        with patch('my_iveco_crm.whatsapp.send_whatsapp_text'):
+            response = self.client.post(self._url())
+
+        self.assertEqual(response.data['declaration'], '20450000000001')
+
+    def test_response_has_sent_to_and_errors_keys(self):
+        self.buyer.features.notifications_whatsapp = True
+        self.buyer.features.save(update_fields=['notifications_whatsapp'])
+
+        with patch('my_iveco_crm.whatsapp.send_whatsapp_text'):
+            response = self.client.post(self._url())
+
+        self.assertIn('sent_to', response.data)
+        self.assertIn('errors', response.data)

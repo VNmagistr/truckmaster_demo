@@ -123,6 +123,88 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def cancel(self, request, pk=None):
         return self._change_status(request, 'cancelled')
 
+    @action(detail=True, methods=['post'])
+    def send_ttn(self, request, pk=None):
+        """Надіслати ТТН Нової Пошти клієнту через Telegram та/або WhatsApp."""
+        invoice = self.get_object()
+
+        if not invoice.nova_poshta_declaration:
+            return Response(
+                {'detail': 'У рахунку не вказано номер декларації Нової Пошти.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        client = invoice.client
+        if not client:
+            return Response(
+                {'detail': 'Рахунок не прив\'язаний до клієнта.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tracking_url = f'https://tracking.novaposhta.ua/#/uk/parcel/{invoice.nova_poshta_declaration}'
+        text = (
+            f'📦 Ваше замовлення відправлено!\n\n'
+            f'Рахунок: {invoice.number}\n'
+            f'ТТН Нової Пошти: {invoice.nova_poshta_declaration}\n\n'
+            f'Відстежити посилку:\n{tracking_url}'
+        )
+
+        sent_to = []
+        errors = []
+
+        # Telegram
+        try:
+            features = client.features
+        except Exception:
+            features = None
+
+        tg_allowed = (
+            client.telegram_chat_id
+            and (features is None or features.notifications_telegram)
+        )
+        if tg_allowed:
+            import os
+            import asyncio
+            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+            if bot_token:
+                try:
+                    from telegram import Bot
+                    bot = Bot(token=bot_token)
+                    asyncio.run(bot.send_message(
+                        chat_id=client.telegram_chat_id,
+                        text=text,
+                    ))
+                    sent_to.append('telegram')
+                except Exception as e:
+                    logger.error(f'TTN send Telegram error (invoice {invoice.number}): {e}')
+                    errors.append('telegram')
+
+        # WhatsApp
+        wa_allowed = (
+            client.phone
+            and (features is None or features.notifications_whatsapp)
+        )
+        if wa_allowed:
+            try:
+                from my_iveco_crm.whatsapp import send_whatsapp_text
+                send_whatsapp_text(client.phone, text)
+                sent_to.append('whatsapp')
+            except Exception as e:
+                logger.error(f'TTN send WhatsApp error (invoice {invoice.number}): {e}')
+                errors.append('whatsapp')
+
+        if not sent_to and not errors:
+            return Response(
+                {'detail': 'Клієнт не має підключених каналів сповіщень (Telegram/WhatsApp).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({
+            'sent_to': sent_to,
+            'errors': errors,
+            'declaration': invoice.nova_poshta_declaration,
+        })
+
 
 class InvoiceItemViewSet(viewsets.ModelViewSet):
     serializer_class   = InvoiceItemSerializer
