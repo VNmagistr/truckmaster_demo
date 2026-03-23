@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 MAIN_KEYBOARD = [
     [KeyboardButton("Мої автомобілі 🚚")],
     [KeyboardButton("Перевірити статус замовлення 🧾")],
+    [KeyboardButton("📦 Мої відправки")],
     [KeyboardButton("🔔 Нагадування")],
 ]
 MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
@@ -451,6 +452,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 lines.append("")
             bot_reply = "\n".join(lines)
             await update.message.reply_text(bot_reply, parse_mode='Markdown')
+    elif "Мої відправки" in text:
+        invoices = await get_client_invoices_with_declarations(bot_user)
+        if not invoices:
+            bot_reply = "📭 Відправлень з номером декларації Нової Пошти не знайдено."
+            await update.message.reply_text(bot_reply)
+        else:
+            bot_reply = f"📦 Ваші відправки ({len(invoices)}):\nОберіть декларацію для перевірки статусу:"
+            await update.message.reply_text(
+                bot_reply,
+                reply_markup=get_declarations_keyboard(invoices),
+            )
     elif "Перевірити статус замовлення" in text:
         bot_reply = "Введіть номер замовлення:"
         context.user_data['awaiting_order'] = True
@@ -499,6 +511,78 @@ async def admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if bot_user:
         await log_message_to_db(bot_user, text, bot_reply)
+
+# ─── Нова Пошта: відправки клієнта ──────────────────────────────────────────
+
+@sync_to_async
+def get_client_invoices_with_declarations(bot_user):
+    """Повертає рахунки клієнта із заповненою декларацією НП."""
+    from invoices.models import Invoice
+    if not bot_user or not bot_user.client:
+        return []
+    return list(
+        Invoice.objects.filter(
+            client=bot_user.client,
+            nova_poshta_declaration__isnull=False,
+        ).exclude(nova_poshta_declaration='')
+        .order_by('-date')[:20]
+    )
+
+
+def get_declarations_keyboard(invoices):
+    """Інлайн-клавіатура з переліком декларацій."""
+    keyboard = []
+    for inv in invoices:
+        total = float(inv.total or 0)
+        label = f"{inv.date.strftime('%d.%m.%Y')} · {total:,.0f} ₴ · {inv.nova_poshta_declaration}".replace(',', ' ')
+        keyboard.append([InlineKeyboardButton(label, callback_data=f"np_track_{inv.nova_poshta_declaration}")])
+    keyboard.append([InlineKeyboardButton("❌ Закрити", callback_data="np_close")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+def _np_api_track(declaration: str) -> dict:
+    """Синхронний запит до API Нової Пошти."""
+    import requests as req
+    from django.conf import settings
+    api_key = getattr(settings, 'NP_API_KEY', '')
+    if not api_key:
+        return {'error': 'NP_API_KEY не налаштовано'}
+    payload = {
+        'apiKey': api_key,
+        'modelName': 'TrackingDocument',
+        'calledMethod': 'getStatusDocuments',
+        'methodProperties': {'Documents': [{'DocumentNumber': declaration}]},
+    }
+    try:
+        r = req.post('https://api.novaposhta.ua/v2.0/json/', json=payload, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get('success') or not data.get('data'):
+            return {'error': data.get('errors', ['Помилка API'])[0]}
+        return data['data'][0]
+    except Exception as e:
+        return {'error': str(e)}
+
+
+np_api_track = sync_to_async(_np_api_track)
+
+
+def _format_np_status(data: dict) -> str:
+    if 'error' in data:
+        return f"❌ {data['error']}"
+    lines = [f"📦 *{data.get('Status', '—')}*"]
+    if data.get('CityRecipient'):
+        lines.append(f"📍 Місто: {data['CityRecipient']}")
+    if data.get('WarehouseRecipientAddress'):
+        lines.append(f"🏢 Відділення: {data['WarehouseRecipientAddress']}")
+    if data.get('ActualDeliveryDate'):
+        lines.append(f"✅ Отримано: {data['ActualDeliveryDate']}")
+    elif data.get('ScheduledDeliveryDate'):
+        lines.append(f"📅 Очікується: {data['ScheduledDeliveryDate']}")
+    if data.get('DateScan'):
+        lines.append(f"🔍 Скановано: {data['DateScan']}")
+    return '\n'.join(lines)
+
 
 PHOTO_TYPE_LABELS = {
     'car': 'Номерний знак',
@@ -554,6 +638,35 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📸 Тип: *{label}*\n\nНадішліть фото:",
             parse_mode='Markdown'
         )
+
+    elif query.data.startswith("np_track_"):
+        declaration = query.data.replace("np_track_", "")
+        await query.edit_message_text(f"⏳ Отримую статус для ТТН {declaration}…")
+        np_data = await np_api_track(declaration)
+        status_text = _format_np_status(np_data)
+        await query.edit_message_text(
+            f"ТТН: `{declaration}`\n\n{status_text}",
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ До списку відправок", callback_data="np_back"),
+            ]]),
+        )
+        context.user_data['np_back_chat_id'] = query.message.chat_id
+
+    elif query.data == "np_back":
+        user = query.from_user
+        bot_user = await get_or_create_bot_user(user)
+        invoices = await get_client_invoices_with_declarations(bot_user)
+        if not invoices:
+            await query.edit_message_text("📭 Відправлень з номером декларації не знайдено.")
+        else:
+            await query.edit_message_text(
+                f"📦 Ваші відправки ({len(invoices)}):\nОберіть декларацію для перевірки статусу:",
+                reply_markup=get_declarations_keyboard(invoices),
+            )
+
+    elif query.data == "np_close":
+        await query.edit_message_text("✅ Закрито.")
 
     elif query.data == "photo_cancel":
         context.user_data.pop('photo_order_id', None)
