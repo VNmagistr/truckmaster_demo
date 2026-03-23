@@ -26,7 +26,10 @@ class BotUserViewSet(viewsets.ModelViewSet):
     def statistics(self, request):
         """Статистика по користувачах"""
         from django.db.models import Count
-        
+        from django.utils import timezone
+        from .models import MileageReport
+
+        today = timezone.now().date()
         stats = {
             'total': BotUser.objects.count(),
             'by_role': dict(
@@ -34,6 +37,7 @@ class BotUserViewSet(viewsets.ModelViewSet):
             ),
             'active': BotUser.objects.filter(is_active=True).count(),
             'blocked': BotUser.objects.filter(is_blocked=True).count(),
+            'mileage_today': MileageReport.objects.filter(reported_at__date=today).count(),
         }
         return Response(stats)
 
