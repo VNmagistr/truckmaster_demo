@@ -29,11 +29,13 @@ def auto_close_done_orders():
         ).order_by('-changed_at').first()
 
         if last_done and last_done.changed_at < threshold:
-            order.status = ServiceOrder.StatusChoices.CLOSED
-            # Знімок більше не потрібен — наряд закривається
-            order.intervals_snapshot = None
-            order.save(update_fields=['status', 'intervals_snapshot'])
-            closed_ids.append(order.order_number)
+            try:
+                order.status = ServiceOrder.StatusChoices.CLOSED
+                order.intervals_snapshot = None
+                order.save(update_fields=['status', 'intervals_snapshot'])
+                closed_ids.append(order.order_number)
+            except Exception as e:
+                logger.error(f"Авто-закриття: не вдалося закрити наряд {order.order_number}: {e}")
 
     if closed_ids:
         logger.info(f"Авто-закрито {len(closed_ids)} нарядів: {', '.join(closed_ids)}")
