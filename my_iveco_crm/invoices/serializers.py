@@ -16,7 +16,7 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'product_name', 'product_sku', 'total']
 
     def get_total(self, obj):
-        return float(obj.quantity * obj.unit_price)
+        return obj.quantity * obj.unit_price
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
