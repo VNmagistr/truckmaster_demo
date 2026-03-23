@@ -88,6 +88,21 @@ class ModuleAdmin(admin.ModelAdmin):
                 status=400,
             )
 
+        # Якщо вимикаємо — перевіряємо чи є активні залежники
+        if module.is_enabled:
+            dependents = Module.objects.filter(is_enabled=True).exclude(pk=pk)
+            blocking = [m.label for m in dependents if module.name in (m.dependencies or [])]
+            if blocking:
+                return JsonResponse(
+                    {
+                        'error': (
+                            f'Не можна вимкнути "{module.label}" — '
+                            f'від нього залежать: {", ".join(blocking)}.'
+                        )
+                    },
+                    status=400,
+                )
+
         module.is_enabled = not module.is_enabled
         module.save()
 
@@ -95,6 +110,22 @@ class ModuleAdmin(admin.ModelAdmin):
             'is_enabled': module.is_enabled,
             'label': module.label,
         })
+
+    def save_model(self, request, obj, form, change):
+        if change and not obj.is_enabled and 'is_enabled' in form.changed_data:
+            dependents = Module.objects.filter(is_enabled=True).exclude(pk=obj.pk)
+            blocking = [m.label for m in dependents if obj.name in (m.dependencies or [])]
+            if blocking:
+                from django.contrib import messages
+                obj.is_enabled = True  # відкочуємо зміну
+                super().save_model(request, obj, form, change)
+                self.message_user(
+                    request,
+                    f'Не можна вимкнути "{obj.label}" — від нього залежать: {", ".join(blocking)}.',
+                    level=messages.ERROR,
+                )
+                return
+        super().save_model(request, obj, form, change)
 
     # ── Permissions ──────────────────────────────────────────
 
