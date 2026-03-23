@@ -55,7 +55,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'number', 'client', 'client_name',
             'truck', 'truck_display', 'date', 'status', 'status_display',
-            'total', 'items_count', 'created_at',
+            'total', 'items_count', 'nova_poshta_declaration', 'created_at',
         ]
         read_only_fields = fields
 
