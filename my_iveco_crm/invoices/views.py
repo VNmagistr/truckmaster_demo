@@ -99,14 +99,15 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             StockMovement.objects.create(
                 product=item.product,
                 movement_type='out',
-                quantity=float(item.quantity),
+                quantity=item.quantity,
                 invoice_number=invoice.number,
                 notes=f'Продаж за рахунком {invoice.number}',
             )
+            from decimal import Decimal
             Product.objects.filter(pk=item.product_id).update(
                 current_stock=max(
-                    0,
-                    float(item.product.current_stock or 0) - float(item.quantity)
+                    Decimal('0'),
+                    (item.product.current_stock or Decimal('0')) - item.quantity,
                 )
             )
 
