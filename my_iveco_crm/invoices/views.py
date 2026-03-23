@@ -1,6 +1,7 @@
 import logging
 import requests
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
@@ -60,33 +61,54 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 {'detail': 'Скасований рахунок не можна змінити.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        invoice.status = new_status
-        invoice.save(update_fields=['status', 'updated_at'])
         if new_status == 'paid':
-            self._deduct_stock(invoice)
+            stock_error = self._check_stock(invoice)
+            if stock_error:
+                return Response({'detail': stock_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            invoice.status = new_status
+            invoice.save(update_fields=['status', 'updated_at'])
+            if new_status == 'paid':
+                self._deduct_stock(invoice)
+
         return Response(InvoiceSerializer(invoice, context={'request': request}).data)
 
+    def _check_stock(self, invoice):
+        """Повертає повідомлення про помилку якщо якогось товару недостатньо, інакше None."""
+        from inventory.models import Product
+        items = invoice.items.select_related('product').all()
+        insufficient = []
+        for item in items:
+            if not item.product_id:
+                continue
+            product = Product.objects.get(pk=item.product_id)
+            if (product.current_stock or 0) < item.quantity:
+                insufficient.append(
+                    f'{product.name}: є {product.current_stock or 0}, потрібно {item.quantity}'
+                )
+        if insufficient:
+            return 'Недостатньо товарів на складі: ' + '; '.join(insufficient)
+        return None
+
     def _deduct_stock(self, invoice):
-        try:
-            from inventory.models import StockMovement, Product
-            for item in invoice.items.select_related('product').all():
-                if not item.product_id:
-                    continue
-                StockMovement.objects.create(
-                    product=item.product,
-                    movement_type='out',
-                    quantity=float(item.quantity),
-                    invoice_number=invoice.number,
-                    notes=f'Продаж за рахунком {invoice.number}',
+        from inventory.models import StockMovement, Product
+        for item in invoice.items.select_related('product').all():
+            if not item.product_id:
+                continue
+            StockMovement.objects.create(
+                product=item.product,
+                movement_type='out',
+                quantity=float(item.quantity),
+                invoice_number=invoice.number,
+                notes=f'Продаж за рахунком {invoice.number}',
+            )
+            Product.objects.filter(pk=item.product_id).update(
+                current_stock=max(
+                    0,
+                    float(item.product.current_stock or 0) - float(item.quantity)
                 )
-                Product.objects.filter(pk=item.product_id).update(
-                    current_stock=max(
-                        0,
-                        float(item.product.current_stock or 0) - float(item.quantity)
-                    )
-                )
-        except Exception as e:
-            logger.error(f'Помилка списання складу для рахунку {invoice.number}: {e}')
+            )
 
     @action(detail=True, methods=['post'])
     def mark_sent(self, request, pk=None):
