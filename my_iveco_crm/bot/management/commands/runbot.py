@@ -529,6 +529,18 @@ def get_client_invoices_with_declarations(bot_user):
     )
 
 
+@sync_to_async
+def client_owns_declaration(bot_user, declaration: str) -> bool:
+    """Перевіряє чи декларація належить клієнту цього bot_user."""
+    from invoices.models import Invoice
+    if not bot_user or not bot_user.client:
+        return False
+    return Invoice.objects.filter(
+        client=bot_user.client,
+        nova_poshta_declaration=declaration,
+    ).exists()
+
+
 def get_declarations_keyboard(invoices):
     """Інлайн-клавіатура з переліком декларацій."""
     keyboard = []
@@ -641,6 +653,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith("np_track_"):
         declaration = query.data.replace("np_track_", "")
+        user = query.from_user
+        bot_user = await get_or_create_bot_user(user)
+        if not await client_owns_declaration(bot_user, declaration):
+            await query.answer("⛔ Декларація не належить вашому акаунту.", show_alert=True)
+            return
         await query.edit_message_text(f"⏳ Отримую статус для ТТН {declaration}…")
         np_data = await np_api_track(declaration)
         status_text = _format_np_status(np_data)
