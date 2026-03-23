@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "appointments",
     "alpr",
     "invoices",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -173,6 +174,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
@@ -195,6 +197,13 @@ REST_FRAMEWORK = {
         'user': '10000/day',
         'auth': '10/minute',  # для login та register
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Італ Трак CRM API',
+    'DESCRIPTION': 'API для управління сервісним центром вантажних автомобілів Iveco',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 # Налаштування для медіафайлів (завантажених користувачами)
