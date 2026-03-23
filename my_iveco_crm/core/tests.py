@@ -1,8 +1,13 @@
+import json
+
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
 from django.test import TestCase, RequestFactory
 from django.http import HttpResponse
 
 from core.middleware import ModuleMiddleware
 from core.models import Module
+from core.admin import ModuleAdmin
 from core.registry import _REGISTRY, register_module, clear_module_cache
 
 TEST_PREFIX = '/api/test-module/'
@@ -117,3 +122,85 @@ class ModuleMiddlewareTest(TestCase):
         response = self._get('/api/test-module-other/')
 
         self.assertEqual(response.status_code, 200)
+
+
+class ModuleToggleDependencyTest(TestCase):
+    """Tests for dependency enforcement in toggle_view and save_model."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin_user = User.objects.create_superuser('admin', password='pass')
+        self.site = AdminSite()
+        self.module_admin = ModuleAdmin(Module, self.site)
+
+        self.inventory, _ = Module.objects.update_or_create(
+            name='inventory',
+            defaults={'label': 'Склад', 'is_enabled': True, 'dependencies': []},
+        )
+        self.invoices, _ = Module.objects.update_or_create(
+            name='invoices',
+            defaults={'label': 'Рахунки', 'is_enabled': True, 'dependencies': ['inventory']},
+        )
+
+    def _toggle(self, pk):
+        request = self.factory.post(f'/admin/core/module/{pk}/toggle/')
+        request.user = self.admin_user
+        return self.module_admin.toggle_view(request, pk)
+
+    # ── toggle_view ─────────────────────────────────────────────────────────
+
+    def test_cannot_disable_module_with_active_dependents(self):
+        """toggle_view must return 400 when active modules depend on this one."""
+        response = self._toggle(self.inventory.pk)
+        self.assertEqual(response.status_code, 400)
+        data = json.loads(response.content)
+        self.assertIn('Рахунки', data['error'])
+
+    def test_can_disable_module_after_dependent_is_disabled(self):
+        """toggle_view must succeed once all dependents are disabled."""
+        self.invoices.is_enabled = False
+        self.invoices.save()
+
+        response = self._toggle(self.inventory.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.inventory.refresh_from_db()
+        self.assertFalse(self.inventory.is_enabled)
+
+    def test_can_always_enable_module(self):
+        """Enabling a disabled module must never be blocked by dependencies."""
+        self.inventory.is_enabled = False
+        self.inventory.save()
+
+        response = self._toggle(self.inventory.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.inventory.refresh_from_db()
+        self.assertTrue(self.inventory.is_enabled)
+
+    def test_module_without_dependents_can_be_disabled(self):
+        """Module with no active dependents must toggle freely."""
+        response = self._toggle(self.invoices.pk)
+        self.assertEqual(response.status_code, 200)
+        self.invoices.refresh_from_db()
+        self.assertFalse(self.invoices.is_enabled)
+
+    # ── save_model ──────────────────────────────────────────────────────────
+
+    def test_save_model_reverts_disable_when_dependents_active(self):
+        """save_model must keep module enabled if active dependents exist."""
+        from django.contrib.messages.storage.fallback import FallbackStorage
+
+        class FakeForm:
+            changed_data = ['is_enabled']
+
+        self.inventory.is_enabled = False  # simulate form trying to disable
+        request = self.factory.post('/')
+        request.user = self.admin_user
+        request.session = {}
+        request._messages = FallbackStorage(request)
+
+        self.module_admin.save_model(request, self.inventory, FakeForm(), change=True)
+
+        self.inventory.refresh_from_db()
+        self.assertTrue(self.inventory.is_enabled)
