@@ -23,16 +23,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'last_name': self.user.last_name,
         }
         
-        # Додаємо роль з UserProfile (якщо є)
-        if hasattr(self.user, 'profile'):
-            data['user']['role'] = self.user.profile.role
-            data['user']['position'] = self.user.profile.position
-        else:
-            # Якщо профілю немає, перевіряємо чи це superuser
-            if self.user.is_superuser:
-                data['user']['role'] = 'admin'
-            else:
-                data['user']['role'] = 'mechanic'  # За замовчуванням
+        # UserProfile завжди створюється автоматично через post_save сигнал
+        data['user']['role'] = self.user.profile.role
+        data['user']['position'] = self.user.profile.position
         
         return data
 
