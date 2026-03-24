@@ -1,5 +1,6 @@
-from django.db import models
+﻿from django.db import models
 from django.conf import settings
+from core.models import SoftDeleteModel
 from django.db.models import Sum, F
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -66,7 +67,7 @@ class WorkPrice(models.Model):
         return self.price
 
 
-class ServiceOrder(models.Model):
+class ServiceOrder(SoftDeleteModel):
     class StatusChoices(models.TextChoices):
         OPEN = 'OPEN', 'Відкрито'
         IN_PROGRESS = 'IN_PROGRESS', 'В роботі'
@@ -90,17 +91,6 @@ class ServiceOrder(models.Model):
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Створено")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
 
-    marked_for_deletion = models.BooleanField(default=False, verbose_name="Позначено на видалення")
-    deletion_reason = models.TextField(blank=True, verbose_name="Причина видалення")
-    marked_for_deletion_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True,
-        related_name='orders_marked_for_deletion',
-        verbose_name="Позначив на видалення"
-    )
-    marked_for_deletion_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата позначення")
 
     objects = ServiceOrderManager()
 

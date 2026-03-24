@@ -287,8 +287,6 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
             and (client_features is None or client_features.notifications_telegram)
         )
         if tg_allowed:
-            from .tasks import send_photo_notification_telegram
-            tg_text = base_text.replace("\U0001f4f8 \u041d\u043e\u0432\u0435 \u0444\u043e\u0442\u043e \u0440\u0435\u043c\u043e\u043d\u0442\u0443", "\U0001f4f8 *\u041d\u043e\u0432\u0435 \u0444\u043e\u0442\u043e \u0440\u0435\u043c\u043e\u043d\u0442\u0443*")
                 logger.error(f"Telegram photo notify error for client {client.id}: {e}")
 
     # --- WhatsApp (перевіряємо фічу клієнта 'notifications_whatsapp') ---

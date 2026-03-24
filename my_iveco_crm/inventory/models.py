@@ -1,5 +1,6 @@
-from django.db import models
+﻿from django.db import models
 from django.conf import settings
+from core.models import SoftDeleteModel
 from django.utils.text import slugify
 
 
@@ -76,7 +77,7 @@ class Warehouse(models.Model):
         super().save(*args, **kwargs)
 
 
-class Product(models.Model):
+class Product(SoftDeleteModel):
     """Товар / Запчастина"""
     UNIT_CHOICES = [
         ('pcs', 'шт'),
@@ -113,17 +114,6 @@ class Product(models.Model):
     notes = models.TextField('Примітки', blank=True)
     address_in_stock = models.CharField('Адреса на складі', max_length=100, blank=True)
 
-    marked_for_deletion = models.BooleanField('Позначено на видалення', default=False)
-    deletion_reason = models.TextField('Причина видалення', blank=True)
-    marked_for_deletion_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products_marked_for_deletion',
-        verbose_name='Позначив на видалення'
-    )
-    marked_for_deletion_at = models.DateTimeField('Дата позначення', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Товар'

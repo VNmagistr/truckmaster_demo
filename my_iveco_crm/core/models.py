@@ -1,4 +1,4 @@
-# core/models.py
+﻿# core/models.py
 
 from django.db import models
 
@@ -38,3 +38,29 @@ class Module(models.Model):
         super().save(*args, **kwargs)
         from core.registry import clear_module_cache
         clear_module_cache(self.name)
+
+class SoftDeleteModel(models.Model):
+    marked_for_deletion = models.BooleanField(
+        default=False,
+        verbose_name='Позначено на видалення',
+    )
+    deletion_reason = models.TextField(
+        blank=True,
+        verbose_name='Причина видалення',
+    )
+    marked_for_deletion_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='%(class)s_marked_for_deletion',
+        verbose_name='Позначив на видалення',
+    )
+    marked_for_deletion_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата позначення',
+    )
+
+    class Meta:
+        abstract = True
