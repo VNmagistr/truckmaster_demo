@@ -1,5 +1,6 @@
-import logging
+﻿import logging
 from celery import shared_task
+from core.telegram import send_message as tg_send
 from django.utils import timezone
 from datetime import timedelta
 
@@ -46,19 +47,6 @@ def auto_close_done_orders():
 
 @shared_task
 def send_photo_notification_telegram(telegram_chat_id, text):
-    import asyncio
-    import os
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        return
-    try:
-        from telegram import Bot
-        bot = Bot(token=bot_token)
-        asyncio.run(bot.send_message(
-            chat_id=telegram_chat_id,
-            text=text,
-            parse_mode='Markdown',
-        ))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f'send_photo_notification_telegram error: {e}')
+@shared_task
+def send_photo_notification_telegram(telegram_chat_id, text):
+    tg_send(telegram_chat_id, text)

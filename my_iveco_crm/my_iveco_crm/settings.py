@@ -1,4 +1,4 @@
-"""
+﻿"""
 Django settings for my_iveco_crm project.
 """
 
@@ -296,3 +296,11 @@ SIMPLE_JWT = {
 
 
 NP_API_KEY = config('NP_API_KEY', default='')
+
+# Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_WORKER_POOL = 'gevent'
+CELERY_WORKER_CONCURRENCY = 20
+# gevent is not safe with persistent DB connections
+CONN_MAX_AGE = 0

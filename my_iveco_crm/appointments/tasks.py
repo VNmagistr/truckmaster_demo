@@ -1,18 +1,14 @@
-import asyncio
 import logging
-import os
 from datetime import timedelta
 
 from celery import shared_task
 from django.utils import timezone
-from telegram import Bot
-from telegram.error import TelegramError
 
+from core.telegram import send_message as tg_send
 from .models import Appointment
 from .signals import _get_telegram_chat_id, _get_whatsapp_phone
 
 logger = logging.getLogger(__name__)
-BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 
 
 @shared_task
@@ -32,7 +28,6 @@ def send_appointment_reminders():
         scheduled_dt__lte=window_end,
     )
 
-    bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
     sent_count = 0
 
     for appt in appointments:
@@ -48,17 +43,15 @@ def send_appointment_reminders():
 
         # --- Telegram ---
         chat_id = _get_telegram_chat_id(appt)
-        if chat_id and bot:
+        if chat_id:
             try:
                 tg_text = (
                     f"🔔 *Нагадування про запис на СТО*\n\n"
                     f"Завтра о *{appt.scheduled_dt.strftime('%H:%M')}* ваш запис у *Італ Трак*.\n\n"
                     f"{base}"
                 )
-                asyncio.run(bot.send_message(chat_id=chat_id, text=tg_text, parse_mode='Markdown'))
+                tg_send(chat_id, tg_text)
                 notified = True
-            except TelegramError as e:
-                logger.error(f"Telegram reminder error for appt {appt.pk}: {e}")
             except Exception as e:
                 logger.error(f"Telegram reminder error for appt {appt.pk}: {e}")
 
@@ -85,13 +78,7 @@ def send_appointment_reminders():
     logger.info(f"Sent {sent_count} appointment reminders")
     return sent_count
 
+
 @shared_task
 def send_confirmation_telegram(chat_id, text):
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        return
-    try:
-        bot = Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown'))
-    except Exception as e:
-        logger.error(f'send_confirmation_telegram error (chat_id={chat_id}): {e}')
+    tg_send(chat_id, text)

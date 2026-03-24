@@ -30,19 +30,6 @@ def _get_whatsapp_phone(appt: Appointment):
         return appt.client.phone
     return None
 
-
-def _send_telegram(chat_id, text):
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        return
-    try:
-        from telegram import Bot
-        bot = Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown'))
-    except Exception as e:
-        logger.error(f"Telegram send error: {e}")
-
-
 def _send_whatsapp(phone, text):
     try:
         from my_iveco_crm.whatsapp import send_whatsapp_text
