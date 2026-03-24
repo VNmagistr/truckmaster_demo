@@ -1,11 +1,12 @@
-import logging
+﻿import logging
 import datetime
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
 from django_filters.rest_framework import DjangoFilterBackend
 
 logger = logging.getLogger(__name__)
@@ -220,11 +221,19 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def week_detail(self, request):
         """Кількість замовлень по днях поточного тижня (Пн–Нд)."""
         today = timezone.now().date()
-        monday = today - datetime.timedelta(days=today.weekday())
-        day_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
         qs = ServiceOrder.objects.filter(marked_for_deletion=False)
+        day_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
+        sunday = monday + datetime.timedelta(days=6)
+        counts = {
+            r['day']: r['count']
+            for r in ServiceOrder.objects
+            .filter(marked_for_deletion=False, created_at__date__gte=monday, created_at__date__lte=sunday)
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(count=Count('id'))
+        }
         result = [
-            {'name': day_names[i], 'orders': qs.filter(created_at__date=monday + datetime.timedelta(days=i)).count()}
+            {'name': day_names[i], 'orders': counts.get(monday + datetime.timedelta(days=i), 0)}
             for i in range(7)
         ]
         return Response(result)
