@@ -43,3 +43,22 @@ def auto_close_done_orders():
         logger.debug("Авто-закриття: нарядів для закриття не знайдено")
 
     return len(closed_ids)
+
+@shared_task
+def send_photo_notification_telegram(telegram_chat_id, text):
+    import asyncio
+    import os
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        return
+    try:
+        from telegram import Bot
+        bot = Bot(token=bot_token)
+        asyncio.run(bot.send_message(
+            chat_id=telegram_chat_id,
+            text=text,
+            parse_mode='Markdown',
+        ))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f'send_photo_notification_telegram error: {e}')
