@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
@@ -11,7 +11,6 @@ from appointments.models import Appointment
 from .models import IgnoredVehicle, VehicleArrival, normalize_plate
 from .serializers import IgnoredVehicleSerializer, VehicleArrivalSerializer, AlprEventInputSerializer
 from .permissions import AlprApiKeyPermission
-from .notifications import send_staff_telegram
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +71,12 @@ def alpr_event(request):
         appointment=appointment,
         ignored=False,
     )
-
     # 5. Telegram-сповіщення персоналу
-    try:
-        send_staff_telegram(arrival)
-        arrival.notified = True
-        arrival.save(update_fields=['notified'])
-    except Exception as e:
-        logger.error(f"ALPR notify error: {e}")
+    # 5. Telegram-.
+    from alpr.tasks import send_staff_telegram_task
+    send_staff_telegram_task.delay(arrival.id)
+    arrival.notified = True
+    arrival.save(update_fields=['notified'])
 
     return Response({
         'status': 'ok',

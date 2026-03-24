@@ -1,5 +1,4 @@
-import asyncio
-import logging
+﻿import logging
 import os
 
 from django.db.models.signals import pre_save, post_save
@@ -86,7 +85,8 @@ def send_confirmation_on_confirm(sender, instance, created, **kwargs):
     # Telegram (Markdown)
     chat_id = _get_telegram_chat_id(instance)
     if chat_id:
-        _send_telegram(chat_id, f"✅ *Запис підтверджено*\n\n{base}")
+        from appointments.tasks import send_confirmation_telegram
+        send_confirmation_telegram.delay(chat_id, f"\u2705 *\u0417\u0430\u043f\u0438\u0441 \u043f\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043d\u043e*\u005c\u006e\u005c\u006e{base}")
 
     # WhatsApp (plain text)
     phone = _get_whatsapp_phone(instance)

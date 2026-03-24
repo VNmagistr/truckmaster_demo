@@ -84,3 +84,14 @@ def send_appointment_reminders():
 
     logger.info(f"Sent {sent_count} appointment reminders")
     return sent_count
+
+@shared_task
+def send_confirmation_telegram(chat_id, text):
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        return
+    try:
+        bot = Bot(token=bot_token)
+        asyncio.run(bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown'))
+    except Exception as e:
+        logger.error(f'send_confirmation_telegram error (chat_id={chat_id}): {e}')

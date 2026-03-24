@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import requests
 from django.conf import settings
 from django.db import transaction
@@ -163,21 +163,9 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             and (features is None or features.notifications_telegram)
         )
         if tg_allowed:
-            import os
-            import asyncio
-            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-            if bot_token:
-                try:
-                    from telegram import Bot
-                    bot = Bot(token=bot_token)
-                    asyncio.run(bot.send_message(
-                        chat_id=client.telegram_chat_id,
-                        text=text,
-                    ))
-                    sent_to.append('telegram')
-                except Exception as e:
-                    logger.error(f'TTN send Telegram error (invoice {invoice.number}): {e}')
-                    errors.append('telegram')
+            from invoices.tasks import send_ttn_telegram
+            send_ttn_telegram.delay(client.telegram_chat_id, text, invoice.number)
+            sent_to.append('telegram')
 
         # WhatsApp
         wa_allowed = (
