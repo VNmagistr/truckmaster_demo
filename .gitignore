@@ -38,3 +38,4 @@ my_iveco_crm/fp3_files/
 # Logs
 *.log
 logs/
+cookies.txt
