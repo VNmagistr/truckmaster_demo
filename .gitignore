@@ -22,7 +22,7 @@ mediafiles/
 
 # Файли IDE
 .vscode/
-.idea/*.save
+.idea/
 
 # Claude
 CLAUDE.md
@@ -34,3 +34,7 @@ test_parsing/
 fp3_files/
 my_iveco_crm/test_parsing/
 my_iveco_crm/fp3_files/
+
+# Logs
+*.log
+logs/
