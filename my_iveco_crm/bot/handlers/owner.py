@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 # bot/handlers/owner.py
 
 """
@@ -76,7 +77,7 @@ async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if orders:
             for order in orders:
-                text += f"  • №{order.order_number} - {order.created_at.strftime('%d.%m.%Y')} - {order.get_status_display()}\n"
+                text += f"  • №{order.order_number} - {timezone.localtime(order.created_at).strftime('%d.%m.%Y')} - {order.get_status_display()}\n"
         else:
             text += f"  _(історія відсутня)_\n"
         
@@ -111,7 +112,7 @@ async def active_orders_command(update: Update, context: ContextTypes.DEFAULT_TY
         text += f"🔸 №{order.order_number}\n"
         text += f"   🚚 {order.truck.license_plate}\n"
         text += f"   📊 {order.get_status_display()}\n"
-        text += f"   📅 {order.created_at.strftime('%d.%m.%Y')}\n"
+        text += f"   📅 {timezone.localtime(order.created_at).strftime('%d.%m.%Y')}\n"
         if order.total_cost:
             text += f"   💰 {order.total_cost} грн\n"
         text += "\n"

@@ -1,4 +1,5 @@
-﻿import logging
+﻿from django.utils import timezone
+import logging
 import os
 
 from django.db.models.signals import pre_save, post_save
@@ -60,7 +61,7 @@ def send_confirmation_on_confirm(sender, instance, created, **kwargs):
     if instance.status != 'confirmed' or previous == 'confirmed' or instance.confirmation_sent:
         return
 
-    dt_str = instance.scheduled_dt.strftime('%d.%m.%Y о %H:%M')
+    dt_str = timezone.localtime(instance.scheduled_dt).strftime('%d.%m.%Y о %H:%M')
     base = (
         f"📅 Дата: {dt_str}\n"
         f"🚗 Авто: {instance.license_plate}\n"

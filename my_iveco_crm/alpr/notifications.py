@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 import logging
 import os
 
@@ -29,7 +30,7 @@ def send_staff_telegram(arrival):
 
     if arrival.appointment:
         appt = arrival.appointment
-        dt_str = appt.scheduled_dt.strftime('%d.%m.%Y %H:%M')
+        dt_str = timezone.localtime(appt.scheduled_dt).strftime('%d.%m.%Y %H:%M')
         lines.append(f'\n📅 Запис на {dt_str} — {appt.get_service_type_display()}')
 
     if not arrival.client and not arrival.appointment:

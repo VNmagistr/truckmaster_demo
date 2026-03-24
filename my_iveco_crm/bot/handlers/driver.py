@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 # bot/handlers/driver.py
 
 """
@@ -130,7 +131,7 @@ async def show_truck_history(query, truck_id: int):
         
         for order in orders:
             text += f"📝 №{order.order_number}\n"
-            text += f"📅 {order.created_at.strftime('%d.%m.%Y')}\n"
+            text += f"📅 {timezone.localtime(order.created_at).strftime('%d.%m.%Y')}\n"
             text += f"📊 {order.get_status_display()}\n"
             if order.total_cost:
                 text += f"💰 {order.total_cost} грн\n"

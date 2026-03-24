@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 from clients.models import Client
@@ -58,7 +59,7 @@ class Appointment(models.Model):
         ordering = ['scheduled_dt']
 
     def __str__(self):
-        return f"{self.client_name} — {self.license_plate} ({self.scheduled_dt.strftime('%d.%m.%Y %H:%M')})"
+        return f"{self.client_name} — {self.license_plate} ({timezone.localtime(self.scheduled_dt).strftime('%d.%m.%Y %H:%M')})"
 
     @property
     def end_dt(self):

@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -85,4 +86,4 @@ class VehicleArrival(models.Model):
 
     def __str__(self):
         client_str = f" | {self.client.name}" if self.client else " | невідомий"
-        return f"{self.license_plate}{client_str} — {self.detected_at.strftime('%d.%m.%Y %H:%M')}"
+        return f"{self.license_plate}{client_str} — {timezone.localtime(self.detected_at).strftime('%d.%m.%Y %H:%M')}"

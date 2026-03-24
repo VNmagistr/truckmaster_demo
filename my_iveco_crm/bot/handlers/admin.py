@@ -1,3 +1,4 @@
+﻿from django.utils import timezone
 # bot/handlers/admin.py
 
 """
@@ -129,7 +130,7 @@ async def logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for i, log in enumerate(logs, 1):
         # Час
-        time_str = log.created_at.strftime('%d.%m %H:%M')
+        time_str = timezone.localtime(log.created_at).strftime('%d.%m %H:%M')
         
         # Напрямок
         direction = "➡️" if log.is_incoming else "⬅️"
@@ -236,7 +237,7 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"  📱 @{user.username}\n"
         
         text += f"  ID: `{user.telegram_id}`\n"
-        text += f"  Активність: {user.last_activity.strftime('%d.%m.%Y %H:%M')}\n\n"
+        text += f"  Активність: {timezone.localtime(user.last_activity).strftime('%d.%m.%Y %H:%M')}\n\n"
     
     text += "_Для повного списку використайте Django Admin_"
     

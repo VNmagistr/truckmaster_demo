@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from datetime import timedelta
 
 from celery import shared_task
@@ -31,7 +31,7 @@ def send_appointment_reminders():
     sent_count = 0
 
     for appt in appointments:
-        dt_str = appt.scheduled_dt.strftime('%d.%m.%Y о %H:%M')
+        dt_str = timezone.localtime(appt.scheduled_dt).strftime('%d.%m.%Y о %H:%M')
         base = (
             f"📅 Дата: {dt_str}\n"
             f"🚗 Авто: {appt.license_plate}\n"
@@ -47,7 +47,7 @@ def send_appointment_reminders():
             try:
                 tg_text = (
                     f"🔔 *Нагадування про запис на СТО*\n\n"
-                    f"Завтра о *{appt.scheduled_dt.strftime('%H:%M')}* ваш запис у *Італ Трак*.\n\n"
+                    f"Завтра о *{timezone.localtime(appt.scheduled_dt).strftime('%H:%M')}* ваш запис у *Італ Трак*.\n\n"
                     f"{base}"
                 )
                 tg_send(chat_id, tg_text)
@@ -62,7 +62,7 @@ def send_appointment_reminders():
                 from my_iveco_crm.whatsapp import send_whatsapp_text
                 wa_text = (
                     f"🔔 Нагадування про запис на СТО\n\n"
-                    f"Завтра о {appt.scheduled_dt.strftime('%H:%M')} ваш запис у Італ Трак.\n\n"
+                    f"Завтра о {timezone.localtime(appt.scheduled_dt).strftime('%H:%M')} ваш запис у Італ Трак.\n\n"
                     f"{base}"
                 )
                 send_whatsapp_text(phone, wa_text)

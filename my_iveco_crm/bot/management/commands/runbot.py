@@ -1,4 +1,4 @@
-import io
+﻿import io
 import os
 import logging
 import asyncio
@@ -55,7 +55,7 @@ def get_order_selection_keyboard(orders):
     keyboard = []
     for order in orders:
         plate = order.truck.license_plate if order.truck else '—'
-        date = order.created_at.strftime('%d.%m.%y')
+        date = timezone.localtime(order.created_at).strftime('%d.%m.%y')
         label = f"№{order.order_number}  {plate}  {date}"
         keyboard.append([InlineKeyboardButton(label, callback_data=f"photo_order_{order.id}")])
     keyboard.append([InlineKeyboardButton("❌ Скасувати", callback_data="photo_cancel")])
@@ -315,7 +315,7 @@ def get_repair_history(truck_id):
         if not orders: return "Історії немає."
         reply = f"Історія {truck.license_plate}:\n"
         for o in orders:
-            reply += f"🔹 {o.created_at.strftime('%d.%m.%y')} - {o.get_status_display()}\n"
+            reply += f"🔹 {timezone.localtime(o.created_at).strftime('%d.%m.%y')} - {o.get_status_display()}\n"
         return reply
     except: return "Помилка."
 
@@ -325,7 +325,7 @@ def get_order_status(order_number):
         order = ServiceOrder.objects.select_related('client', 'truck').get(order_number=order_number.strip())
         text = f"📝 *Замовлення №{order.order_number}*\n\n"
         text += f"📊 Статус: *{order.get_status_display()}*\n"
-        text += f"📅 Дата: {order.created_at.strftime('%d.%m.%Y')}\n"
+        text += f"📅 Дата: {timezone.localtime(order.created_at).strftime('%d.%m.%Y')}\n"
         if order.truck:
             truck_info = order.truck.license_plate
             if order.truck.specific_model_name:
