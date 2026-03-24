@@ -1022,6 +1022,15 @@ class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return TruckMaintenanceIntervals.objects.select_related('truck').all()
 
+    @action(detail=False, methods=['put'], url_path='by-truck/(?P<truck_id>[^/.]+)')
+    def by_truck(self, request, truck_id=None):
+        """PUT /api/maintenance-intervals/by-truck/{truck_id}/ — update_or_create одним запитом."""
+        obj, _ = TruckMaintenanceIntervals.objects.get_or_create(truck_id=truck_id)
+        serializer = self.get_serializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
 
 class BaseMaintenanceKitViewSet(viewsets.ModelViewSet):
     """ViewSet для базових шаблонів комплектів ТО (по моделі + Євро-стандарт)."""
