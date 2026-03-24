@@ -52,10 +52,17 @@ class ContactFormView(APIView):
         message = request.data.get('message', '').strip()
 
         if not name or not phone:
-
             return Response({'error': "Ім'я та телефон обов'язкові"}, status=400)
-        from .tasks import notify_admins_contact_form
-        notify_admins_contact_form.delay(name, phone, message)
+        try:
+            from .tasks import notify_admins_contact_form
+            notify_admins_contact_form.delay(name, phone, message)
+        except Exception as e:
+            logger.error(f'ContactFormView: failed to queue task, running sync: {e}')
+            try:
+                from .tasks import notify_admins_contact_form
+                notify_admins_contact_form(name, phone, message)
+            except Exception as e2:
+                logger.error(f'ContactFormView: sync fallback also failed: {e2}')
         return Response({'success': True})
 
 
