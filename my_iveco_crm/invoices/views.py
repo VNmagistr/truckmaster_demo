@@ -8,8 +8,8 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Invoice, InvoiceItem, _next_invoice_number
-from .serializers import InvoiceSerializer, InvoiceListSerializer, InvoiceItemSerializer
+from .models import Invoice, InvoiceItem, DriverPickupLog, _next_invoice_number, _next_driver_tab_number
+from .serializers import InvoiceSerializer, InvoiceListSerializer, InvoiceItemSerializer, DriverPickupLogSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             qs = qs.filter(date__gte=date_from)
         if date_to := params.get('date_to'):
             qs = qs.filter(date__lte=date_to)
+        if invoice_type := params.get('invoice_type'):
+            qs = qs.filter(invoice_type=invoice_type)
         if search := params.get('search'):
             from django.db.models import Q
             qs = qs.filter(
@@ -207,6 +209,73 @@ class InvoiceItemViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # invoice передається у полі invoice через серіалізатор
         serializer.save()
+
+
+class DriverPickupLogViewSet(viewsets.ModelViewSet):
+    serializer_class   = DriverPickupLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = DriverPickupLog.objects.select_related('client', 'truck', 'product', 'invoice')
+        params = self.request.query_params
+        if client := params.get('client'):
+            qs = qs.filter(client_id=client)
+        if truck := params.get('truck'):
+            qs = qs.filter(truck_id=truck)
+        if params.get('uninvoiced') == '1':
+            qs = qs.filter(invoice__isnull=True)
+        if date_from := params.get('date_from'):
+            qs = qs.filter(date__gte=date_from)
+        if date_to := params.get('date_to'):
+            qs = qs.filter(date__lte=date_to)
+        return qs.order_by('-date', '-created_at')
+
+    @action(detail=False, methods=['post'], url_path='generate-invoice')
+    def generate_invoice(self, request):
+        client_id = request.data.get('client')
+        truck_id  = request.data.get('truck') or None
+
+        if not client_id:
+            return Response(
+                {'detail': 'Оберіть клієнта.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        pickups_qs = DriverPickupLog.objects.filter(
+            client_id=client_id, invoice__isnull=True,
+        ).select_related('product')
+        if truck_id:
+            pickups_qs = pickups_qs.filter(truck_id=truck_id)
+        pickups = list(pickups_qs)
+
+        if not pickups:
+            return Response(
+                {'detail': 'Немає незарахованих видач для цього клієнта.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            invoice = Invoice.objects.create(
+                number=_next_driver_tab_number(),
+                client_id=client_id,
+                truck_id=truck_id,
+                invoice_type='driver_tab',
+            )
+            for pickup in pickups:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    product=pickup.product,
+                    description=f"{pickup.date.strftime('%d.%m.%Y')} — {pickup.description}",
+                    quantity=pickup.quantity,
+                    unit_price=pickup.unit_price,
+                )
+            DriverPickupLog.objects.filter(pk__in=[p.pk for p in pickups]).update(invoice=invoice)
+            invoice.recalc_total()
+
+        return Response(
+            InvoiceSerializer(invoice, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @api_view(['GET'])

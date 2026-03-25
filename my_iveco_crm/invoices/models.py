@@ -16,7 +16,25 @@ def _next_invoice_number():
     return f'{prefix}{seq:03d}'
 
 
+def _next_driver_tab_number():
+    year = timezone.now().year
+    prefix = f'ВД-{year}-'
+    last = Invoice.objects.filter(number__startswith=prefix).order_by('-number').first()
+    if last:
+        try:
+            seq = int(last.number.replace(prefix, '')) + 1
+        except ValueError:
+            seq = 1
+    else:
+        seq = 1
+    return f'{prefix}{seq:03d}'
+
+
 class Invoice(models.Model):
+    TYPE_CHOICES = [
+        ('delivery',   'НП / Самовивіз'),
+        ('driver_tab', 'Видача водієм'),
+    ]
     STATUS_CHOICES = [
         ('draft',     'Чернетка'),
         ('sent',      'Виставлено'),
@@ -38,6 +56,10 @@ class Invoice(models.Model):
         related_name='invoices', verbose_name='Вантажівка',
     )
     date = models.DateField(default=timezone.localdate, verbose_name='Дата')
+    invoice_type = models.CharField(
+        max_length=20, choices=TYPE_CHOICES, default='delivery',
+        verbose_name='Тип рахунку',
+    )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='draft',
         verbose_name='Статус',
@@ -113,3 +135,43 @@ class InvoiceItem(models.Model):
         invoice = self.invoice
         super().delete(*args, **kwargs)
         invoice.recalc_total()
+
+
+class DriverPickupLog(models.Model):
+    """Журнал видачі запчастин водієм — до виставлення рахунку."""
+    client = models.ForeignKey(
+        'clients.Client', on_delete=models.CASCADE,
+        related_name='driver_pickups', verbose_name='Клієнт',
+    )
+    truck = models.ForeignKey(
+        'clients.Truck', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='driver_pickups', verbose_name='Вантажівка',
+    )
+    date = models.DateField(default=timezone.localdate, verbose_name='Дата')
+    product = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='driver_pickups', verbose_name='Товар',
+    )
+    description = models.CharField(max_length=255, verbose_name='Опис')
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name='Кількість')
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Ціна за одиницю')
+    invoice = models.ForeignKey(
+        Invoice, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pickup_logs', verbose_name='Рахунок',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Видача водієм'
+        verbose_name_plural = 'Видачі водієм'
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f'{self.date} — {self.client.name}: {self.description} × {self.quantity}'
+
+    @property
+    def total(self):
+        return self.quantity * self.unit_price
