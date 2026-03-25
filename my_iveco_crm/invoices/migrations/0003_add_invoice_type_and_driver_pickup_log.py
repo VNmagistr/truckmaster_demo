@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             model_name='invoice',
             name='invoice_type',
             field=models.CharField(
-                choices=[('delivery', 'НП / Самовивіз'), ('driver_tab', 'Видача водієм')],
+                choices=[('delivery', 'НП / Самовивіз'), ('driver_tab', 'Видача водію')],
                 default='delivery',
                 max_length=20,
                 verbose_name='Тип рахунку',
@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
                 )),
             ],
             options={
-                'verbose_name': 'Видача водієм',
+                'verbose_name': 'Видача водію',
                 'verbose_name_plural': 'Видачі водієм',
                 'ordering': ['-date', '-created_at'],
             },

@@ -33,7 +33,7 @@ def _next_driver_tab_number():
 class Invoice(models.Model):
     TYPE_CHOICES = [
         ('delivery',   'НП / Самовивіз'),
-        ('driver_tab', 'Видача водієм'),
+        ('driver_tab', 'Видача водію'),
     ]
     STATUS_CHOICES = [
         ('draft',     'Чернетка'),
@@ -165,7 +165,7 @@ class DriverPickupLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Видача водієм'
+        verbose_name = 'Видача водію'
         verbose_name_plural = 'Видачі водієм'
         ordering = ['-date', '-created_at']
 
