@@ -22,6 +22,7 @@ MAIN_KEYBOARD = [
     [KeyboardButton("Перевірити статус замовлення 🧾")],
     [KeyboardButton("📦 Мої відправки")],
     [KeyboardButton("🔔 Нагадування")],
+    [KeyboardButton("🔧 Регламентні роботи")],
 ]
 MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 
@@ -272,6 +273,94 @@ def get_client_reminders(bot_user):
 
 
 @sync_to_async
+def get_maintenance_trucks_keyboard(bot_user):
+    """Повертає inline-клавіатуру з вантажівками клієнта для вибору перед перевіркою регламентних робіт."""
+    if not bot_user.client:
+        return None
+    trucks = list(bot_user.assigned_trucks.all())
+    if not trucks:
+        return None
+    keyboard = [
+        [InlineKeyboardButton(
+            f"🚚 {t.license_plate} ({t.specific_model_name})",
+            callback_data=f"maintenance_truck_{t.id}"
+        )]
+        for t in trucks
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+@sync_to_async
+def get_maintenance_status(truck_id, mileage):
+    """Розраховує залишок км до кожної регламентної роботи для вантажівки."""
+    from orders.models import TruckMaintenanceIntervals
+    try:
+        truck = Truck.objects.get(id=truck_id)
+    except Truck.DoesNotExist:
+        return "❌ Вантажівку не знайдено."
+
+    try:
+        intervals = TruckMaintenanceIntervals.objects.get(truck=truck)
+    except TruckMaintenanceIntervals.DoesNotExist:
+        return (
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
+            "ℹ️ Для цього автомобіля ще не налаштовано інтервали регламентних робіт.\n"
+            "Зверніться до менеджера сервісного центру."
+        )
+
+    ITEMS = [
+        ('engine_oil', '🛢 Олива двигуна'),
+        ('gearbox_oil', '⚙️ Олива КПП/АКПП'),
+        ('rear_axle_oil', '🔩 Олива заднього моста'),
+        ('belts', '🔗 Ремені/ролики'),
+        ('chains', '⛓ Ланцюги'),
+    ]
+
+    formatted_mileage = f"{mileage:,}".replace(",", " ")
+    lines = [
+        f"🚚 *{truck.license_plate}* ({truck.specific_model_name})",
+        f"📏 Поточний пробіг: *{formatted_mileage} км*\n",
+        "🔧 *Стан регламентних робіт:*\n",
+    ]
+
+    has_any_data = False
+    for key, label in ITEMS:
+        interval = getattr(intervals, f"{key}_interval")
+        last_km = getattr(intervals, f"{key}_last_km")
+
+        if interval is None or last_km is None:
+            lines.append(f"{label}\n   ❓ Дані відсутні\n")
+            continue
+
+        has_any_data = True
+        next_km = last_km + interval
+        remaining = next_km - mileage
+        formatted_last = f"{last_km:,}".replace(",", " ")
+        formatted_next = f"{next_km:,}".replace(",", " ")
+
+        if remaining > 0:
+            formatted_remaining = f"{remaining:,}".replace(",", " ")
+            icon = "✅" if remaining > 0.2 * interval else "⚠️"
+            lines.append(
+                f"{label}\n"
+                f"   {icon} Залишилось: *{formatted_remaining} км*\n"
+                f"   _(остання: {formatted_last} км → наступна: {formatted_next} км)_\n"
+            )
+        else:
+            formatted_overdue = f"{abs(remaining):,}".replace(",", " ")
+            lines.append(
+                f"{label}\n"
+                f"   🚨 Прострочено на *{formatted_overdue} км*!\n"
+                f"   _(мало бути: {formatted_next} км)_\n"
+            )
+
+    if not has_any_data:
+        lines.append("ℹ️ Інтервали не налаштовано. Зверніться до менеджера.")
+
+    return "\n".join(lines)
+
+
+@sync_to_async
 def get_orders_for_photo(query):
     """Повертає список замовлень за точним або частковим збігом номера."""
     query = query.strip()
@@ -387,7 +476,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     bot_user = await get_or_create_bot_user(user)
 
-    if context.user_data.get('awaiting_mileage_truck_id') and text.strip().isdigit():
+    if context.user_data.get('awaiting_maintenance_mileage_truck_id') and text.strip().isdigit():
+        truck_id = context.user_data.pop('awaiting_maintenance_mileage_truck_id')
+        mileage = int(text.strip())
+        bot_reply = await get_maintenance_status(truck_id, mileage)
+        await update.message.reply_text(bot_reply, parse_mode='Markdown')
+    elif context.user_data.get('awaiting_mileage_truck_id') and text.strip().isdigit():
         truck_id = context.user_data.pop('awaiting_mileage_truck_id')
         mileage = int(text.strip())
         truck, bot_reply = await save_mileage_report(bot_user, truck_id, mileage)
@@ -467,6 +561,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = "Введіть номер замовлення:"
         context.user_data['awaiting_order'] = True
         await update.message.reply_text(bot_reply)
+    elif "Регламентні роботи" in text:
+        keyboard = await get_maintenance_trucks_keyboard(bot_user)
+        if keyboard is None:
+            bot_reply = "❌ За вами не закріплено авто або ви не авторизовані."
+            await update.message.reply_text(bot_reply)
+        else:
+            bot_reply = "Оберіть автомобіль для перевірки регламентних робіт:"
+            await update.message.reply_text(bot_reply, reply_markup=keyboard)
     else:
         bot_reply = "Оберіть дію з меню."
         await update.message.reply_text(bot_reply)
@@ -621,6 +723,18 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
             "Введіть поточний пробіг в км (тільки число, наприклад: 185000):",
+            parse_mode='Markdown'
+        )
+
+    elif query.data.startswith("maintenance_truck_"):
+        truck_id = int(query.data.replace("maintenance_truck_", ""))
+        truck = await sync_to_async(
+            lambda: Truck.objects.get(id=truck_id)
+        )()
+        context.user_data['awaiting_maintenance_mileage_truck_id'] = truck_id
+        await query.edit_message_text(
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
+            "Введіть поточний пробіг (тільки число, наприклад: 185000):",
             parse_mode='Markdown'
         )
 
