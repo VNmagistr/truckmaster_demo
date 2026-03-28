@@ -47,6 +47,4 @@ def auto_close_done_orders():
 
 @shared_task
 def send_photo_notification_telegram(telegram_chat_id, text):
-@shared_task
-def send_photo_notification_telegram(telegram_chat_id, text):
     tg_send(telegram_chat_id, text)

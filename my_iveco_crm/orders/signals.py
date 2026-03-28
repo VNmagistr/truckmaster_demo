@@ -287,7 +287,9 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
             and (client_features is None or client_features.notifications_telegram)
         )
         if tg_allowed:
-                logger.error(f"Telegram photo notify error for client {client.id}: {e}")
+            from .tasks import send_photo_notification_telegram
+            tg_text = base_text.replace("📸 Нове фото ремонту", "📸 *Нове фото ремонту*")
+            send_photo_notification_telegram.delay(client.telegram_chat_id, tg_text)
 
     # --- WhatsApp (перевіряємо фічу клієнта 'notifications_whatsapp') ---
     if client.phone:
