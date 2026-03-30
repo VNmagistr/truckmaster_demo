@@ -2,6 +2,7 @@
 import io
 import json
 import logging
+import os
 import urllib.request
 
 import qrcode
