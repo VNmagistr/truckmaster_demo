@@ -170,6 +170,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://ital-truck.com.ua",
     "https://www.ital-truck.com.ua",
     "https://api.ital-truck.com.ua",
+    "https://demo.ital-truck.com.ua",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

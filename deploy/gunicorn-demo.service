@@ -1,0 +1,22 @@
+[Unit]
+Description=Gunicorn daemon for TruckMaster Demo
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/truckmaster_demo/my_iveco_crm
+EnvironmentFile=/home/ubuntu/truckmaster_demo/.env
+ExecStart=/home/ubuntu/truckmaster_demo/venv/bin/gunicorn \
+    --workers 2 \
+    --bind unix:/run/gunicorn-demo.sock \
+    --access-logfile /var/log/gunicorn-demo-access.log \
+    --error-logfile /var/log/gunicorn-demo-error.log \
+    my_iveco_crm.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RuntimeDirectory=gunicorn-demo
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target
