@@ -335,6 +335,78 @@ class OrderFolderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(folder)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'])
+    def receive_all(self, request, pk=None):
+        """Масове оприбуткування всіх позицій з прив'язкою до товару.
+        Body:
+          warehouse_id: int (required)
+        """
+        folder = self.get_object()
+        warehouse_id = request.data.get('warehouse_id')
+        if not warehouse_id:
+            return Response({'error': 'warehouse_id обов\'язковий'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            warehouse = Warehouse.objects.get(id=warehouse_id)
+        except Warehouse.DoesNotExist:
+            return Response({'error': 'Склад не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+
+        items = folder.items.filter(
+            is_ordered=True, is_received=False, linked_product__isnull=False
+        ).select_related('linked_product')
+
+        if not items.exists():
+            return Response(
+                {'error': 'Немає готових позицій (потрібно: замовлено + прив\'язано до товару)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        received_ids = []
+        errors = []
+
+        for item in items:
+            try:
+                quantity = Decimal(str(item.quantity or 1))
+                product = item.linked_product
+
+                with transaction.atomic():
+                    stock_item, _ = StockItem.objects.get_or_create(
+                        warehouse=warehouse, product=product, defaults={'quantity': 0}
+                    )
+                    stock_item.quantity += quantity
+                    stock_item.save()
+
+                    from django.db.models import Sum
+                    total = StockItem.objects.filter(product=product).aggregate(
+                        total=Sum('quantity')
+                    )['total'] or 0
+                    product.current_stock = total
+                    product.save(update_fields=['current_stock'])
+
+                    StockMovement.objects.create(
+                        movement_type='in',
+                        product=product,
+                        quantity=quantity,
+                        warehouse_to=warehouse,
+                        created_by=request.user,
+                        purchase_price=item.purchase_price or None,
+                        notes=f'Масове надходження: {folder.name} / {item.name}',
+                    )
+
+                    item.is_received = True
+                    item.received_at = timezone.now()
+                    item.received_by = request.user
+                    item.save()
+
+                received_ids.append(item.id)
+            except Exception as e:
+                errors.append({'item': item.name, 'error': str(e)})
+
+        return Response({
+            'received': len(received_ids),
+            'errors': errors,
+            'folder': self.get_serializer(folder).data,
+        })
+
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     """ViewSet для позицій замовлення"""
@@ -423,12 +495,14 @@ class OrderItemViewSet(viewsets.ModelViewSet):
             product.current_stock = total
             product.save(update_fields=['current_stock'])
 
+            purchase_price = request.data.get('purchase_price') or None
             StockMovement.objects.create(
                 movement_type='in',
                 product=product,
                 quantity=quantity,
                 warehouse_to=warehouse,
                 created_by=request.user,
+                purchase_price=purchase_price,
                 notes=f'Надходження з замовлення: {item.folder.name} / {item.name}',
             )
 

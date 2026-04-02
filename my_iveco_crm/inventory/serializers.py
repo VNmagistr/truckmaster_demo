@@ -263,6 +263,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'quantity',
             'unit',
             'notes',
+            'purchase_price',
             'is_ordered',
             'ordered_at',
             'ordered_by',

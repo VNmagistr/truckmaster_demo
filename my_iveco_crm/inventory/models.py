@@ -279,6 +279,7 @@ class OrderItem(models.Model):
     quantity = models.DecimalField('Кількість', max_digits=10, decimal_places=2, null=True, blank=True)
     unit = models.CharField('Одиниця', max_length=20, blank=True)
     notes = models.TextField('Примітки', blank=True)
+    purchase_price = models.DecimalField('Ціна закупівлі', max_digits=10, decimal_places=2, null=True, blank=True)
     is_ordered = models.BooleanField('Замовлено', default=False)
     ordered_at = models.DateTimeField('Замовлено о', null=True, blank=True)
     ordered_by = models.ForeignKey(
