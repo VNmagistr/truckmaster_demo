@@ -251,6 +251,8 @@ class UsedPartSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     """Серіалізатор позицій замовлення"""
     ordered_by_name = serializers.CharField(source='ordered_by.get_full_name', read_only=True)
+    received_by_name = serializers.CharField(source='received_by.get_full_name', read_only=True)
+    linked_product_name = serializers.CharField(source='linked_product.name', read_only=True)
 
     class Meta:
         model = OrderItem
@@ -265,9 +267,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'ordered_at',
             'ordered_by',
             'ordered_by_name',
+            'is_received',
+            'received_at',
+            'received_by',
+            'received_by_name',
+            'linked_product',
+            'linked_product_name',
             'created_at',
         ]
-        read_only_fields = ['ordered_at', 'ordered_by', 'created_at']
+        read_only_fields = ['ordered_at', 'ordered_by', 'received_at', 'received_by', 'linked_product', 'created_at']
 
 
 class OrderFolderSerializer(serializers.ModelSerializer):

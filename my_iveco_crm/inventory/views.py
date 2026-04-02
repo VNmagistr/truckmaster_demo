@@ -7,6 +7,7 @@ from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart, OrderFolder, OrderItem
+import uuid
 from .serializers import (
     ProductSerializer,
     ProductListSerializer,
@@ -337,10 +338,10 @@ class OrderFolderViewSet(viewsets.ModelViewSet):
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     """ViewSet для позицій замовлення"""
-    queryset = OrderItem.objects.select_related('folder', 'ordered_by').all()
+    queryset = OrderItem.objects.select_related('folder', 'ordered_by', 'received_by', 'linked_product').all()
     serializer_class = OrderItemSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['folder', 'is_ordered']
+    filterset_fields = ['folder', 'is_ordered', 'is_received']
 
     @action(detail=True, methods=['post'])
     def toggle_ordered(self, request, pk=None):
@@ -354,3 +355,100 @@ class OrderItemViewSet(viewsets.ModelViewSet):
             item.ordered_by = None
         item.save()
         return Response(OrderItemSerializer(item).data)
+
+    @action(detail=True, methods=['post'])
+    def receive(self, request, pk=None):
+        """Оприбуткувати позицію на склад.
+        Body:
+          warehouse_id: int (required)
+          quantity: decimal (optional, defaults to item.quantity)
+          product_id: int (optional — existing product)
+          sku_code: str (required if no product_id — for new product)
+          product_name: str (optional, defaults to item.name)
+          unit: str (optional)
+        """
+        item = self.get_object()
+        if item.is_received:
+            return Response({'error': 'Позицію вже оприбутковано'}, status=status.HTTP_400_BAD_REQUEST)
+
+        warehouse_id = request.data.get('warehouse_id')
+        if not warehouse_id:
+            return Response({'error': 'warehouse_id обов\'язковий'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            warehouse = Warehouse.objects.get(id=warehouse_id)
+        except Warehouse.DoesNotExist:
+            return Response({'error': 'Склад не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            raw_qty = request.data.get('quantity', item.quantity or 1)
+            quantity = Decimal(str(raw_qty))
+        except (InvalidOperation, TypeError):
+            return Response({'error': 'Невірна кількість'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity <= 0:
+            return Response({'error': 'Кількість має бути більше 0'}, status=status.HTTP_400_BAD_REQUEST)
+
+        product_id = request.data.get('product_id')
+
+        with transaction.atomic():
+            if product_id:
+                try:
+                    product = Product.objects.get(id=product_id)
+                except Product.DoesNotExist:
+                    return Response({'error': 'Товар не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                sku_code = request.data.get('sku_code', '').strip()
+                if not sku_code:
+                    return Response({'error': 'sku_code обов\'язковий для нового товару'}, status=status.HTTP_400_BAD_REQUEST)
+                product_name = request.data.get('product_name', item.name).strip()
+                unit = request.data.get('unit', item.unit or 'pcs')
+                product = Product.objects.create(
+                    sku_code=sku_code,
+                    name=product_name,
+                    unit=unit,
+                    current_stock=0,
+                    notes=f'Створено з замовлення: {item.folder.name}',
+                )
+
+            # Add stock
+            stock_item, _ = StockItem.objects.get_or_create(
+                warehouse=warehouse, product=product, defaults={'quantity': 0}
+            )
+            stock_item.quantity += quantity
+            stock_item.save()
+
+            from django.db.models import Sum
+            total = StockItem.objects.filter(product=product).aggregate(total=Sum('quantity'))['total'] or 0
+            product.current_stock = total
+            product.save(update_fields=['current_stock'])
+
+            StockMovement.objects.create(
+                movement_type='in',
+                product=product,
+                quantity=quantity,
+                warehouse_to=warehouse,
+                created_by=request.user,
+                notes=f'Надходження з замовлення: {item.folder.name} / {item.name}',
+            )
+
+            item.is_received = True
+            item.received_at = timezone.now()
+            item.received_by = request.user
+            item.linked_product = product
+            item.save()
+
+        return Response(OrderItemSerializer(item).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def search_products(self, request):
+        """Пошук товарів для зіставлення з позицією замовлення."""
+        q = request.query_params.get('q', '').strip()
+        if not q:
+            return Response([])
+        products = Product.objects.filter(
+            Q(name__icontains=q) | Q(sku_code__icontains=q),
+            marked_for_deletion=False,
+        )[:20]
+        from .serializers import ProductListSerializer
+        return Response(ProductListSerializer(products, many=True).data)

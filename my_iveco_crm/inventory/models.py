@@ -289,6 +289,24 @@ class OrderItem(models.Model):
         related_name='ordered_items',
         verbose_name='Замовив'
     )
+    is_received = models.BooleanField('Отримано', default=False)
+    received_at = models.DateTimeField('Отримано о', null=True, blank=True)
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_items',
+        verbose_name='Отримав'
+    )
+    linked_product = models.ForeignKey(
+        'Product',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_items',
+        verbose_name='Товар на складі'
+    )
     created_at = models.DateTimeField('Створено', auto_now_add=True)
 
     class Meta:
