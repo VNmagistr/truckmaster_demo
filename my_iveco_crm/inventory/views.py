@@ -107,11 +107,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not show_deleted:
             queryset = queryset.filter(marked_for_deletion=False)
 
-        # Пошук: по закінченню артикулу АБО по назві
+        # Пошук: по артикулу (будь-яка частина) АБО по назві
         q = self.request.query_params.get('search', '').strip()
         if q:
             queryset = queryset.filter(
-                Q(sku_code__iendswith=q) | Q(name__icontains=q)
+                Q(sku_code__icontains=q) | Q(name__icontains=q)
             )
 
         return queryset
