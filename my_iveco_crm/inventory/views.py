@@ -3,6 +3,8 @@ from django.db.models import Q
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import transaction
+from decimal import Decimal, InvalidOperation
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart, OrderFolder, OrderItem
 from .serializers import (
@@ -168,6 +170,106 @@ class StockMovementViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Автоматично встановлюємо користувача, який створив рух"""
         serializer.save(created_by=self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def transfer(self, request):
+        """Переміщення товару між складами. Оновлює StockItem на обох складах."""
+        try:
+            product = Product.objects.get(id=request.data.get('product'))
+            warehouse_from = Warehouse.objects.get(id=request.data.get('warehouse_from'))
+            warehouse_to = Warehouse.objects.get(id=request.data.get('warehouse_to'))
+            quantity = Decimal(str(request.data.get('quantity', 0)))
+        except (Product.DoesNotExist, Warehouse.DoesNotExist):
+            return Response({'error': 'Товар або склад не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+        except (InvalidOperation, TypeError):
+            return Response({'error': 'Невірна кількість'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity <= 0:
+            return Response({'error': 'Кількість має бути більше 0'}, status=status.HTTP_400_BAD_REQUEST)
+        if warehouse_from.id == warehouse_to.id:
+            return Response({'error': 'Склади мають бути різними'}, status=status.HTTP_400_BAD_REQUEST)
+
+        source_item, _ = StockItem.objects.get_or_create(
+            warehouse=warehouse_from, product=product, defaults={'quantity': 0}
+        )
+        if source_item.quantity < quantity:
+            return Response(
+                {'error': f'Недостатньо товару. На складі: {source_item.quantity} {product.unit}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            source_item.quantity -= quantity
+            source_item.save()
+
+            dest_item, _ = StockItem.objects.get_or_create(
+                warehouse=warehouse_to, product=product, defaults={'quantity': 0}
+            )
+            dest_item.quantity += quantity
+            dest_item.save()
+
+            # Синхронізуємо Product.current_stock: total = sum по всіх StockItem
+            from django.db.models import Sum
+            total_qty = StockItem.objects.filter(product=product).aggregate(
+                total=Sum('quantity')
+            )['total'] or 0
+            product.current_stock = total_qty
+            product.save(update_fields=['current_stock'])
+
+            movement = StockMovement.objects.create(
+                movement_type='transfer',
+                product=product,
+                quantity=quantity,
+                warehouse_from=warehouse_from,
+                warehouse_to=warehouse_to,
+                created_by=request.user,
+                notes=request.data.get('notes', ''),
+            )
+
+        return Response(StockMovementSerializer(movement).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def receive_stock(self, request):
+        """Надходження товару на будь-який склад (оптовий або роздрібний)."""
+        try:
+            product = Product.objects.get(id=request.data.get('product'))
+            warehouse = Warehouse.objects.get(id=request.data.get('warehouse'))
+            quantity = Decimal(str(request.data.get('quantity', 0)))
+        except (Product.DoesNotExist, Warehouse.DoesNotExist):
+            return Response({'error': 'Товар або склад не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+        except (InvalidOperation, TypeError):
+            return Response({'error': 'Невірна кількість'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity <= 0:
+            return Response({'error': 'Кількість має бути більше 0'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            stock_item, _ = StockItem.objects.get_or_create(
+                warehouse=warehouse, product=product, defaults={'quantity': 0}
+            )
+            stock_item.quantity += quantity
+            stock_item.save()
+
+            from django.db.models import Sum
+            total_qty = StockItem.objects.filter(product=product).aggregate(
+                total=Sum('quantity')
+            )['total'] or 0
+            product.current_stock = total_qty
+            product.save(update_fields=['current_stock'])
+
+            movement = StockMovement.objects.create(
+                movement_type='in',
+                product=product,
+                quantity=quantity,
+                warehouse_to=warehouse,
+                created_by=request.user,
+                supplier=request.data.get('supplier', ''),
+                invoice_number=request.data.get('invoice_number', ''),
+                purchase_price=request.data.get('purchase_price') or None,
+                notes=request.data.get('notes', ''),
+            )
+
+        return Response(StockMovementSerializer(movement).data, status=status.HTTP_201_CREATED)
 
 
 class UsedPartViewSet(viewsets.ModelViewSet):

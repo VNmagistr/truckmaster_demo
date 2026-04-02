@@ -48,11 +48,24 @@ class SubCategory(models.Model):
 
 class Warehouse(models.Model):
     """Склад"""
+    TYPE_RETAIL = 'retail'
+    TYPE_WHOLESALE = 'wholesale'
+    TYPE_OTHER = 'other'
+    WAREHOUSE_TYPE_CHOICES = [
+        (TYPE_RETAIL, 'Роздрібний'),
+        (TYPE_WHOLESALE, 'Оптовий'),
+        (TYPE_OTHER, 'Інший'),
+    ]
+
     name = models.CharField('Назва', max_length=100)
     slug = models.SlugField('Slug', unique=True)
     address = models.TextField('Адреса', blank=True)
     is_active = models.BooleanField('Активний', default=True)
     is_default = models.BooleanField('За замовчуванням', default=False)
+    warehouse_type = models.CharField(
+        'Тип складу', max_length=20,
+        choices=WAREHOUSE_TYPE_CHOICES, default=TYPE_RETAIL
+    )
     sort_order = models.IntegerField('Порядок сортування', default=0)
 
     class Meta:

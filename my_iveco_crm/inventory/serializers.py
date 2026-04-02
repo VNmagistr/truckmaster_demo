@@ -59,6 +59,7 @@ class WarehouseSerializer(serializers.ModelSerializer):
             'address',
             'is_active',
             'is_default',
+            'warehouse_type',
             'sort_order',
             'stock_count',
         ]
