@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
+from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart, OrderFolder, OrderItem
 from .serializers import (
     ProductSerializer,
     ProductListSerializer,
@@ -14,6 +14,8 @@ from .serializers import (
     StockItemSerializer,
     StockMovementSerializer,
     UsedPartSerializer,
+    OrderFolderSerializer,
+    OrderItemSerializer,
 )
 
 
@@ -180,3 +182,51 @@ class UsedPartViewSet(viewsets.ModelViewSet):
         return UsedPart.objects.select_related(
             'part', 'warehouse', 'service_work', 'service_order'
         ).all()
+
+
+class OrderFolderViewSet(viewsets.ModelViewSet):
+    """ViewSet для папок замовлення"""
+    queryset = OrderFolder.objects.prefetch_related('items').all()
+    serializer_class = OrderFolderSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_all_ordered(self, request, pk=None):
+        folder = self.get_object()
+        folder.items.all().update(
+            is_ordered=True,
+            ordered_at=timezone.now(),
+            ordered_by=request.user
+        )
+        serializer = self.get_serializer(folder)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def unmark_all_ordered(self, request, pk=None):
+        folder = self.get_object()
+        folder.items.all().update(is_ordered=False, ordered_at=None, ordered_by=None)
+        serializer = self.get_serializer(folder)
+        return Response(serializer.data)
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    """ViewSet для позицій замовлення"""
+    queryset = OrderItem.objects.select_related('folder', 'ordered_by').all()
+    serializer_class = OrderItemSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['folder', 'is_ordered']
+
+    @action(detail=True, methods=['post'])
+    def toggle_ordered(self, request, pk=None):
+        item = self.get_object()
+        item.is_ordered = not item.is_ordered
+        if item.is_ordered:
+            item.ordered_at = timezone.now()
+            item.ordered_by = request.user
+        else:
+            item.ordered_at = None
+            item.ordered_by = None
+        item.save()
+        return Response(OrderItemSerializer(item).data)

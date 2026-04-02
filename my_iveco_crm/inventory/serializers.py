@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart
+from .models import Product, Category, SubCategory, Warehouse, StockItem, StockMovement, UsedPart, OrderFolder, OrderItem
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -245,3 +245,50 @@ class UsedPartSerializer(serializers.ModelSerializer):
                     )
                 })
         return data
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """Серіалізатор позицій замовлення"""
+    ordered_by_name = serializers.CharField(source='ordered_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = [
+            'id',
+            'folder',
+            'name',
+            'quantity',
+            'unit',
+            'notes',
+            'is_ordered',
+            'ordered_at',
+            'ordered_by',
+            'ordered_by_name',
+            'created_at',
+        ]
+        read_only_fields = ['ordered_at', 'ordered_by', 'created_at']
+
+
+class OrderFolderSerializer(serializers.ModelSerializer):
+    """Серіалізатор папок замовлення"""
+    items = OrderItemSerializer(many=True, read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    items_count = serializers.IntegerField(source='items.count', read_only=True)
+    ordered_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderFolder
+        fields = [
+            'id',
+            'name',
+            'created_at',
+            'created_by',
+            'created_by_name',
+            'items',
+            'items_count',
+            'ordered_count',
+        ]
+        read_only_fields = ['created_at', 'created_by']
+
+    def get_ordered_count(self, obj):
+        return obj.items.filter(is_ordered=True).count()

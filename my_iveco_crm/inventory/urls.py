@@ -8,6 +8,8 @@ from .views import (
     StockItemViewSet,
     StockMovementViewSet,
     UsedPartViewSet,
+    OrderFolderViewSet,
+    OrderItemViewSet,
 )
 
 router = DefaultRouter()
@@ -18,6 +20,8 @@ router.register(r'products', ProductViewSet, basename='product')
 router.register(r'stock', StockItemViewSet, basename='stock')
 router.register(r'movements', StockMovementViewSet, basename='movement')
 router.register(r'used-parts', UsedPartViewSet, basename='used-parts')
+router.register(r'order-folders', OrderFolderViewSet, basename='order-folder')
+router.register(r'order-items', OrderItemViewSet, basename='order-item')
 
 urlpatterns = [
     path('', include(router.urls)),

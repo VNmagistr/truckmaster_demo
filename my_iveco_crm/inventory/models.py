@@ -230,6 +230,61 @@ class StockMovement(models.Model):
         return f"{self.get_movement_type_display()}: {self.product} ({self.quantity})"
 
 
+class OrderFolder(models.Model):
+    """Папка для списку товарів на замовлення"""
+    name = models.CharField('Назва', max_length=200)
+    created_at = models.DateTimeField('Створено', auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_folders',
+        verbose_name='Створив'
+    )
+
+    class Meta:
+        verbose_name = 'Папка замовлення'
+        verbose_name_plural = 'Папки замовлень'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+
+class OrderItem(models.Model):
+    """Позиція в папці замовлення"""
+    folder = models.ForeignKey(
+        OrderFolder,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='Папка'
+    )
+    name = models.CharField('Назва', max_length=300)
+    quantity = models.DecimalField('Кількість', max_digits=10, decimal_places=2, null=True, blank=True)
+    unit = models.CharField('Одиниця', max_length=20, blank=True)
+    notes = models.TextField('Примітки', blank=True)
+    is_ordered = models.BooleanField('Замовлено', default=False)
+    ordered_at = models.DateTimeField('Замовлено о', null=True, blank=True)
+    ordered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ordered_items',
+        verbose_name='Замовив'
+    )
+    created_at = models.DateTimeField('Створено', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Позиція замовлення'
+        verbose_name_plural = 'Позиції замовлень'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.folder.name} / {self.name}"
+
+
 class UsedPart(models.Model):
     """Використана запчастина"""
     service_work = models.ForeignKey(
