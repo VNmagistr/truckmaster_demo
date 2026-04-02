@@ -285,11 +285,13 @@ class OrderFolderSerializer(serializers.ModelSerializer):
             'created_at',
             'created_by',
             'created_by_name',
+            'is_archived',
+            'archived_at',
             'items',
             'items_count',
             'ordered_count',
         ]
-        read_only_fields = ['created_at', 'created_by']
+        read_only_fields = ['created_at', 'created_by', 'archived_at']
 
     def get_ordered_count(self, obj):
         return obj.items.filter(is_ordered=True).count()

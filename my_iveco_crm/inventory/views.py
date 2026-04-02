@@ -288,11 +288,33 @@ class UsedPartViewSet(viewsets.ModelViewSet):
 
 class OrderFolderViewSet(viewsets.ModelViewSet):
     """ViewSet для папок замовлення"""
-    queryset = OrderFolder.objects.prefetch_related('items').all()
     serializer_class = OrderFolderSerializer
+
+    def get_queryset(self):
+        show_archived = self.request.query_params.get('show_archived', 'false').lower() == 'true'
+        qs = OrderFolder.objects.prefetch_related('items').all()
+        if not show_archived:
+            qs = qs.filter(is_archived=False)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        folder = self.get_object()
+        folder.is_archived = True
+        folder.archived_at = timezone.now()
+        folder.save()
+        return Response(self.get_serializer(folder).data)
+
+    @action(detail=True, methods=['post'])
+    def unarchive(self, request, pk=None):
+        folder = self.get_object()
+        folder.is_archived = False
+        folder.archived_at = None
+        folder.save()
+        return Response(self.get_serializer(folder).data)
 
     @action(detail=True, methods=['post'])
     def mark_all_ordered(self, request, pk=None):

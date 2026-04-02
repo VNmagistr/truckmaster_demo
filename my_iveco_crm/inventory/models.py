@@ -255,6 +255,8 @@ class OrderFolder(models.Model):
         related_name='order_folders',
         verbose_name='Створив'
     )
+    is_archived = models.BooleanField('В архіві', default=False)
+    archived_at = models.DateTimeField('Архівовано', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Папка замовлення'
