@@ -104,6 +104,24 @@ def check_if_user_is_linked(telegram_id):
     except BotUser.DoesNotExist:
         return False, False, None
 
+
+@sync_to_async
+def is_email_verified_for_bot(bot_user):
+    """
+    Перевіряє доступ до бота за email верифікацією.
+    Блокує тільки клієнтів з кабінетним акаунтом (user != None), email яких не верифіковано.
+    Клієнти без кабінетного акаунту (прив'язані лише через телефон) — без обмежень.
+    """
+    if not bot_user or not bot_user.client_id:
+        return True
+    try:
+        client = Client.objects.get(id=bot_user.client_id)
+        if client.user_id and not client.email_verified:
+            return False
+        return True
+    except Exception:
+        return True
+
 @sync_to_async
 def link_bot_user_by_phone(bot_user, phone_number):
     try:
@@ -290,6 +308,69 @@ def get_maintenance_trucks_keyboard(bot_user):
     return InlineKeyboardMarkup(keyboard)
 
 
+def get_maintenance_action_keyboard(truck_id):
+    """Inline-клавіатура з вибором дії після вибору вантажівки."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📅 Коли виконувались роботи", callback_data=f"maint_history_{truck_id}")],
+        [InlineKeyboardButton("📏 Залишок до ТО", callback_data=f"maint_remaining_{truck_id}")],
+    ])
+
+
+@sync_to_async
+def get_maintenance_history(truck_id):
+    """Показує дату і номер наряду останньої регламентної роботи кожного типу."""
+    from orders.models import TruckMaintenanceIntervals, ServiceOrder
+    from django.utils import timezone as tz
+
+    try:
+        truck = Truck.objects.get(id=truck_id)
+    except Truck.DoesNotExist:
+        return "❌ Вантажівку не знайдено."
+
+    try:
+        intervals = TruckMaintenanceIntervals.objects.get(truck=truck)
+    except TruckMaintenanceIntervals.DoesNotExist:
+        intervals = None
+
+    ITEMS = [
+        ('engine_oil_last_km',   '🛢 Олива двигуна'),
+        ('gearbox_oil_last_km',  '⚙️ Олива КПП/АКПП'),
+        ('rear_axle_oil_last_km','🔩 Олива заднього моста'),
+        ('belts_last_km',        '🔗 Ремені/ролики'),
+        ('chains_last_km',       '⛓ Ланцюги'),
+    ]
+
+    lines = [
+        f"🚚 *{truck.license_plate}* ({truck.specific_model_name})",
+        "",
+        "📅 *Коли виконувались регламентні роботи:*\n",
+    ]
+
+    for field, label in ITEMS:
+        last_km = getattr(intervals, field, None) if intervals else None
+
+        order = (
+            ServiceOrder.objects
+            .filter(truck=truck, intervals_snapshot__has_key=field)
+            .order_by('-updated_at')
+            .first()
+        )
+
+        lines.append(label)
+        if order:
+            date_str = tz.localtime(order.updated_at).strftime('%d.%m.%Y')
+            km_str = f"{last_km:,}".replace(",", " ") if last_km else "—"
+            lines.append(f"   📅 {date_str}   •   📏 {km_str} км")
+            lines.append(f"   _(Наряд {order.order_number})_\n")
+        elif last_km:
+            km_str = f"{last_km:,}".replace(",", " ")
+            lines.append(f"   📏 {km_str} км _(дата не збережена)_\n")
+        else:
+            lines.append("   ❓ Даних немає\n")
+
+    return "\n".join(lines)
+
+
 @sync_to_async
 def get_maintenance_status(truck_id, mileage):
     """Розраховує залишок км до кожної регламентної роботи для вантажівки."""
@@ -438,9 +519,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_linked, is_admin, _ = await check_if_user_is_linked(user.id)
 
     if is_linked:
-        markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
-        bot_reply = f"Вітаю, {bot_user.first_name}!"
-        await update.message.reply_text(bot_reply, reply_markup=markup)
+        if not await is_email_verified_for_bot(bot_user):
+            bot_reply = (
+                "🔒 Для використання бота необхідно підтвердити email адресу.\n\n"
+                "Перейдіть до особистого кабінету: https://ital-truck.com.ua/cabinet\n"
+                "та підтвердіть email, або запросіть новий лист підтвердження."
+            )
+            await update.message.reply_text(bot_reply)
+        else:
+            markup = ADMIN_REPLY_MARKUP if is_admin else MAIN_REPLY_MARKUP
+            bot_reply = f"Вітаю, {bot_user.first_name}!"
+            await update.message.reply_text(bot_reply, reply_markup=markup)
     else:
         btn = KeyboardButton("Надати номер телефону", request_contact=True)
         bot_reply = "Я вас не знаю. Надайте номер:"
@@ -475,6 +564,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.message.from_user
     bot_user = await get_or_create_bot_user(user)
+
+    if bot_user and bot_user.client_id and not await is_email_verified_for_bot(bot_user):
+        bot_reply = (
+            "🔒 Для використання бота необхідно підтвердити email адресу.\n\n"
+            "Перейдіть до особистого кабінету: https://ital-truck.com.ua/cabinet\n"
+            "та підтвердіть email, або запросіть новий лист підтвердження."
+        )
+        await update.message.reply_text(bot_reply)
+        if bot_user:
+            await log_message_to_db(bot_user, text, bot_reply)
+        return
 
     if context.user_data.get('awaiting_maintenance_mileage_truck_id') and text.strip().isdigit():
         truck_id = context.user_data.pop('awaiting_maintenance_mileage_truck_id')
@@ -728,6 +828,22 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith("maintenance_truck_"):
         truck_id = int(query.data.replace("maintenance_truck_", ""))
+        truck = await sync_to_async(
+            lambda: Truck.objects.get(id=truck_id)
+        )()
+        await query.edit_message_text(
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\nОберіть дію:",
+            parse_mode='Markdown',
+            reply_markup=get_maintenance_action_keyboard(truck_id),
+        )
+
+    elif query.data.startswith("maint_history_"):
+        truck_id = int(query.data.replace("maint_history_", ""))
+        text = await get_maintenance_history(truck_id)
+        await query.edit_message_text(text, parse_mode='Markdown')
+
+    elif query.data.startswith("maint_remaining_"):
+        truck_id = int(query.data.replace("maint_remaining_", ""))
         truck = await sync_to_async(
             lambda: Truck.objects.get(id=truck_id)
         )()
