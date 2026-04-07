@@ -855,6 +855,8 @@ class RepairPhotoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='bulk_upload')
     def bulk_upload(self, request):
         """Завантаження кількох фото одночасно. Надсилає одне сповіщення клієнту."""
+        import traceback
+        import warnings
         from .models import MAX_REPAIR_PHOTOS_PER_ORDER, ServiceOrder
 
         images = request.FILES.getlist('images')
@@ -879,18 +881,23 @@ class RepairPhotoViewSet(viewsets.ModelViewSet):
 
         images = images[:remaining]
         created_photos = []
-        for image in images:
-            photo = RepairPhoto(service_order=order, image=image, description=description)
-            photo._skip_notification = True
-            photo.save()
-            created_photos.append(photo)
+        try:
+            for image in images:
+                photo = RepairPhoto(service_order=order, image=image, description=description)
+                photo._skip_notification = True
+                photo.save()
+                created_photos.append(photo)
 
-        # Надсилаємо одне сповіщення після завантаження всіх фото
-        if created_photos:
-            from .signals import notify_client_on_new_photo
-            representative = created_photos[0]
-            representative._skip_notification = False
-            notify_client_on_new_photo(sender=RepairPhoto, instance=representative, created=True)
+            # Надсилаємо одне сповіщення після завантаження всіх фото
+            if created_photos:
+                from .signals import notify_client_on_new_photo
+                representative = created_photos[0]
+                representative._skip_notification = False
+                notify_client_on_new_photo(sender=RepairPhoto, instance=representative, created=True)
+        except Exception as e:
+            tb = traceback.format_exc()
+            warnings.warn(f"bulk_upload error: {e}\n{tb}")
+            return Response({'error': str(e), 'detail': tb}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         serializer = RepairPhotoSerializer(created_photos, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
