@@ -112,10 +112,15 @@ def update_order_on_work_change(sender, instance, **kwargs):
     """
     Коли робота створюється, оновлюється або видаляється,
     перераховуємо вартість замовлення.
+    Якщо наряд вже у статусі DONE — одразу оновлюємо інтервали ТО,
+    бо сигнал зміни статусу вже не спрацює.
     """
     try:
         if instance.service_order_id and instance.service_order:
-            instance.service_order.update_total_cost()
+            order = instance.service_order
+            order.update_total_cost()
+            if order.status == ServiceOrder.StatusChoices.DONE:
+                _update_maintenance_intervals(order)
     except Exception as e:
         logger.debug(f"Не вдалося оновити вартість: {e}")
 
@@ -258,7 +263,7 @@ def notify_client_on_new_photo(sender, instance, created, **kwargs):
     Після додавання фото ремонту надсилає сповіщення клієнту
     через Telegram (якщо є telegram_chat_id) та WhatsApp (якщо є телефон).
     """
-    if not created:
+    if not created or getattr(instance, '_skip_notification', False):
         return
 
     client = instance.service_order.client
