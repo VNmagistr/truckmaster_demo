@@ -1,9 +1,12 @@
-﻿from django.db import models
+﻿import uuid
+from django.db import models
 from django.conf import settings
 from core.models import SoftDeleteModel
 from django.db.models import Sum, F
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+
+MAX_REPAIR_PHOTOS_PER_ORDER = 20
 
 # Імпортуємо тільки існуючі моделі
 from clients.models import Client, Truck, IvecoBaseModel
@@ -21,7 +24,8 @@ def validate_image(file):
 
 
 def get_repair_photo_path(instance, filename):
-    return f'repair_photos/{instance.service_order.id}/{filename}'
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'jpg'
+    return f'repair_photos/{instance.service_order_id}/{uuid.uuid4().hex}.{ext}'
 
 
 class ServiceOrderManager(models.Manager):
@@ -179,7 +183,7 @@ class ServiceWork(models.Model):
 
 class RepairPhoto(models.Model):
     service_order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE, related_name='photos')
-    image = models.ImageField(upload_to='repair_photos/', validators=[validate_image])
+    image = models.ImageField(upload_to=get_repair_photo_path, validators=[validate_image])
     description = models.CharField(max_length=255, blank=True)
 
     class Meta:
