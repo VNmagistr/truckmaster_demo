@@ -867,8 +867,12 @@ class RepairPhotoViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No images provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            order = ServiceOrder.objects.select_related('client', 'truck').get(pk=service_order_id)
-        except ServiceOrder.DoesNotExist:
+            order = ServiceOrder.objects.get(pk=service_order_id)
+        except (ServiceOrder.DoesNotExist, Exception) as e:
+            if not isinstance(e, ServiceOrder.DoesNotExist):
+                import traceback, warnings
+                warnings.warn(f"bulk_upload order query error: {traceback.format_exc()}")
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
 
         current_count = order.photos.count()
