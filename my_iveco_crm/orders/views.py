@@ -857,7 +857,11 @@ class RepairPhotoViewSet(viewsets.ModelViewSet):
         """Завантаження кількох фото одночасно. Надсилає одне сповіщення клієнту."""
         import traceback
         import warnings
-        from .models import MAX_REPAIR_PHOTOS_PER_ORDER, ServiceOrder
+        from .models import ServiceOrder
+        try:
+            from .models import MAX_REPAIR_PHOTOS_PER_ORDER
+        except ImportError:
+            MAX_REPAIR_PHOTOS_PER_ORDER = 20
 
         images = request.FILES.getlist('images')
         service_order_id = request.data.get('service_order')
