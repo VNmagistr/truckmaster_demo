@@ -108,6 +108,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not show_deleted:
             queryset = queryset.filter(marked_for_deletion=False)
 
+        # Пошук за штрих-кодом (точний збіг або через sku_code)
+        barcode = self.request.query_params.get('barcode', '').strip()
+        if barcode:
+            queryset = queryset.filter(
+                Q(barcode=barcode) | Q(sku_code__iexact=barcode)
+            )
+            return queryset
+
         # Пошук: по артикулу (будь-яка частина) АБО по назві
         q = self.request.query_params.get('search', '').strip()
         if q:

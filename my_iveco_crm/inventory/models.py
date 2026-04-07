@@ -101,6 +101,7 @@ class Product(SoftDeleteModel):
     ]
 
     sku_code = models.CharField('Артикул', max_length=100, unique=True)
+    barcode = models.CharField('Штрих-код', max_length=100, blank=True, db_index=True)
     name = models.CharField('Назва', max_length=255)
     brand = models.CharField('Бренд', max_length=100, blank=True)
     subcategory = models.ForeignKey(

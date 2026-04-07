@@ -83,6 +83,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'sku_code',
+            'barcode',
             'name',
             'brand',
             'subcategory',
@@ -129,6 +130,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'sku_code',
+            'barcode',
             'name',
             'brand',
             'subcategory',
