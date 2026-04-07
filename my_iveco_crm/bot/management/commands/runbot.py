@@ -12,6 +12,7 @@ from clients.models import Client, Truck
 from bot.models import BotUser, BotMessageLog
 from asgiref.sync import sync_to_async
 from django.db.models import Q
+from django.utils import timezone
 
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 logger = logging.getLogger(__name__)
@@ -255,7 +256,6 @@ def save_mileage_report(bot_user, truck_id, mileage):
 def get_client_reminders(bot_user):
     """Повертає активні нагадування для всіх вантажівок клієнта."""
     from maintenance.models import ServiceReminder
-    from django.utils import timezone
 
     if not bot_user.client:
         return []
@@ -320,7 +320,6 @@ def get_maintenance_action_keyboard(truck_id):
 def get_maintenance_history(truck_id):
     """Показує дату і номер наряду останньої регламентної роботи кожного типу."""
     from orders.models import TruckMaintenanceIntervals, ServiceOrder
-    from django.utils import timezone as tz
 
     try:
         truck = Truck.objects.get(id=truck_id)
@@ -358,7 +357,7 @@ def get_maintenance_history(truck_id):
 
         lines.append(label)
         if order:
-            date_str = tz.localtime(order.updated_at).strftime('%d.%m.%Y')
+            date_str = timezone.localtime(order.updated_at).strftime('%d.%m.%Y')
             km_str = f"{last_km:,}".replace(",", " ") if last_km else "—"
             lines.append(f"   📅 {date_str}   •   📏 {km_str} км")
             lines.append(f"   _(Наряд {order.order_number})_\n")
