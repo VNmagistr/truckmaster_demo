@@ -23,7 +23,6 @@ MAIN_KEYBOARD = [
     [KeyboardButton("Перевірити статус замовлення 🧾")],
     [KeyboardButton("📦 Мої відправки")],
     [KeyboardButton("🔔 Нагадування")],
-    [KeyboardButton("🔧 Регламентні роботи")],
 ]
 MAIN_REPLY_MARKUP = ReplyKeyboardMarkup(MAIN_KEYBOARD, resize_keyboard=True)
 
@@ -185,7 +184,7 @@ def get_my_cars_with_keyboard(bot_user):
     for truck in trucks:
         button = InlineKeyboardButton(
             text=f"🚚 {truck.license_plate} ({truck.specific_model_name})",
-            callback_data=f"history_{truck.id}"
+            callback_data=f"truck_menu_{truck.id}"
         )
         keyboard.append([button])
     
@@ -290,22 +289,12 @@ def get_client_reminders(bot_user):
     return result
 
 
-@sync_to_async
-def get_maintenance_trucks_keyboard(bot_user):
-    """Повертає inline-клавіатуру з вантажівками клієнта для вибору перед перевіркою регламентних робіт."""
-    if not bot_user.client:
-        return None
-    trucks = list(bot_user.assigned_trucks.all())
-    if not trucks:
-        return None
-    keyboard = [
-        [InlineKeyboardButton(
-            f"🚚 {t.license_plate} ({t.specific_model_name})",
-            callback_data=f"maintenance_truck_{t.id}"
-        )]
-        for t in trucks
-    ]
-    return InlineKeyboardMarkup(keyboard)
+def get_truck_menu_keyboard(truck_id):
+    """Підменю вантажівки: Історія ремонтів + Регламентні роботи."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📋 Історія ремонтів", callback_data=f"truck_history_{truck_id}")],
+        [InlineKeyboardButton("🔧 Регламентні роботи", callback_data=f"maintenance_truck_{truck_id}")],
+    ])
 
 
 def get_maintenance_action_keyboard(truck_id):
@@ -660,14 +649,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_reply = "Введіть номер замовлення:"
         context.user_data['awaiting_order'] = True
         await update.message.reply_text(bot_reply)
-    elif "Регламентні роботи" in text:
-        keyboard = await get_maintenance_trucks_keyboard(bot_user)
-        if keyboard is None:
-            bot_reply = "❌ За вами не закріплено авто або ви не авторизовані."
-            await update.message.reply_text(bot_reply)
-        else:
-            bot_reply = "Оберіть автомобіль для перевірки регламентних робіт:"
-            await update.message.reply_text(bot_reply, reply_markup=keyboard)
     else:
         bot_reply = "Оберіть дію з меню."
         await update.message.reply_text(bot_reply)
@@ -809,8 +790,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if "history_" in query.data:
-        truck_id = query.data.split("_")[1]
+    if query.data.startswith("truck_menu_"):
+        truck_id = int(query.data.replace("truck_menu_", ""))
+        truck = await sync_to_async(lambda: Truck.objects.get(id=truck_id))()
+        await query.edit_message_text(
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\nОберіть дію:",
+            parse_mode='Markdown',
+            reply_markup=get_truck_menu_keyboard(truck_id),
+        )
+
+    elif query.data.startswith("truck_history_"):
+        truck_id = query.data.replace("truck_history_", "")
         await query.edit_message_text(await get_repair_history(truck_id))
 
     elif query.data.startswith("mileage_truck_"):
