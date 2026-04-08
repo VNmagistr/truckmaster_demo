@@ -47,13 +47,14 @@ class Command(BaseCommand):
         ws = wb.active
 
         stats = {
-            'rows':            0,
-            'skipped':         0,
-            'clients_created': 0,
-            'clients_updated': 0,
-            'trucks_created':  0,
-            'trucks_updated':  0,
-            'errors':          0,
+            'rows':              0,
+            'skipped':           0,
+            'clients_created':   0,
+            'clients_updated':   0,
+            'trucks_created':    0,
+            'trucks_updated':    0,
+            'ownership_changes': 0,
+            'errors':            0,
         }
 
         # Попередньо збираємо телефони, що вже зайняті в БД
@@ -209,6 +210,7 @@ class Command(BaseCommand):
                         )
                     else:
                         # Оновлюємо авто
+                        from clients.models import OwnershipHistory
                         changed = {}
 
                         if license_plate and truck.license_plate != license_plate:
@@ -217,9 +219,27 @@ class Command(BaseCommand):
                             changed['full_vin'] = full_vin
                         if model_name and truck.specific_model_name != model_name:
                             changed['specific_model_name'] = model_name
-                        # Переприв'язуємо до клієнта якщо відрізняється
-                        if client.id and truck.client_id != client.id:
+
+                        # ── Зміна власника ─────────────────────────────────
+                        owner_changed = client.id and truck.client_id != client.id
+                        if owner_changed:
+                            old_owner_name = truck.client.name if truck.client else '—'
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    f'  [рядок {row_idx}] ЗМІНА ВЛАСНИКА: '
+                                    f'"{old_owner_name}" → "{client_name}" '
+                                    f'({truck.license_plate} / {truck.full_vin})'
+                                )
+                            )
+                            if not dry_run:
+                                # Записуємо старого власника в OwnershipHistory
+                                OwnershipHistory.objects.create(
+                                    truck=truck,
+                                    client=truck.client,
+                                    license_plate=truck.license_plate,
+                                )
                             changed['client'] = client
+                            stats['ownership_changes'] = stats.get('ownership_changes', 0) + 1
 
                         if changed:
                             if not dry_run:
@@ -227,10 +247,11 @@ class Command(BaseCommand):
                                     setattr(truck, field, val)
                                 truck.save(update_fields=list(changed.keys()))
                             stats['trucks_updated'] += 1
-                            self.stdout.write(
-                                f'  [рядок {row_idx}] авто оновлено ({match_field}): '
-                                f'{license_plate} — {list(changed.keys())}'
-                            )
+                            if not owner_changed:
+                                self.stdout.write(
+                                    f'  [рядок {row_idx}] авто оновлено ({match_field}): '
+                                    f'{license_plate} — {list(changed.keys())}'
+                                )
 
             except Exception as exc:
                 stats['errors'] += 1
@@ -247,6 +268,11 @@ class Command(BaseCommand):
         self.stdout.write(f"Клієнтів оновлено:     {stats['clients_updated']}")
         self.stdout.write(f"Авто створено:         {stats['trucks_created']}")
         self.stdout.write(f"Авто оновлено:         {stats['trucks_updated']}")
+        self.stdout.write(
+            self.style.WARNING(f"Змін власника:         {stats['ownership_changes']}")
+            if stats['ownership_changes'] else
+            f"Змін власника:         0"
+        )
         self.stdout.write(f"Помилок:               {stats['errors']}")
         if dry_run:
             self.stdout.write(self.style.WARNING('DRY-RUN: нічого не збережено'))
