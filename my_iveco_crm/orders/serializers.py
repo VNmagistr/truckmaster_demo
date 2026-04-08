@@ -76,13 +76,15 @@ class WorkGroupSerializer(serializers.ModelSerializer):
 class WorkPriceSerializer(serializers.ModelSerializer):
     """Серіалізатор ціни роботи."""
     calculated_price = serializers.SerializerMethodField()
-    
+    hourly_rate = serializers.DecimalField(
+        source='work_group.hourly_rate', max_digits=10, decimal_places=2, read_only=True
+    )
+
     class Meta:
         model = WorkPrice
         fields = '__all__'
-    
+
     def get_calculated_price(self, obj):
-        """Отримання розрахованої ціни."""
         try:
             return obj.get_calculated_price()
         except Exception:
