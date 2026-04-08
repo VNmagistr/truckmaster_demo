@@ -326,6 +326,22 @@ class UsedPartViewSet(viewsets.ModelViewSet):
             'part', 'warehouse', 'service_work', 'service_order'
         ).all()
 
+    def perform_create(self, serializer):
+        from .services import StockService
+        instance = serializer.save()
+        StockService.deduct(instance)
+
+    def perform_update(self, serializer):
+        from .services import StockService
+        old_quantity = serializer.instance.quantity
+        instance = serializer.save()
+        StockService.adjust(instance, old_quantity)
+
+    def perform_destroy(self, instance):
+        from .services import StockService
+        StockService.restore(instance)
+        instance.delete()
+
 
 class OrderFolderViewSet(viewsets.ModelViewSet):
     """ViewSet для папок замовлення"""

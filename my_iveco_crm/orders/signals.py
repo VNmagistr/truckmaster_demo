@@ -134,6 +134,7 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     """
     from core.registry import is_module_enabled
     from inventory.models import UsedPart
+    from inventory.services import StockService
 
     if not created:
         return
@@ -152,18 +153,22 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
         return
 
     if kit.oil:
-        UsedPart.objects.get_or_create(
+        oil_part, oil_created = UsedPart.objects.get_or_create(
             service_work=instance,
             part=kit.oil,
             defaults={'quantity': int(kit.oil_quantity)}
         )
+        if oil_created:
+            StockService.deduct(oil_part)
 
     for kit_filter in kit.filters.all():
-        UsedPart.objects.get_or_create(
+        filter_part, filter_created = UsedPart.objects.get_or_create(
             service_work=instance,
             part=kit_filter.part,
             defaults={'quantity': kit_filter.quantity}
         )
+        if filter_created:
+            StockService.deduct(filter_part)
 
     logger.info(f"Автоматично додано набір ТО для {truck.license_plate}")
     instance.service_order.update_total_cost()

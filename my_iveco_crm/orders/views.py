@@ -657,12 +657,15 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         applicable_filters = _filters_for_service_type(kit.filters, service_type)
 
         # Очищаємо старі direct_parts цього наряду від запчастин набору ТО
+        from inventory.services import StockService
         kit_part_ids = [kit.oil_id] + list(applicable_filters.values_list('part_id', flat=True))
-        UsedPart.objects.filter(
+        for old_part in UsedPart.objects.filter(
             service_order=order,
             service_work__isnull=True,
             part_id__in=kit_part_ids,
-        ).delete()
+        ):
+            StockService.restore(old_part)
+            old_part.delete()
 
         # Видаляємо попередньо застосований набір (якщо є), щоб уникнути дублювання
         ServiceWork.objects.filter(service_order=order, description=rule.name).delete()
@@ -676,18 +679,20 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         )
 
         # Додаємо оливу та фільтри до роботи
-        UsedPart.objects.create(
+        oil_part = UsedPart.objects.create(
             service_work=service_work,
             part=kit.oil,
             quantity=kit.oil_quantity,
         )
+        StockService.deduct(oil_part)
 
         for kit_filter in applicable_filters:
-            UsedPart.objects.create(
+            filter_part = UsedPart.objects.create(
                 service_work=service_work,
                 part=kit_filter.part,
                 quantity=kit_filter.quantity,
             )
+            StockService.deduct(filter_part)
 
         # Логуємо виконання ТО
         MaintenanceLog.objects.create(
@@ -771,21 +776,26 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         unit_price = request.data.get('unit_price')
         
         try:
+            from inventory.services import StockService
             used_part = UsedPart.objects.create(
                 service_work=service_work,
                 part_id=part_id,
                 quantity=quantity,
                 unit_price=unit_price
             )
+            StockService.deduct(used_part)
             return Response(UsedPartSerializer(used_part).data, status=201)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
-            
+
     @action(detail=True, methods=['delete'], url_path='remove-part/(?P<part_id>[^/.]+)')
     def remove_part(self, request, pk=None, part_id=None):
         """Видалити запчастину з роботи."""
         try:
-            UsedPart.objects.get(id=part_id, service_work_id=pk).delete()
+            from inventory.services import StockService
+            used_part = UsedPart.objects.get(id=part_id, service_work_id=pk)
+            StockService.restore(used_part)
+            used_part.delete()
             return Response(status=204)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
@@ -815,23 +825,28 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        from inventory.services import StockService
         added = []
 
         if kit.oil:
-            UsedPart.objects.get_or_create(
+            oil_part, created = UsedPart.objects.get_or_create(
                 service_work=work,
                 part=kit.oil,
                 defaults={'quantity': kit.oil_quantity}
             )
+            if created:
+                StockService.deduct(oil_part)
             added.append({'name': kit.oil.name, 'quantity': str(kit.oil_quantity), 'type': 'oil'})
 
         applicable_filters = _filters_for_service_type(kit.filters, service_type)
         for kit_filter in applicable_filters:
-            UsedPart.objects.get_or_create(
+            filter_part, created = UsedPart.objects.get_or_create(
                 service_work=work,
                 part=kit_filter.part,
                 defaults={'quantity': kit_filter.quantity}
             )
+            if created:
+                StockService.deduct(filter_part)
             added.append({'name': kit_filter.part.name, 'quantity': kit_filter.quantity, 'type': 'filter'})
 
         work.service_order.update_total_cost()
