@@ -130,10 +130,11 @@ class Command(BaseCommand):
                                 phone=safe_phone or None,
                             )
                         else:
-                            # Заглушка для dry-run
+                            # Заглушка для dry-run — всі атрибути які можуть читатись нижче
                             class _FakeClient:
                                 id = None
-                                name = client_name
+                                phone = safe_phone
+                            _FakeClient.name = client_name
                             client = _FakeClient()
                         stats['clients_created'] += 1
                         self.stdout.write(
