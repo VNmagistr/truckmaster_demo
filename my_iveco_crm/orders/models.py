@@ -176,9 +176,7 @@ class ServiceWork(models.Model):
         return self.price_at_moment * self.hours_spent
 
     def save(self, *args, **kwargs):
-        if not self.price_at_moment and self.work:
-            # Зберігаємо годинну ставку, а не загальну вартість.
-            # Фінальна сума = price_at_moment × hours_spent
+        if self.work_id:
             self.price_at_moment = self.work.work_group.hourly_rate
         super().save(*args, **kwargs)
 
