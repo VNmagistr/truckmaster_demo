@@ -1,35 +1,13 @@
-# bot/handlers/__init__.py
+"""Bot handlers package."""
 
-"""
-Обробники команд Telegram бота
-"""
-
-from .common import *
-from .guest import *
-from .driver import *
-from .owner import *
-from .manager import *
-from .admin import *
+from .main import start, handle_contact, my_cars, handle_text
+from .admin import admin_buttons
+from .callbacks import callback_handler
+from .photos import handle_photo
 
 __all__ = [
-    # Common
-    'start_handler',
-    'help_handler',
-    'cancel_handler',
-    'unknown_command_handler',
-    
-    # Guest
-    'guest_handlers',
-    
-    # Driver
-    'driver_handlers',
-    
-    # Owner
-    'owner_handlers',
-    
-    # Manager
-    'manager_handlers',
-    
-    # Admin
-    'admin_handlers',
+    'start', 'handle_contact', 'my_cars', 'handle_text',
+    'admin_buttons',
+    'callback_handler',
+    'handle_photo',
 ]
