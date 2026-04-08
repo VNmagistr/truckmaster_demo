@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import requests
 from django.conf import settings
 from django.db import transaction
@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import CanAccessInvoices
 from rest_framework.response import Response
 
 from .models import Invoice, InvoiceItem, DriverPickupLog, _next_invoice_number, _next_driver_tab_number
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanAccessInvoices]
     ordering           = ['-date', '-created_at']
 
     def get_queryset(self):
@@ -198,7 +199,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
 class InvoiceItemViewSet(viewsets.ModelViewSet):
     serializer_class   = InvoiceItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanAccessInvoices]
 
     def get_queryset(self):
         qs = InvoiceItem.objects.select_related('product', 'invoice')
@@ -213,7 +214,7 @@ class InvoiceItemViewSet(viewsets.ModelViewSet):
 
 class DriverPickupLogViewSet(viewsets.ModelViewSet):
     serializer_class   = DriverPickupLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanAccessInvoices]
 
     def get_queryset(self):
         qs = DriverPickupLog.objects.select_related('client', 'truck', 'product', 'invoice')

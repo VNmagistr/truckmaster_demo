@@ -1,9 +1,10 @@
-﻿import logging
+import logging
 import datetime
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from users.permissions import IsAdminRole, IsManagerOrAbove
 from django.utils import timezone
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
@@ -70,6 +71,12 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     ).all().order_by('-created_at')
     
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [permissions.IsAuthenticated(), IsManagerOrAbove()]
+        return [permissions.IsAuthenticated()]
+
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
     search_fields = [
@@ -838,12 +845,22 @@ class WorkGroupViewSet(viewsets.ModelViewSet):
     serializer_class = WorkGroupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [permissions.IsAuthenticated(), IsAdminRole()]
+        return [permissions.IsAuthenticated()]
+
 
 class WorkPriceViewSet(viewsets.ModelViewSet):
     """ViewSet для цін на роботи."""
     queryset = WorkPrice.objects.select_related('work_group').all()
     serializer_class = WorkPriceSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [permissions.IsAuthenticated(), IsAdminRole()]
+        return [permissions.IsAuthenticated()]
 
 
 class RepairPhotoViewSet(viewsets.ModelViewSet):

@@ -71,22 +71,6 @@ class UserProfile(models.Model):
             return True
         return self.warehouses.filter(pk=warehouse.pk).exists()
 
-    def can_view(self, section):
-        permissions = ROLE_PERMISSIONS.get(self.role, {})
-        return permissions.get(f'can_view_{section}', False) or self.user.is_superuser
-
-    def can_edit(self, section):
-        permissions = ROLE_PERMISSIONS.get(self.role, {})
-        return permissions.get(f'can_edit_{section}', False) or self.user.is_superuser
-
-    def can_create(self, section):
-        permissions = ROLE_PERMISSIONS.get(self.role, {})
-        return permissions.get(f'can_create_{section}', False) or self.user.is_superuser
-
-    def can_delete(self, section):
-        permissions = ROLE_PERMISSIONS.get(self.role, {})
-        return permissions.get(f'can_delete_{section}', False) or self.user.is_superuser
-
 
 # Автоматичне створення профілю
 @receiver(post_save, sender=User)
@@ -100,47 +84,6 @@ def save_user_profile(sender, instance, **kwargs):
     if not hasattr(instance, 'profile'):
         UserProfile.objects.create(user=instance)
 
-
-# Матриця прав
-ROLE_PERMISSIONS = {
-    'admin': {
-        'can_view_clients': True, 'can_edit_clients': True, 'can_create_clients': True, 'can_delete_clients': True,
-        'can_view_trucks': True, 'can_edit_trucks': True, 'can_create_trucks': True, 'can_delete_trucks': True,
-        'can_view_orders': True, 'can_edit_orders': True, 'can_create_orders': True, 'can_delete_orders': True,
-        'can_complete_orders': True,
-        'can_view_stock': True, 'can_edit_stock': True, 'can_receive_stock': True, 'can_transfer_stock': True,
-        'can_view_products': True, 'can_edit_products': True, 'can_edit_prices': True,
-        'can_view_reports': True, 'can_view_financial': True,
-        'can_manage_users': True,
-    },
-    'manager': {
-        'can_view_clients': True, 'can_edit_clients': True, 'can_create_clients': True,
-        'can_view_trucks': True, 'can_edit_trucks': True, 'can_create_trucks': True,
-        'can_view_orders': True, 'can_edit_orders': True, 'can_create_orders': True, 'can_complete_orders': True,
-        'can_view_stock': True, 'can_receive_stock': True,
-        'can_view_products': True, 'can_edit_products': True,
-        'can_view_reports': True, 'can_view_financial': True,
-    },
-    'mechanic': {
-        'can_view_clients': True,
-        'can_view_trucks': True,
-        'can_view_orders': True, 'can_edit_orders': True, 'can_create_orders': True,
-        'can_view_stock': True,
-        'can_view_products': True,
-    },
-    'storekeeper': {
-        'can_view_stock': True, 'can_edit_stock': True, 'can_receive_stock': True, 'can_transfer_stock': True,
-        'can_view_products': True,
-        'can_view_orders': True,
-    },
-    'accountant': {
-        'can_view_clients': True,
-        'can_view_orders': True,
-        'can_view_stock': True,
-        'can_view_products': True,
-        'can_view_reports': True, 'can_view_financial': True,
-    },
-}
 
 
 class UserActionLog(models.Model):

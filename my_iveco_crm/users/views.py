@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserMeSerializer, ChangePasswordSerializer
+from .permissions import IsAdminRole
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -16,6 +17,12 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserMeSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        # Створення, редагування, видалення юзерів — тільки адмін
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsAdminRole()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         queryset = User.objects.all()

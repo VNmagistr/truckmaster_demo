@@ -1,4 +1,6 @@
 from rest_framework import viewsets, filters, status
+from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsAdminRole, IsManagerOrAbove, CanManageStock
 from django.db.models import Q
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -30,6 +32,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'slug']
     ordering_fields = ['sort_order', 'name']
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsManagerOrAbove()]
+        return [IsAuthenticated()]
+
 
 class SubCategoryViewSet(viewsets.ModelViewSet):
     """ViewSet для підкатегорій товарів"""
@@ -40,6 +47,11 @@ class SubCategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'slug']
     ordering_fields = ['name']
 
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsManagerOrAbove()]
+        return [IsAuthenticated()]
+
 
 class WarehouseViewSet(viewsets.ModelViewSet):
     """ViewSet для складів"""
@@ -48,6 +60,13 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'address']
 
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsAdminRole()]
+        if self.action in ('create', 'update', 'partial_update'):
+            return [IsAuthenticated(), IsManagerOrAbove()]
+        return [IsAuthenticated()]
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     """
@@ -55,6 +74,13 @@ class ProductViewSet(viewsets.ModelViewSet):
     Підтримує всі CRUD операції
     """
     queryset = Product.objects.select_related('subcategory', 'subcategory__category').all()
+
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsAdminRole()]
+        if self.action in ('create', 'update', 'partial_update'):
+            return [IsAuthenticated(), CanManageStock()]
+        return [IsAuthenticated()]
 
     # Фільтри та пошук
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -175,6 +201,12 @@ class StockMovementViewSet(viewsets.ModelViewSet):
     search_fields = ['product__name', 'invoice_number', 'supplier', 'notes']
     ordering_fields = ['created_at', 'quantity']
     ordering = ['-created_at']
+
+    def get_permissions(self):
+        # Перегляд — всі; запис і спеціальні дії — тільки ті, хто управляє складом
+        if self.action in ('create', 'update', 'partial_update', 'destroy', 'transfer', 'receive_stock'):
+            return [IsAuthenticated(), CanManageStock()]
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         """Автоматично встановлюємо користувача, який створив рух"""
