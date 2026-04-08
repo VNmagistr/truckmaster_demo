@@ -34,6 +34,8 @@ class ClientTokenObtainPairSerializer(TokenObtainPairSerializer):
             'client_id': client.id,
             'name': client.name,
             'phone': client.phone,
+            'email': client.email,
+            'email_verified': client.email_verified,
             'is_client': True,
         }
         return data
@@ -44,6 +46,7 @@ class ClientTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ClientRegisterSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     phone = serializers.CharField(max_length=20)
+    email = serializers.EmailField()
     password = serializers.CharField(min_length=6, write_only=True)
 
     def validate_phone(self, value):
@@ -54,31 +57,46 @@ class ClientRegisterSerializer(serializers.Serializer):
 
     def validate(self, data):
         phone = data['phone']
+        email = data['email']
         if User.objects.filter(username=phone).exists():
             raise serializers.ValidationError(
                 {"phone": "Акаунт з цим номером телефону вже існує."}
             )
-        # Перевіряємо чи клієнт вже має прив'язаний акаунт
         existing_client = Client.objects.filter(phone=phone).first()
         if existing_client and existing_client.user_id:
             raise serializers.ValidationError(
                 {"phone": "Клієнт з цим номером вже має акаунт."}
             )
+        if Client.objects.filter(email=email, email_verified=True).exists():
+            raise serializers.ValidationError(
+                {"email": "Акаунт з цією email адресою вже існує."}
+            )
         return data
 
     def create(self, validated_data):
+        from .email_utils import send_verification_email
+
         phone = validated_data['phone']
         name = validated_data['name']
+        email = validated_data['email']
         password = validated_data['password']
 
-        # Знаходимо існуючого клієнта або створюємо нового
         client = Client.objects.filter(phone=phone).first()
         if client is None:
-            client = Client.objects.create(name=name, phone=phone)
+            client = Client.objects.create(name=name, phone=phone, email=email)
+        else:
+            client.email = email
+            client.save(update_fields=['email'])
 
         user = User.objects.create_user(username=phone, password=password)
         client.user = user
         client.save(update_fields=['user'])
+
+        try:
+            send_verification_email(client, email)
+        except Exception:
+            pass  # Реєстрація проходить навіть якщо лист не надіслано
+
         return user
 
 
@@ -107,7 +125,7 @@ class CabinetClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ['id', 'name', 'phone', 'email', 'address', 'features']
+        fields = ['id', 'name', 'phone', 'email', 'address', 'email_verified', 'features']
 
 
 class CabinetTruckSerializer(serializers.ModelSerializer):

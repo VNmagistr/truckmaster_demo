@@ -29,4 +29,20 @@ class ClientHasCabinetAccess(BasePermission):
         try:
             return request.user.client_profile.features.cabinet
         except Exception:
-            return True  # fail-open: якщо ClientFeature не існує — дозволяємо
+            return False
+
+
+class ClientEmailVerified(BasePermission):
+    """
+    Перевіряє, що клієнт підтвердив свою email адресу.
+    Використовується для захисту ендпоінтів, недоступних до верифікації.
+    """
+    message = "Будь ласка, підтвердіть вашу email адресу для доступу до цієї функції."
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        try:
+            return request.user.client_profile.email_verified
+        except Exception:
+            return False

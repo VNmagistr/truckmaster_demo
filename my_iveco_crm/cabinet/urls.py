@@ -8,6 +8,8 @@ from .views import (
     CabinetTrucksView,
     CabinetOrdersView,
     CabinetOrderDetailView,
+    VerifyEmailView,
+    ResendVerificationEmailView,
 )
 
 urlpatterns = [
@@ -15,6 +17,10 @@ urlpatterns = [
     path('token/', ClientTokenObtainPairView.as_view(), name='cabinet_token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='cabinet_token_refresh'),
     path('register/', ClientRegisterView.as_view(), name='cabinet_register'),
+
+    # Email verification
+    path('verify-email/', VerifyEmailView.as_view(), name='cabinet_verify_email'),
+    path('resend-verification/', ResendVerificationEmailView.as_view(), name='cabinet_resend_verification'),
 
     # Cabinet data
     path('me/', CabinetMeView.as_view(), name='cabinet_me'),

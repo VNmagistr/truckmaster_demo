@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from clients.models import Truck
 from orders.models import ServiceOrder
 
-from .permissions import IsClientUser, ClientHasCabinetAccess
+from .permissions import IsClientUser, ClientHasCabinetAccess, ClientEmailVerified
 from .serializers import (
     ClientRegisterSerializer,
     ClientTokenObtainPairSerializer,
@@ -58,7 +58,7 @@ class CabinetMeView(APIView):
 
 class CabinetTrucksView(generics.ListAPIView):
     """Список вантажівок клієнта."""
-    permission_classes = [IsClientUser, ClientHasCabinetAccess]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess, ClientEmailVerified]
     serializer_class = CabinetTruckSerializer
     pagination_class = None  # Клієнт бачить тільки свої авто — пагінація не потрібна
 
@@ -71,7 +71,7 @@ class CabinetTrucksView(generics.ListAPIView):
 
 class CabinetOrdersView(generics.ListAPIView):
     """Список замовлень клієнта. Фільтр: ?truck=<id>"""
-    permission_classes = [IsClientUser, ClientHasCabinetAccess]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess, ClientEmailVerified]
     serializer_class = CabinetOrderListSerializer
     pagination_class = None  # Повертаємо всі замовлення клієнта без пагінації
 
@@ -90,7 +90,7 @@ class CabinetOrdersView(generics.ListAPIView):
 
 class CabinetOrderDetailView(generics.RetrieveAPIView):
     """Деталі конкретного замовлення клієнта."""
-    permission_classes = [IsClientUser, ClientHasCabinetAccess]
+    permission_classes = [IsClientUser, ClientHasCabinetAccess, ClientEmailVerified]
     serializer_class = CabinetOrderDetailSerializer
 
     def get_object(self):
@@ -102,3 +102,68 @@ class CabinetOrderDetailView(generics.RetrieveAPIView):
             client=client,
             marked_for_deletion=False,
         )
+
+
+# ── Email verification ────────────────────────────────────────────────────────
+
+class VerifyEmailView(APIView):
+    """Підтвердження email за токеном із листа."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .models import EmailVerification
+
+        token = request.query_params.get('token')
+        if not token:
+            return Response({'detail': 'Токен відсутній.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            verification = EmailVerification.objects.select_related('client').get(token=token)
+        except EmailVerification.DoesNotExist:
+            return Response({'detail': 'Недійсний токен.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not verification.is_valid():
+            return Response(
+                {'detail': 'Термін дії токена закінчився або він вже використаний.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        client = verification.client
+        client.email = verification.email
+        client.email_verified = True
+        client.save(update_fields=['email', 'email_verified'])
+
+        verification.is_used = True
+        verification.save(update_fields=['is_used'])
+
+        return Response({'detail': 'Email успішно підтверджено. Тепер ви маєте повний доступ.'})
+
+
+class ResendVerificationEmailView(APIView):
+    """Повторне надсилання листа з підтвердженням."""
+    permission_classes = [IsClientUser]
+    throttle_classes = [CabinetRateThrottle]
+
+    def post(self, request):
+        from .email_utils import send_verification_email
+
+        client = request.user.client_profile
+
+        if client.email_verified:
+            return Response({'detail': 'Email вже підтверджено.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not client.email:
+            return Response(
+                {'detail': 'Email адреса не встановлена. Зверніться до менеджера.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            send_verification_email(client, client.email)
+        except Exception:
+            return Response(
+                {'detail': 'Помилка надсилання листа. Спробуйте пізніше.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response({'detail': f'Лист з підтвердженням надіслано на {client.email}.'})

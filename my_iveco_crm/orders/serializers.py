@@ -129,10 +129,19 @@ class ServiceWorkWriteSerializer(serializers.ModelSerializer):
 
 class RepairPhotoSerializer(serializers.ModelSerializer):
     """Серіалізатор фото ремонту."""
-    
+
     class Meta:
         model = RepairPhoto
         fields = '__all__'
+
+    def validate(self, attrs):
+        from .models import MAX_REPAIR_PHOTOS_PER_ORDER
+        order = attrs.get('service_order')
+        if order and order.photos.count() >= MAX_REPAIR_PHOTOS_PER_ORDER:
+            raise serializers.ValidationError(
+                f'Максимальна кількість фото на наряд — {MAX_REPAIR_PHOTOS_PER_ORDER}.'
+            )
+        return attrs
 
 
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):

@@ -19,6 +19,7 @@ class Client(SoftDeleteModel):
     address = models.CharField(max_length=255, blank=True, null=True)
     telegram_chat_id = models.BigIntegerField(unique=True, blank=True, null=True, db_index=True, verbose_name="ID чату Telegram")
     is_admin = models.BooleanField(default=False, verbose_name="Адміністратор бота")
+    email_verified = models.BooleanField(default=False, verbose_name="Email верифіковано")
     class Meta:
         verbose_name = "Клієнт"
         verbose_name_plural = "Клієнти"
