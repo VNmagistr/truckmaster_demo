@@ -1,9 +1,12 @@
 ﻿import logging
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+ALPR_DEBOUNCE_TTL = 300  # секунд — один номер обробляємо раз на 5 хвилин
 
 from clients.models import Truck
 from appointments.models import Appointment
@@ -33,6 +36,12 @@ def alpr_event(request):
     plate = normalize_plate(raw_plate)
     camera_id = serializer.validated_data.get('camera_id', '')
     confidence = serializer.validated_data.get('confidence')
+
+    # 0. Debounce: той самий номер обробляємо не частіше ніж раз на ALPR_DEBOUNCE_TTL секунд
+    debounce_key = f'alpr:debounce:{plate}'
+    if cache.get(debounce_key):
+        return Response({'status': 'debounced', 'license_plate': plate})
+    cache.set(debounce_key, True, ALPR_DEBOUNCE_TTL)
 
     # 1. Перевірка списку ігнору
     ignored_entry = IgnoredVehicle.objects.filter(license_plate=plate, is_active=True).first()
