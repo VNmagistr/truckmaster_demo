@@ -172,8 +172,8 @@ class ServiceWork(models.Model):
         verbose_name_plural = "Виконані роботи"
 
     @property
-    def amount(self): 
-        return self.price_at_moment * self.hours_spent
+    def amount(self):
+        return self.price_at_moment
 
     def save(self, *args, **kwargs):
         if not self.price_at_moment and self.work:
