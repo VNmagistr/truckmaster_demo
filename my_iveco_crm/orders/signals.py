@@ -185,21 +185,31 @@ def _update_maintenance_intervals(order):
         return
 
     works = list(order.works.select_related('work__work_group').all())
-    if not any(_is_maintenance_work(sw.work) for sw in works):
-        return
 
     ENGINE_KW  = ('двигун', 'мотор', 'моторн', 'engine')
     GEARBOX_KW = ('кпп', 'акпп', 'коробк', 'трансміс', 'gearbox')
     AXLE_KW    = ('міст', 'мост', 'axle')
-    BELTS_KW   = ('ремін', 'ролик', 'belt')
+    BELTS_KW   = ('ремін', 'ремн', 'ролик', 'belt')
     CHAINS_KW  = ('ланцюг', 'chain')
+    INTERVAL_KW = BELTS_KW + CHAINS_KW
 
     def matches(text, keywords):
         return any(kw in text for kw in keywords)
 
+    def _has_interval_kw(work):
+        if not work:
+            return False
+        text = work.name.lower()
+        if work.work_group:
+            text += ' ' + work.work_group.name.lower()
+        return matches(text, INTERVAL_KW)
+
+    if not any(_is_maintenance_work(sw.work) or _has_interval_kw(sw.work) for sw in works):
+        return
+
     fields_to_update = {}
     for sw in works:
-        if not _is_maintenance_work(sw.work):
+        if not _is_maintenance_work(sw.work) and not _has_interval_kw(sw.work):
             continue
         name = sw.work.name.lower() if sw.work else ''
         group = sw.work.work_group.name.lower() if sw.work and sw.work.work_group else ''
