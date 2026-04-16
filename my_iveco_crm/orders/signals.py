@@ -3,6 +3,7 @@ import os
 
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder, RepairPhoto, TruckMaintenanceIntervals
 
@@ -97,6 +98,16 @@ def record_status_change(sender, instance, created, **kwargs):
         )
     ):
         _revert_maintenance_intervals(instance)
+
+    # Автоматично встановлюємо дату закриття при переході в CLOSED (якщо не задана вручну)
+    if (
+        previous_status is not None
+        and previous_status != ServiceOrder.StatusChoices.CLOSED
+        and instance.status == ServiceOrder.StatusChoices.CLOSED
+        and not instance.closed_at
+    ):
+        ServiceOrder.objects.filter(pk=instance.pk).update(closed_at=timezone.now())
+        instance.closed_at = timezone.now()
 
     # Фінальні статуси — знімок більше не потрібен, видаляємо
     if instance.status in (

@@ -93,6 +93,7 @@ class ServiceOrder(SoftDeleteModel):
     total_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Загальна вартість")
     intervals_snapshot = models.JSONField(null=True, blank=True, editable=False, verbose_name="Знімок інтервалів до DONE")
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Створено")
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="Закрито")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Оновлено")
 
 
