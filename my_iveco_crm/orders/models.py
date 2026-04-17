@@ -127,7 +127,7 @@ class ServiceOrder(SoftDeleteModel):
         super().save(*args, **kwargs)
 
     def update_total_cost(self):
-        works_cost = self.works.aggregate(total=Sum('amount'))['total'] or 0
+        works_cost = self.works.aggregate(total=Sum('price_at_moment'))['total'] or 0
         # Запчастини через ServiceWork
         work_parts_cost = UsedPart.objects.filter(
             service_work__service_order=self
@@ -174,7 +174,7 @@ class ServiceWork(models.Model):
 
     @property
     def amount(self):
-        return self.price_at_moment * self.hours_spent
+        return self.price_at_moment
 
     def save(self, *args, **kwargs):
         if self.work_id:
