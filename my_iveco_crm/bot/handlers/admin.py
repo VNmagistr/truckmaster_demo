@@ -7,6 +7,7 @@ from bot.queries import (
     check_if_user_is_linked, log_message_to_db,
     get_all_trucks, get_all_orders, get_statistics,
 )
+from bot.handlers.utils import clear_awaiting_states
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +36,17 @@ async def admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(bot_reply)
     elif "Знайти авто" in text:
         bot_reply = "Введіть номер авто:"
+        clear_awaiting_states(context.user_data)
         context.user_data['awaiting_truck'] = True
         await update.message.reply_text(bot_reply)
     elif "Знайти клієнта" in text:
         bot_reply = "Введіть ім'я:"
+        clear_awaiting_states(context.user_data)
         context.user_data['awaiting_client'] = True
         await update.message.reply_text(bot_reply)
     elif "Фото замовлення" in text:
         bot_reply = "Введіть номер замовлення або останні цифри (наприклад: 0001):"
+        clear_awaiting_states(context.user_data)
         context.user_data['awaiting_photo_order'] = True
         await update.message.reply_text(bot_reply)
 

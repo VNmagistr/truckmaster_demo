@@ -12,6 +12,7 @@ from bot.queries import (
     get_or_create_bot_user, get_repair_history,
     get_maintenance_history, get_maintenance_status,
 )
+from bot.handlers.utils import clear_awaiting_states
 from bot.nova_poshta import (
     get_client_invoices_with_declarations, client_owns_declaration,
     np_api_track, format_np_status,
@@ -44,6 +45,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("mileage_truck_"):
         truck_id = int(data.replace("mileage_truck_", ""))
         truck    = await sync_to_async(Truck.objects.get)(id=truck_id)
+        clear_awaiting_states(ud)
         ud['awaiting_mileage_truck_id'] = truck_id
         await query.edit_message_text(
             f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
@@ -67,6 +69,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("maint_remaining_"):
         truck_id = int(data.replace("maint_remaining_", ""))
         truck    = await sync_to_async(Truck.objects.get)(id=truck_id)
+        clear_awaiting_states(ud)
         ud['awaiting_maintenance_mileage_truck_id'] = truck_id
         await query.edit_message_text(
             f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"

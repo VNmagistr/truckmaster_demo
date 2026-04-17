@@ -8,6 +8,7 @@ from bot.keyboards import (
     get_photo_type_keyboard, get_order_selection_keyboard,
     get_declarations_keyboard,
 )
+from bot.handlers.utils import clear_awaiting_states
 from bot.queries import (
     get_or_create_bot_user, check_if_user_is_linked, is_email_verified_for_bot,
     link_bot_user_by_phone, log_message_to_db, get_my_cars_with_keyboard,
@@ -180,6 +181,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif "Перевірити статус замовлення" in text:
         bot_reply = "Введіть номер замовлення:"
+        clear_awaiting_states(ud)
         ud['awaiting_order'] = True
         await update.message.reply_text(bot_reply)
 
