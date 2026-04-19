@@ -136,11 +136,49 @@ def update_order_on_work_change(sender, instance, **kwargs):
         logger.debug(f"Не вдалося оновити вартість: {e}")
 
 
+def _detect_work_type(work):
+    """Повертає тип роботи: engine_oil | rear_axle | gearbox | auto_gearbox | belts | chains | None."""
+    if not work or not _is_maintenance_work(work):
+        return None
+    name = work.name.lower()
+    group = work.work_group.name.lower() if work.work_group else ''
+    text = name + ' ' + group
+
+    def matches(text, keywords):
+        return any(kw in text for kw in keywords)
+
+    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
+    AXLE_KW         = ('міст', 'мост', 'axle')
+    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW       = ('ланцюг', 'chain')
+
+    is_oil_change   = 'заміна оливи' in text or 'заміна масла' in text
+    is_axle         = matches(text, AXLE_KW)
+    is_auto_gearbox = matches(text, AUTO_GEARBOX_KW)
+    is_gearbox      = matches(text, GEARBOX_KW) and not is_auto_gearbox
+
+    if is_axle:
+        return 'rear_axle'
+    if is_auto_gearbox:
+        return 'auto_gearbox'
+    if is_gearbox:
+        return 'gearbox'
+    if matches(text, BELTS_KW):
+        return 'belts'
+    if matches(text, CHAINS_KW):
+        return 'chains'
+    if matches(text, ENGINE_KW) or is_oil_change:
+        return 'engine_oil'
+    return 'engine_oil'
+
+
 @receiver(post_save, sender=ServiceWork)
 def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     """
-    При створенні роботи типу 'ТО' або 'Заміна оливи'
-    автоматично додає запчастини з існуючого набору ТО для цього авто.
+    При створенні роботи типу ТО автоматично додає оливу та запчастини
+    з набору ТО для цього авто залежно від типу роботи.
     Потребує увімкненого модуля 'inventory'.
     """
     from core.registry import is_module_enabled
@@ -154,7 +192,11 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
         return
 
     truck = instance.service_order.truck
-    if not truck or not _is_maintenance_work(instance.work):
+    if not truck:
+        return
+
+    work_type = _detect_work_type(instance.work)
+    if not work_type:
         return
 
     try:
@@ -163,16 +205,33 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
         logger.info(f"Набір ТО для {truck.license_plate} не знайдено")
         return
 
-    if kit.oil:
-        oil_part, oil_created = UsedPart.objects.get_or_create(
-            service_work=instance,
-            part=kit.oil,
-            defaults={'quantity': int(kit.oil_quantity)}
-        )
-        if oil_created:
-            StockService.deduct(oil_part)
+    OIL_MAP = {
+        'engine_oil':   ('oil',            'oil_quantity'),
+        'rear_axle':    ('rear_axle_oil',   'rear_axle_oil_quantity'),
+        'gearbox':      ('gearbox_oil',     'gearbox_oil_quantity'),
+        'auto_gearbox': ('auto_gearbox_oil','auto_gearbox_oil_quantity'),
+    }
 
-    for kit_filter in kit.filters.all():
+    oil_field, qty_field = OIL_MAP.get(work_type, (None, None))
+    if oil_field:
+        oil_product = getattr(kit, oil_field)
+        oil_qty = getattr(kit, qty_field)
+        if oil_product and oil_qty:
+            oil_part, oil_created = UsedPart.objects.get_or_create(
+                service_work=instance,
+                part=oil_product,
+                defaults={'quantity': int(oil_qty)}
+            )
+            if oil_created:
+                StockService.deduct(oil_part)
+
+    # Для двигуна — фільтри both/full/partial; для інших — тільки свій service_type
+    if work_type == 'engine_oil':
+        filters_qs = kit.filters.filter(service_type__in=('both', 'full', 'partial'))
+    else:
+        filters_qs = kit.filters.filter(service_type=work_type)
+
+    for kit_filter in filters_qs:
         filter_part, filter_created = UsedPart.objects.get_or_create(
             service_work=instance,
             part=kit_filter.part,
@@ -181,7 +240,7 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
         if filter_created:
             StockService.deduct(filter_part)
 
-    logger.info(f"Автоматично додано набір ТО для {truck.license_plate}")
+    logger.info(f"Автоматично додано набір ТО ({work_type}) для {truck.license_plate}")
     instance.service_order.update_total_cost()
 
 
@@ -197,11 +256,12 @@ def _update_maintenance_intervals(order):
 
     works = list(order.works.select_related('work__work_group').all())
 
-    ENGINE_KW  = ('двигун', 'мотор', 'моторн', 'engine')
-    GEARBOX_KW = ('кпп', 'акпп', 'коробк', 'трансміс', 'gearbox')
-    AXLE_KW    = ('міст', 'мост', 'axle')
-    BELTS_KW   = ('ремін', 'ремн', 'ролик', 'belt')
-    CHAINS_KW  = ('ланцюг', 'chain')
+    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
+    AXLE_KW         = ('міст', 'мост', 'axle')
+    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW       = ('ланцюг', 'chain')
     INTERVAL_KW = BELTS_KW + CHAINS_KW
 
     def matches(text, keywords):
@@ -227,11 +287,17 @@ def _update_maintenance_intervals(order):
         text = name + ' ' + group
 
         is_oil_change = 'заміна оливи' in text or 'заміна масла' in text
-        if matches(text, ENGINE_KW) or (is_oil_change and not matches(text, GEARBOX_KW) and not matches(text, AXLE_KW)):
+        is_axle = matches(text, AXLE_KW)
+        is_auto_gearbox = matches(text, AUTO_GEARBOX_KW)
+        is_gearbox = matches(text, GEARBOX_KW) and not is_auto_gearbox
+
+        if matches(text, ENGINE_KW) or (is_oil_change and not is_gearbox and not is_auto_gearbox and not is_axle):
             fields_to_update['engine_oil_last_km'] = current_km
-        if matches(text, GEARBOX_KW):
+        if is_gearbox:
             fields_to_update['gearbox_oil_last_km'] = current_km
-        if matches(text, AXLE_KW):
+        if is_auto_gearbox:
+            fields_to_update['auto_gearbox_oil_last_km'] = current_km
+        if is_axle:
             fields_to_update['rear_axle_oil_last_km'] = current_km
         if matches(text, BELTS_KW):
             fields_to_update['belts_last_km'] = current_km

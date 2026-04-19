@@ -294,6 +294,11 @@ SERVICE_TYPE_CHOICES = [
     ('both', 'Повне і часткове ТО'),
     ('full', 'Тільки повне ТО'),
     ('partial', 'Тільки часткове ТО'),
+    ('rear_axle', 'Заміна оливи заднього моста'),
+    ('gearbox', 'Заміна оливи КПП'),
+    ('auto_gearbox', 'Заміна оливи АКПП'),
+    ('belts', 'Заміна ремнів/роликів'),
+    ('chains', 'Заміна ланцюгів'),
 ]
 
 
@@ -316,7 +321,7 @@ class BaseMaintenanceKitFilter(models.Model):
         verbose_name="Інтервал заміни (км)"
     )
     service_type = models.CharField(
-        max_length=10,
+        max_length=12,
         choices=SERVICE_TYPE_CHOICES,
         default='both',
         verbose_name="Вид ТО",
@@ -347,6 +352,42 @@ class MaintenanceKit(models.Model):
         verbose_name="Інтервал заміни оливи (км)",
         help_text="Наприклад: 20000"
     )
+    rear_axle_oil = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='rear_axle_oil_for_trucks',
+        null=True, blank=True,
+        verbose_name="Олива заднього моста"
+    )
+    rear_axle_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        null=True, blank=True,
+        verbose_name="Кількість оливи заднього моста"
+    )
+    gearbox_oil = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='gearbox_oil_for_trucks',
+        null=True, blank=True,
+        verbose_name="Олива КПП"
+    )
+    gearbox_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        null=True, blank=True,
+        verbose_name="Кількість оливи КПП"
+    )
+    auto_gearbox_oil = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='auto_gearbox_oil_for_trucks',
+        null=True, blank=True,
+        verbose_name="Олива АКПП"
+    )
+    auto_gearbox_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        null=True, blank=True,
+        verbose_name="Кількість оливи АКПП"
+    )
 
     def __str__(self):
         return f"Комплект ТО — {self.truck.specific_model_name} ({self.truck.license_plate})"
@@ -375,7 +416,7 @@ class MaintenanceKitFilter(models.Model):
         help_text="Наприклад: 20000"
     )
     service_type = models.CharField(
-        max_length=10,
+        max_length=12,
         choices=SERVICE_TYPE_CHOICES,
         default='both',
         verbose_name="Вид ТО",
@@ -397,8 +438,10 @@ class TruckMaintenanceIntervals(models.Model):
     )
     engine_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи двигуна (км)")
     engine_oil_last_km   = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи двигуна")
-    gearbox_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи КПП/АКПП (км)")
-    gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи КПП/АКПП")
+    gearbox_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи КПП (км)")
+    gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи КПП")
+    auto_gearbox_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи АКПП (км)")
+    auto_gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи АКПП")
     rear_axle_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи заднього моста (км)")
     rear_axle_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи заднього моста")
     belts_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ремнів/роликів (км)")
