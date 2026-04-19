@@ -136,7 +136,7 @@ def update_order_on_work_change(sender, instance, **kwargs):
         logger.debug(f"Не вдалося оновити вартість: {e}")
 
 
-def _detect_work_type(work):
+def _detect_work_type(work, truck=None):
     """Повертає тип роботи: engine_oil | rear_axle | gearbox | auto_gearbox | belts | chains | None."""
     if not work or not _is_maintenance_work(work):
         return None
@@ -164,6 +164,9 @@ def _detect_work_type(work):
     if is_auto_gearbox:
         return 'auto_gearbox'
     if is_gearbox:
+        transmission = getattr(truck, 'transmission_type', None) if truck else None
+        if transmission in ('automatic', 'robotic'):
+            return 'auto_gearbox'
         return 'gearbox'
     if matches(text, BELTS_KW):
         return 'belts'
@@ -195,7 +198,7 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     if not truck:
         return
 
-    work_type = _detect_work_type(instance.work)
+    work_type = _detect_work_type(instance.work, truck=truck)
     if not work_type:
         return
 
@@ -294,7 +297,11 @@ def _update_maintenance_intervals(order):
         if matches(text, ENGINE_KW) or (is_oil_change and not is_gearbox and not is_auto_gearbox and not is_axle):
             fields_to_update['engine_oil_last_km'] = current_km
         if is_gearbox:
-            fields_to_update['gearbox_oil_last_km'] = current_km
+            transmission = getattr(truck, 'transmission_type', None)
+            if transmission in ('automatic', 'robotic'):
+                fields_to_update['auto_gearbox_oil_last_km'] = current_km
+            else:
+                fields_to_update['gearbox_oil_last_km'] = current_km
         if is_auto_gearbox:
             fields_to_update['auto_gearbox_oil_last_km'] = current_km
         if is_axle:

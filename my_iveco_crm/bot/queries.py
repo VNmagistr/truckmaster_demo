@@ -217,9 +217,21 @@ def get_maintenance_history(truck_id):
     except TruckMaintenanceIntervals.DoesNotExist:
         intervals = None
 
+    transmission = getattr(truck, 'transmission_type', None)
+    if transmission == 'manual':
+        gearbox_items = [('gearbox_oil_last_km', '⚙️ Олива КПП')]
+    elif transmission == 'automatic':
+        gearbox_items = [('auto_gearbox_oil_last_km', '⚙️ Олива АКПП')]
+    elif transmission == 'robotic':
+        gearbox_items = [('auto_gearbox_oil_last_km', '⚙️ Олива роботизованої КПП')]
+    else:
+        gearbox_items = [
+            ('gearbox_oil_last_km', '⚙️ Олива КПП'),
+            ('auto_gearbox_oil_last_km', '⚙️ Олива АКПП'),
+        ]
     ITEMS = [
         ('engine_oil_last_km',    '🛢 Олива двигуна'),
-        ('gearbox_oil_last_km',   '⚙️ Олива КПП/АКПП'),
+        *gearbox_items,
         ('rear_axle_oil_last_km', '🔩 Олива заднього моста'),
         ('belts_last_km',         '🔗 Ремені/ролики'),
         ('chains_last_km',        '⛓ Ланцюги'),
@@ -268,9 +280,21 @@ def get_maintenance_status(truck_id, mileage):
             "Зверніться до менеджера сервісного центру."
         )
 
+    transmission = getattr(truck, 'transmission_type', None)
+    if transmission == 'manual':
+        gearbox_items_s = [('gearbox_oil', '⚙️ Олива КПП')]
+    elif transmission == 'automatic':
+        gearbox_items_s = [('auto_gearbox_oil', '⚙️ Олива АКПП')]
+    elif transmission == 'robotic':
+        gearbox_items_s = [('auto_gearbox_oil', '⚙️ Олива роботизованої КПП')]
+    else:
+        gearbox_items_s = [
+            ('gearbox_oil', '⚙️ Олива КПП'),
+            ('auto_gearbox_oil', '⚙️ Олива АКПП'),
+        ]
     ITEMS = [
         ('engine_oil',    '🛢 Олива двигуна'),
-        ('gearbox_oil',   '⚙️ Олива КПП/АКПП'),
+        *gearbox_items_s,
         ('rear_axle_oil', '🔩 Олива заднього моста'),
         ('belts',         '🔗 Ремені/ролики'),
         ('chains',        '⛓ Ланцюги'),

@@ -40,6 +40,7 @@ class TruckListSerializer(serializers.ModelSerializer):
             'client_id',
             'base_model',
             'last_seven_vin',
+            'transmission_type',
             'marked_for_deletion',
         ]
 
