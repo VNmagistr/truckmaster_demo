@@ -226,7 +226,8 @@ def _update_maintenance_intervals(order):
         group = sw.work.work_group.name.lower() if sw.work and sw.work.work_group else ''
         text = name + ' ' + group
 
-        if matches(text, ENGINE_KW) or 'заміна оливи' in text or 'заміна масла' in text:
+        is_oil_change = 'заміна оливи' in text or 'заміна масла' in text
+        if matches(text, ENGINE_KW) or (is_oil_change and not matches(text, GEARBOX_KW) and not matches(text, AXLE_KW)):
             fields_to_update['engine_oil_last_km'] = current_km
         if matches(text, GEARBOX_KW):
             fields_to_update['gearbox_oil_last_km'] = current_km
