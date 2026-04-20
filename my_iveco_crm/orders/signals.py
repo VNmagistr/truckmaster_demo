@@ -164,7 +164,7 @@ def _detect_work_type(work, truck=None):
     if is_axle:
         return 'rear_axle'
     if is_auto_gearbox_filter:
-        return None  # фільтр АКПП не додає масло зі складу
+        return 'auto_gearbox_filter'
     if is_auto_gearbox:
         return 'auto_gearbox'
     if is_gearbox:
