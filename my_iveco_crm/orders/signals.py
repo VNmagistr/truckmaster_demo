@@ -147,20 +147,24 @@ def _detect_work_type(work, truck=None):
     def matches(text, keywords):
         return any(kw in text for kw in keywords)
 
-    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
-    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
-    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
-    AXLE_KW         = ('міст', 'мост', 'axle')
-    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
-    CHAINS_KW       = ('ланцюг', 'chain')
+    ENGINE_KW              = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW             = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW        = ('акпп', 'автоматич')
+    AUTO_GEARBOX_FILTER_KW = ('фільтр акпп', 'фільтр автоматич', 'atf filter', 'акпп фільтр')
+    AXLE_KW                = ('міст', 'мост', 'axle')
+    BELTS_KW               = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW              = ('ланцюг', 'chain')
 
-    is_oil_change   = 'заміна оливи' in text or 'заміна масла' in text
-    is_axle         = matches(text, AXLE_KW)
-    is_auto_gearbox = matches(text, AUTO_GEARBOX_KW)
-    is_gearbox      = matches(text, GEARBOX_KW) and not is_auto_gearbox
+    is_oil_change          = 'заміна оливи' in text or 'заміна масла' in text
+    is_axle                = matches(text, AXLE_KW)
+    is_auto_gearbox_filter = matches(text, AUTO_GEARBOX_FILTER_KW) and 'фільтр' in text
+    is_auto_gearbox        = matches(text, AUTO_GEARBOX_KW) and not is_auto_gearbox_filter
+    is_gearbox             = matches(text, GEARBOX_KW) and not is_auto_gearbox and not is_auto_gearbox_filter
 
     if is_axle:
         return 'rear_axle'
+    if is_auto_gearbox_filter:
+        return None  # фільтр АКПП не додає масло зі складу
     if is_auto_gearbox:
         return 'auto_gearbox'
     if is_gearbox:
@@ -259,12 +263,13 @@ def _update_maintenance_intervals(order):
 
     works = list(order.works.select_related('work__work_group').all())
 
-    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
-    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
-    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
-    AXLE_KW         = ('міст', 'мост', 'axle')
-    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
-    CHAINS_KW       = ('ланцюг', 'chain')
+    ENGINE_KW              = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW             = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW        = ('акпп', 'автоматич')
+    AUTO_GEARBOX_FILTER_KW = ('фільтр акпп', 'фільтр автоматич', 'atf filter', 'акпп фільтр')
+    AXLE_KW                = ('міст', 'мост', 'axle')
+    BELTS_KW               = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW              = ('ланцюг', 'chain')
     INTERVAL_KW = BELTS_KW + CHAINS_KW
 
     def matches(text, keywords):
@@ -290,11 +295,13 @@ def _update_maintenance_intervals(order):
         text = name + ' ' + group
 
         is_oil_change = 'заміна оливи' in text or 'заміна масла' in text
+        is_filter_change = 'заміна фільтр' in text or 'замін' in text and 'фільтр' in text
         is_axle = matches(text, AXLE_KW)
-        is_auto_gearbox = matches(text, AUTO_GEARBOX_KW)
-        is_gearbox = matches(text, GEARBOX_KW) and not is_auto_gearbox
+        is_auto_gearbox_filter = matches(text, AUTO_GEARBOX_FILTER_KW) and (is_filter_change or 'фільтр' in text)
+        is_auto_gearbox = matches(text, AUTO_GEARBOX_KW) and not is_auto_gearbox_filter
+        is_gearbox = matches(text, GEARBOX_KW) and not is_auto_gearbox and not is_auto_gearbox_filter
 
-        if matches(text, ENGINE_KW) or (is_oil_change and not is_gearbox and not is_auto_gearbox and not is_axle):
+        if matches(text, ENGINE_KW) or (is_oil_change and not is_gearbox and not is_auto_gearbox and not is_axle and not is_auto_gearbox_filter):
             fields_to_update['engine_oil_last_km'] = current_km
         if is_gearbox:
             transmission = getattr(truck, 'transmission_type', None)
@@ -304,6 +311,8 @@ def _update_maintenance_intervals(order):
                 fields_to_update['gearbox_oil_last_km'] = current_km
         if is_auto_gearbox:
             fields_to_update['auto_gearbox_oil_last_km'] = current_km
+        if is_auto_gearbox_filter:
+            fields_to_update['auto_gearbox_filter_last_km'] = current_km
         if is_axle:
             fields_to_update['rear_axle_oil_last_km'] = current_km
         if matches(text, BELTS_KW):

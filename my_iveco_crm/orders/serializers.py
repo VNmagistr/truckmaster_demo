@@ -404,6 +404,8 @@ class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
             'id', 'truck',
             'engine_oil_interval', 'engine_oil_last_km',
             'gearbox_oil_interval', 'gearbox_oil_last_km',
+            'auto_gearbox_oil_interval', 'auto_gearbox_oil_last_km',
+            'auto_gearbox_filter_interval', 'auto_gearbox_filter_last_km',
             'rear_axle_oil_interval', 'rear_axle_oil_last_km',
             'belts_interval', 'belts_last_km',
             'chains_interval', 'chains_last_km',

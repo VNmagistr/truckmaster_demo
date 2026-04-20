@@ -444,6 +444,8 @@ class TruckMaintenanceIntervals(models.Model):
     gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи КПП")
     auto_gearbox_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи АКПП (км)")
     auto_gearbox_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи АКПП")
+    auto_gearbox_filter_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни фільтра АКПП (км)")
+    auto_gearbox_filter_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні фільтра АКПП")
     rear_axle_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи заднього моста (км)")
     rear_axle_oil_last_km  = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи заднього моста")
     belts_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ремнів/роликів (км)")

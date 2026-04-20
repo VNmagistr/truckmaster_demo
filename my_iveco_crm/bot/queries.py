@@ -221,9 +221,15 @@ def get_maintenance_history(truck_id):
     if transmission == 'manual':
         gearbox_items = [('gearbox_oil_last_km', '⚙️ Олива КПП')]
     elif transmission == 'automatic':
-        gearbox_items = [('auto_gearbox_oil_last_km', '⚙️ Олива АКПП')]
+        gearbox_items = [
+            ('auto_gearbox_oil_last_km',    '⚙️ Олива АКПП'),
+            ('auto_gearbox_filter_last_km', '🔘 Фільтр АКПП'),
+        ]
     elif transmission == 'robotic':
-        gearbox_items = [('auto_gearbox_oil_last_km', '⚙️ Олива роботизованої КПП')]
+        gearbox_items = [
+            ('auto_gearbox_oil_last_km',    '⚙️ Олива роботизованої КПП'),
+            ('auto_gearbox_filter_last_km', '🔘 Фільтр роботизованої КПП'),
+        ]
     else:
         gearbox_items = [
             ('gearbox_oil_last_km', '⚙️ Олива КПП'),
@@ -284,9 +290,15 @@ def get_maintenance_status(truck_id, mileage):
     if transmission == 'manual':
         gearbox_items_s = [('gearbox_oil', '⚙️ Олива КПП')]
     elif transmission == 'automatic':
-        gearbox_items_s = [('auto_gearbox_oil', '⚙️ Олива АКПП')]
+        gearbox_items_s = [
+            ('auto_gearbox_oil',    '⚙️ Олива АКПП'),
+            ('auto_gearbox_filter', '🔘 Фільтр АКПП'),
+        ]
     elif transmission == 'robotic':
-        gearbox_items_s = [('auto_gearbox_oil', '⚙️ Олива роботизованої КПП')]
+        gearbox_items_s = [
+            ('auto_gearbox_oil',    '⚙️ Олива роботизованої КПП'),
+            ('auto_gearbox_filter', '🔘 Фільтр роботизованої КПП'),
+        ]
     else:
         gearbox_items_s = [
             ('gearbox_oil', '⚙️ Олива КПП'),
