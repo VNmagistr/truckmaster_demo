@@ -147,19 +147,20 @@ def _detect_work_type(work, truck=None):
     def matches(text, keywords):
         return any(kw in text for kw in keywords)
 
-    ENGINE_KW              = ('двигун', 'мотор', 'моторн', 'engine')
-    GEARBOX_KW             = ('кпп', 'коробк', 'трансміс', 'gearbox')
-    AUTO_GEARBOX_KW        = ('акпп', 'автоматич')
-    AUTO_GEARBOX_FILTER_KW = ('фільтр акпп', 'фільтр автоматич', 'atf filter', 'акпп фільтр')
-    AXLE_KW                = ('міст', 'мост', 'axle')
-    BELTS_KW               = ('ремін', 'ремн', 'ролик', 'belt')
-    CHAINS_KW              = ('ланцюг', 'chain')
+    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
+    AXLE_KW         = ('міст', 'мост', 'axle')
+    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW       = ('ланцюг', 'chain')
 
-    is_oil_change          = 'заміна оливи' in text or 'заміна масла' in text
-    is_axle                = matches(text, AXLE_KW)
-    is_auto_gearbox_filter = matches(text, AUTO_GEARBOX_FILTER_KW) and 'фільтр' in text
-    is_auto_gearbox        = matches(text, AUTO_GEARBOX_KW) and not is_auto_gearbox_filter
-    is_gearbox             = matches(text, GEARBOX_KW) and not is_auto_gearbox and not is_auto_gearbox_filter
+    name_only                = work.name.lower()
+    is_oil_change            = 'заміна оливи' in text or 'заміна масла' in text
+    is_axle                  = matches(text, AXLE_KW)
+    # фільтр АКПП: у назві роботи є "фільтр" + "акпп"/"автоматич", але не заміна оливи
+    is_auto_gearbox_filter   = ('фільтр' in name_only and matches(text, AUTO_GEARBOX_KW) and not is_oil_change)
+    is_auto_gearbox          = matches(text, AUTO_GEARBOX_KW) and not is_auto_gearbox_filter
+    is_gearbox               = matches(text, GEARBOX_KW) and not is_auto_gearbox and not is_auto_gearbox_filter
 
     if is_axle:
         return 'rear_axle'
@@ -279,13 +280,12 @@ def _update_maintenance_intervals(order):
 
     works = list(order.works.select_related('work__work_group').all())
 
-    ENGINE_KW              = ('двигун', 'мотор', 'моторн', 'engine')
-    GEARBOX_KW             = ('кпп', 'коробк', 'трансміс', 'gearbox')
-    AUTO_GEARBOX_KW        = ('акпп', 'автоматич')
-    AUTO_GEARBOX_FILTER_KW = ('фільтр акпп', 'фільтр автоматич', 'atf filter', 'акпп фільтр')
-    AXLE_KW                = ('міст', 'мост', 'axle')
-    BELTS_KW               = ('ремін', 'ремн', 'ролик', 'belt')
-    CHAINS_KW              = ('ланцюг', 'chain')
+    ENGINE_KW       = ('двигун', 'мотор', 'моторн', 'engine')
+    GEARBOX_KW      = ('кпп', 'коробк', 'трансміс', 'gearbox')
+    AUTO_GEARBOX_KW = ('акпп', 'автоматич')
+    AXLE_KW         = ('міст', 'мост', 'axle')
+    BELTS_KW        = ('ремін', 'ремн', 'ролик', 'belt')
+    CHAINS_KW       = ('ланцюг', 'chain')
     INTERVAL_KW = BELTS_KW + CHAINS_KW
 
     def matches(text, keywords):
@@ -311,9 +311,9 @@ def _update_maintenance_intervals(order):
         text = name + ' ' + group
 
         is_oil_change = 'заміна оливи' in text or 'заміна масла' in text
-        is_filter_change = 'заміна фільтр' in text or 'замін' in text and 'фільтр' in text
         is_axle = matches(text, AXLE_KW)
-        is_auto_gearbox_filter = matches(text, AUTO_GEARBOX_FILTER_KW) and (is_filter_change or 'фільтр' in text)
+        # фільтр АКПП: у назві роботи є "фільтр" + "акпп"/"автоматич", але не заміна оливи
+        is_auto_gearbox_filter = 'фільтр' in name and matches(text, AUTO_GEARBOX_KW) and not is_oil_change
         is_auto_gearbox = matches(text, AUTO_GEARBOX_KW) and not is_auto_gearbox_filter
         is_gearbox = matches(text, GEARBOX_KW) and not is_auto_gearbox and not is_auto_gearbox_filter
 
