@@ -2,7 +2,7 @@
 from django.db import models
 from django.conf import settings
 from core.models import SoftDeleteModel
-from django.db.models import Sum, F
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -127,7 +127,9 @@ class ServiceOrder(SoftDeleteModel):
         super().save(*args, **kwargs)
 
     def update_total_cost(self):
-        works_cost = self.works.aggregate(total=Sum('price_at_moment'))['total'] or 0
+        works_cost = self.works.aggregate(
+            total=Sum(ExpressionWrapper(F('price_at_moment') * F('hours_spent'), output_field=DecimalField()))
+        )['total'] or 0
         # Запчастини через ServiceWork
         work_parts_cost = UsedPart.objects.filter(
             service_work__service_order=self
@@ -174,7 +176,7 @@ class ServiceWork(models.Model):
 
     @property
     def amount(self):
-        return self.price_at_moment
+        return self.price_at_moment * self.hours_spent
 
     def save(self, *args, **kwargs):
         if self.work_id:
