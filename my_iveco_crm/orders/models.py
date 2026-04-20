@@ -324,7 +324,7 @@ class BaseMaintenanceKitFilter(models.Model):
         verbose_name="Інтервал заміни (км)"
     )
     service_type = models.CharField(
-        max_length=12,
+        max_length=20,
         choices=SERVICE_TYPE_CHOICES,
         default='both',
         verbose_name="Вид ТО",
@@ -430,7 +430,7 @@ class MaintenanceKitFilter(models.Model):
         help_text="Наприклад: 20000"
     )
     service_type = models.CharField(
-        max_length=12,
+        max_length=20,
         choices=SERVICE_TYPE_CHOICES,
         default='both',
         verbose_name="Вид ТО",
