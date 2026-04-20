@@ -95,12 +95,12 @@ class MaintenanceLogAdmin(admin.ModelAdmin):
 class MaintenanceKitAdmin(admin.ModelAdmin):
     list_display = ('truck', 'oil', 'oil_quantity', 'rear_axle_oil', 'gearbox_oil', 'auto_gearbox_oil')
     search_fields = ('truck__license_plate',)
-    autocomplete_fields = ['truck', 'oil', 'rear_axle_oil', 'gearbox_oil', 'auto_gearbox_oil']
+    autocomplete_fields = ['truck', 'oil', 'rear_axle_oil', 'gearbox_oil', 'auto_gearbox_oil', 'auto_gearbox_filter']
     fieldsets = (
         ('Олива двигуна', {'fields': ('truck', 'oil', 'oil_quantity', 'oil_change_interval_km')}),
         ('Олива заднього моста', {'fields': ('rear_axle_oil', 'rear_axle_oil_quantity')}),
         ('Олива КПП', {'fields': ('gearbox_oil', 'gearbox_oil_quantity')}),
-        ('Олива АКПП', {'fields': ('auto_gearbox_oil', 'auto_gearbox_oil_quantity')}),
+        ('Олива АКПП', {'fields': ('auto_gearbox_oil', 'auto_gearbox_oil_quantity', 'auto_gearbox_filter', 'auto_gearbox_filter_quantity')}),
     )
     inlines = [MaintenanceKitFilterInline]
 

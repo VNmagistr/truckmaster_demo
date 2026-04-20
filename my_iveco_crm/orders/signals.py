@@ -219,6 +219,22 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
         'auto_gearbox': ('auto_gearbox_oil','auto_gearbox_oil_quantity'),
     }
 
+    # Фільтр АКПП — окреме поле в наборі ТО
+    if work_type == 'auto_gearbox_filter':
+        filter_product = kit.auto_gearbox_filter
+        filter_qty = kit.auto_gearbox_filter_quantity
+        if filter_product and filter_qty:
+            part, created = UsedPart.objects.get_or_create(
+                service_work=instance,
+                part=filter_product,
+                defaults={'quantity': filter_qty}
+            )
+            if created:
+                StockService.deduct(part)
+        logger.info(f"Автоматично додано фільтр АКПП для {truck.license_plate}")
+        instance.service_order.update_total_cost()
+        return
+
     oil_field, qty_field = OIL_MAP.get(work_type, (None, None))
     if oil_field:
         oil_product = getattr(kit, oil_field)

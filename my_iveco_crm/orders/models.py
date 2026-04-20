@@ -391,6 +391,17 @@ class MaintenanceKit(models.Model):
         null=True, blank=True,
         verbose_name="Кількість оливи АКПП"
     )
+    auto_gearbox_filter = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='auto_gearbox_filter_for_trucks',
+        null=True, blank=True,
+        verbose_name="Фільтр АКПП"
+    )
+    auto_gearbox_filter_quantity = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Кількість фільтрів АКПП"
+    )
 
     def __str__(self):
         return f"Комплект ТО — {self.truck.specific_model_name} ({self.truck.license_plate})"
