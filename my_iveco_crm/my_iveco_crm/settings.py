@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "users",
     "clients",
     "orders",
+    "shortlinks",
     # Optional-модулі (можна вимкнути через адмінку)
     "inventory",
     "maintenance",
