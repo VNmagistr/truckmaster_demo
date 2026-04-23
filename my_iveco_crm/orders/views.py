@@ -118,6 +118,14 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 Q(truck__license_plate__icontains=global_search) |
                 Q(client__name__icontains=global_search)
             )
+
+        created_date = self.request.query_params.get('created_date')
+        if created_date:
+            try:
+                d = datetime.datetime.strptime(created_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(created_at__date=d)
+            except ValueError:
+                pass
         return queryset
 
     def perform_create(self, serializer):
