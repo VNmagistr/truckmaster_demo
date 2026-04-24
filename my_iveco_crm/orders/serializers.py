@@ -108,11 +108,12 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
     mechanic = MechanicSerializer(read_only=True)
     used_parts = UsedPartSerializer(many=True, read_only=True)
     amount = serializers.SerializerMethodField()
+    display_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = ServiceWork
         fields = '__all__'
-    
+
     def get_amount(self, obj):
         """Отримання суми за роботу."""
         try:
@@ -123,10 +124,10 @@ class ServiceWorkSerializer(serializers.ModelSerializer):
 
 class ServiceWorkWriteSerializer(serializers.ModelSerializer):
     """Серіалізатор виконаної роботи для запису."""
-    
+
     class Meta:
         model = ServiceWork
-        fields = ['service_order', 'work', 'description', 'mechanic', 'hours_spent']
+        fields = ['service_order', 'work', 'custom_name', 'description', 'mechanic', 'hours_spent']
 
 
 class RepairPhotoSerializer(serializers.ModelSerializer):

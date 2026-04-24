@@ -410,7 +410,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 story.append(Paragraph('Роботи та матеріали', h2))
 
             for idx, w in enumerate(works, 1):
-                work_name = w.work.name if w.work else (w.description or '—')
+                work_name = w.display_name or '—'
                 # Рядок роботи
                 wrow = Table(
                     [[Paragraph(f'<b>{idx}. {work_name}</b>', normal),
@@ -500,7 +500,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 ]]
                 works_total = sum(w.amount for w in works)
                 for w in works:
-                    name = w.work.name if w.work else (w.description or '—')
+                    name = w.display_name or '—'
                     work_data.append([
                         Paragraph(name, normal),
                         Paragraph(str(w.hours_spent), normal),

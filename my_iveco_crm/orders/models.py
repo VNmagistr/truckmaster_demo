@@ -154,10 +154,14 @@ class ServiceWork(models.Model):
         verbose_name="Наряд-замовлення"
     )
     work = models.ForeignKey(
-        WorkPrice, 
-        on_delete=models.SET_NULL, 
+        WorkPrice,
+        on_delete=models.SET_NULL,
         null=True,
         verbose_name="Робота"
+    )
+    custom_name = models.CharField(
+        max_length=255, blank=True,
+        verbose_name="Назва роботи в наряді"
     )
     description = models.TextField(blank=True, verbose_name="Опис")
     mechanic = models.ForeignKey(
@@ -177,6 +181,14 @@ class ServiceWork(models.Model):
     @property
     def amount(self):
         return self.price_at_moment * self.hours_spent
+
+    @property
+    def display_name(self):
+        if self.custom_name:
+            return self.custom_name
+        if self.work_id and self.work:
+            return self.work.name
+        return self.description or ''
 
     def save(self, *args, **kwargs):
         if self.work_id:

@@ -159,7 +159,7 @@ class CabinetServiceWorkSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     def get_work_name(self, obj):
-        return obj.work.name if obj.work else obj.description
+        return obj.display_name or ''
 
     class Meta:
         model = ServiceWork
