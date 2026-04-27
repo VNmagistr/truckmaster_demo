@@ -154,6 +154,91 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         serializer = OrderStatusHistorySerializer(history, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='check-number')
+    def check_number(self, request):
+        """Перевірити чи існує наряд з таким order_number.
+
+        Query params:
+            order_number (str): обовʼязковий
+            truck_id (int): опційний — для перевірки чи це той самий автомобіль
+            exclude_id (int): опційний — виключити поточний наряд (для редагування)
+
+        Response:
+            {exists, same_truck, order_id, order_number, status, status_display,
+             created_at, can_continue, truck, client_name}
+        """
+        order_number = request.query_params.get('order_number', '').strip()
+        truck_id = request.query_params.get('truck_id')
+        exclude_id = request.query_params.get('exclude_id')
+
+        if not order_number:
+            return Response({'exists': False})
+
+        qs = ServiceOrder.objects.select_related('truck', 'client').filter(
+            order_number=order_number
+        )
+        if exclude_id:
+            try:
+                qs = qs.exclude(pk=int(exclude_id))
+            except (ValueError, TypeError):
+                pass
+
+        order = qs.first()
+        if not order:
+            return Response({'exists': False})
+
+        same_truck = False
+        if truck_id and order.truck_id:
+            try:
+                same_truck = int(truck_id) == order.truck_id
+            except (ValueError, TypeError):
+                same_truck = False
+
+        truck_data = None
+        if order.truck:
+            truck_data = {
+                'id': order.truck.id,
+                'license_plate': order.truck.license_plate,
+                'model': order.truck.specific_model_name,
+            }
+
+        return Response({
+            'exists': True,
+            'same_truck': same_truck,
+            'order_id': order.id,
+            'order_number': order.order_number,
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            'created_at': order.created_at,
+            'truck': truck_data,
+            'client_name': order.client.name if order.client else None,
+        })
+
+    @action(detail=True, methods=['post'], url_path='continue-order')
+    def continue_order(self, request, pk=None):
+        """Продовжити наряд: якщо статус DONE/CLOSED — переводимо в IN_PROGRESS.
+
+        Якщо статус інший — лишаємо без змін.
+        """
+        order = self.get_object()
+        closed_statuses = (
+            ServiceOrder.StatusChoices.DONE,
+            ServiceOrder.StatusChoices.CLOSED,
+        )
+        changed = False
+        if order.status in closed_statuses:
+            order._changed_by = request.user
+            order.status = ServiceOrder.StatusChoices.IN_PROGRESS
+            order.closed_at = None
+            order.save()
+            changed = True
+        return Response({
+            'order_id': order.id,
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            'changed': changed,
+        })
+
     @action(detail=False, methods=['get'], url_path='search-truck')
     def search_truck(self, request):
         """Пошук вантажівки за номерним знаком."""
