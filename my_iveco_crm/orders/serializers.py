@@ -28,10 +28,14 @@ class TruckSerializerForOrder(serializers.ModelSerializer):
     """
     client_name = serializers.SerializerMethodField()
     client_id = serializers.SerializerMethodField()
+    base_model_name = serializers.CharField(source='base_model.name', read_only=True, default=None)
 
     class Meta:
         model = Truck
-        fields = ['id', 'license_plate', 'specific_model_name', 'last_seven_vin', 'client_id', 'client_name']
+        fields = [
+            'id', 'license_plate', 'specific_model_name', 'last_seven_vin',
+            'client_id', 'client_name', 'base_model_name',
+        ]
 
     def get_client_name(self, obj):
         """Безпечне отримання імені клієнта."""
@@ -222,6 +226,7 @@ class ServiceOrderDetailSerializer(serializers.ModelSerializer):
             'problem_description',
             'recommendations',
             'current_mileage',
+            'engine_hours',
             'status',
             'created_at',
             'closed_at',

@@ -246,7 +246,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if len(plate_query) < 2:
             return Response({'results': []}, status=status.HTTP_200_OK)
 
-        trucks = Truck.objects.select_related('client').filter(
+        trucks = Truck.objects.select_related('client', 'base_model').filter(
             license_plate__icontains=plate_query
         )[:10]
 
@@ -256,6 +256,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'id': truck.id,
                 'license_plate': truck.license_plate,
                 'model': truck.specific_model_name,
+                'base_model_name': truck.base_model.name if truck.base_model else None,
                 'vin': truck.last_seven_vin,
                 'client_id': truck.client.id if truck.client else None,
                 'client_name': truck.client.name if truck.client else "Без власника"

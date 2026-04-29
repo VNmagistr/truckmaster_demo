@@ -83,6 +83,11 @@ class ServiceOrder(SoftDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, verbose_name="Клієнт")
     truck = models.ForeignKey(Truck, on_delete=models.PROTECT, verbose_name="Вантажівка")
     current_mileage = models.PositiveIntegerField(null=True, blank=True, verbose_name="Поточний пробіг")
+    engine_hours = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Мотогодини",
+        help_text="Заповнюється для моделей зі спецтехнікою (напр. Trakker)",
+    )
     problem_description = models.TextField(blank=True, verbose_name="Опис проблеми")
     recommendations = models.TextField(blank=True, verbose_name="Рекомендації")
     car_photo = models.ImageField(upload_to='order_photos/cars/', blank=True, null=True, validators=[validate_image])
