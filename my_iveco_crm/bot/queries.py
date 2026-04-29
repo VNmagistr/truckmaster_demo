@@ -265,6 +265,7 @@ def get_maintenance_history(truck_id):
         ('belts_last_km',         '🔗 Ремені/ролики'),
         ('chains_last_km',        '⛓ Ланцюги'),
     ]
+    unit = 'мг' if intervals and getattr(intervals, 'tracking_mode', 'mileage') == 'engine_hours' else 'км'
     lines = [
         f"🚚 *{truck.license_plate}* ({truck.specific_model_name})",
         "",
@@ -282,11 +283,11 @@ def get_maintenance_history(truck_id):
         if order:
             date_str = timezone.localtime(order.updated_at).strftime('%d.%m.%Y')
             km_str = f"{last_km:,}".replace(",", " ") if last_km else "—"
-            lines.append(f"   📅 {date_str}   •   📏 {km_str} км")
+            lines.append(f"   📅 {date_str}   •   📏 {km_str} {unit}")
             lines.append(f"   _(Наряд {order.order_number})_\n")
         elif last_km:
             km_str = f"{last_km:,}".replace(",", " ")
-            lines.append(f"   📏 {km_str} км _(дата не збережена)_\n")
+            lines.append(f"   📏 {km_str} {unit} _(дата не збережена)_\n")
         else:
             lines.append("   ❓ Даних немає\n")
     return "\n".join(lines)
@@ -334,10 +335,13 @@ def get_maintenance_status(truck_id, mileage):
         ('belts',         '🔗 Ремені/ролики'),
         ('chains',        '⛓ Ланцюги'),
     ]
+    is_hours = getattr(intervals, 'tracking_mode', 'mileage') == 'engine_hours'
+    unit = 'мг' if is_hours else 'км'
+    current_label = 'Поточні мотогодини' if is_hours else 'Поточний пробіг'
     fmt_mileage = f"{mileage:,}".replace(",", " ")
     lines = [
         f"🚚 *{truck.license_plate}* ({truck.specific_model_name})",
-        f"📏 Поточний пробіг: *{fmt_mileage} км*\n",
+        f"📏 {current_label}: *{fmt_mileage} {unit}*\n",
         "🔧 *Стан регламентних робіт:*\n",
     ]
     has_data = False
@@ -357,15 +361,15 @@ def get_maintenance_status(truck_id, mileage):
             icon = "✅" if remaining > 0.2 * interval else "⚠️"
             lines.append(
                 f"{label}\n"
-                f"   {icon} Залишилось: *{fmt_rem} км*\n"
-                f"   _(остання: {fmt_last} км → наступна: {fmt_next} км)_\n"
+                f"   {icon} Залишилось: *{fmt_rem} {unit}*\n"
+                f"   _(остання: {fmt_last} {unit} → наступна: {fmt_next} {unit})_\n"
             )
         else:
             fmt_over = f"{abs(remaining):,}".replace(",", " ")
             lines.append(
                 f"{label}\n"
-                f"   🚨 Прострочено на *{fmt_over} км*!\n"
-                f"   _(мало бути: {fmt_next} км)_\n"
+                f"   🚨 Прострочено на *{fmt_over} {unit}*!\n"
+                f"   _(мало бути: {fmt_next} {unit})_\n"
             )
     if not has_data:
         lines.append("ℹ️ Інтервали не налаштовано. Зверніться до менеджера.")

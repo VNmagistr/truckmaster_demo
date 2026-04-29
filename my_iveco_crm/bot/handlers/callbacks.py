@@ -71,9 +71,19 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         truck    = await sync_to_async(Truck.objects.get)(id=truck_id)
         clear_awaiting_states(ud)
         ud['awaiting_maintenance_mileage_truck_id'] = truck_id
+        # Якщо інтервали ведуться по мотогодинах — питаємо мотогодини
+        from orders.models import TruckMaintenanceIntervals
+        intervals = await sync_to_async(
+            lambda: TruckMaintenanceIntervals.objects.filter(truck=truck).first()
+        )()
+        is_hours = intervals and intervals.tracking_mode == 'engine_hours'
+        prompt = (
+            "Введіть поточні мотогодини (тільки число, наприклад: 12500):"
+            if is_hours else
+            "Введіть поточний пробіг (тільки число, наприклад: 185000):"
+        )
         await query.edit_message_text(
-            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n"
-            "Введіть поточний пробіг (тільки число, наприклад: 185000):",
+            f"🚚 *{truck.license_plate}* ({truck.specific_model_name})\n\n{prompt}",
             parse_mode='Markdown',
         )
 

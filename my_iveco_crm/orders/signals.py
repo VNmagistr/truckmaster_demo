@@ -268,11 +268,19 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
 def _update_maintenance_intervals(order):
     """
     При переході наряду в DONE оновлює TruckMaintenanceIntervals:
-    встановлює *_last_km = поточний пробіг для відповідних типів робіт.
+    встановлює *_last_km = поточний пробіг (або мотогодини, якщо інтервали
+    цієї вантажівки ведуться в режимі engine_hours).
     """
     truck = order.truck
-    current_km = order.current_mileage
-    if not truck or not current_km:
+    if not truck:
+        return
+
+    # Визначаємо режим обліку для цієї вантажівки (якщо запис ще не існує — mileage)
+    existing_intervals = getattr(truck, 'maintenance_intervals', None)
+    tracking_mode = getattr(existing_intervals, 'tracking_mode', 'mileage') if existing_intervals else 'mileage'
+
+    current_km = order.engine_hours if tracking_mode == 'engine_hours' else order.current_mileage
+    if not current_km:
         return
 
     works = list(order.works.select_related('work__work_group').all())

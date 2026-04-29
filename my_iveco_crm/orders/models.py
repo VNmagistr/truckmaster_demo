@@ -461,11 +461,24 @@ class MaintenanceKitFilter(models.Model):
 
 class TruckMaintenanceIntervals(models.Model):
     """Інтервали регламентних робіт для вантажівки."""
+
+    class TrackingMode(models.TextChoices):
+        MILEAGE = 'mileage', 'По кілометражу'
+        ENGINE_HOURS = 'engine_hours', 'По мотогодинах'
+
     truck = models.OneToOneField(
         Truck,
         on_delete=models.CASCADE,
         related_name='maintenance_intervals',
         verbose_name="Вантажівка"
+    )
+    tracking_mode = models.CharField(
+        max_length=20,
+        choices=TrackingMode.choices,
+        default=TrackingMode.MILEAGE,
+        verbose_name="Режим обліку",
+        help_text="Для спецтехніки (Trakker) можна вести облік у мотогодинах. "
+                  "У режимі engine_hours поля *_interval/*_last_km інтерпретуються як години.",
     )
     engine_oil_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи двигуна (км)")
     engine_oil_last_km   = models.PositiveIntegerField(null=True, blank=True, verbose_name="Пробіг при останній заміні оливи двигуна")

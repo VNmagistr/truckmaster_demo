@@ -407,7 +407,7 @@ class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TruckMaintenanceIntervals
         fields = [
-            'id', 'truck',
+            'id', 'truck', 'tracking_mode',
             'engine_oil_interval', 'engine_oil_last_km',
             'gearbox_oil_interval', 'gearbox_oil_last_km',
             'auto_gearbox_oil_interval', 'auto_gearbox_oil_last_km',
