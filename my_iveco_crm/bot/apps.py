@@ -19,3 +19,4 @@ class BotConfig(AppConfig):
     def ready(self):
         from core.registry import register_module
         register_module(self.MODULE_INFO)
+        from . import signals  # noqa: F401
