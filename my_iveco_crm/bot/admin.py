@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BotUser, BotMessageLog, MileageReport, BotSettings
+from .models import BotUser, BotMessageLog, MileageReport, BotSettings, UnknownPlateSearch
 
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
@@ -53,3 +53,11 @@ class BotSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(UnknownPlateSearch)
+class UnknownPlateSearchAdmin(admin.ModelAdmin):
+    list_display = ('plate', 'search_count', 'last_searched_at', 'last_searched_by', 'notes')
+    list_filter = ('last_searched_at',)
+    search_fields = ('plate', 'notes')
+    readonly_fields = ('plate', 'search_count', 'first_searched_at', 'last_searched_at', 'last_searched_by')

@@ -95,10 +95,31 @@ class ReminderSettings(models.Model):
     """Налаштування нагадувань для користувача"""
     bot_user = models.ForeignKey(BotUser, on_delete=models.CASCADE, verbose_name="Користувач")
     truck = models.ForeignKey(Truck, on_delete=models.CASCADE, verbose_name="Вантажівка")
-    reminder_type = models.CharField(max_length=50, default='maintenance', verbose_name="Тип нагадування") 
+    reminder_type = models.CharField(max_length=50, default='maintenance', verbose_name="Тип нагадування")
     is_enabled = models.BooleanField(default=True, verbose_name="Увімкнено")
-    
+
     class Meta:
         unique_together = ['bot_user', 'truck', 'reminder_type']
         verbose_name = "Налаштування нагадування"
         verbose_name_plural = "Налаштування нагадувань"
+
+
+class UnknownPlateSearch(models.Model):
+    """Номерні знаки, яких не знайдено при пошуку через бот."""
+    plate = models.CharField(max_length=32, unique=True, verbose_name="Номерний знак")
+    search_count = models.PositiveIntegerField(default=1, verbose_name="К-ть пошуків")
+    first_searched_at = models.DateTimeField(auto_now_add=True, verbose_name="Перший пошук")
+    last_searched_at = models.DateTimeField(auto_now=True, verbose_name="Останній пошук")
+    last_searched_by = models.ForeignKey(
+        BotUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='unknown_plate_searches', verbose_name="Хто шукав останнім"
+    )
+    notes = models.CharField(max_length=255, blank=True, verbose_name="Нотатка")
+
+    class Meta:
+        verbose_name = "Невідомий номер"
+        verbose_name_plural = "Невідомі номери"
+        ordering = ['-last_searched_at']
+
+    def __str__(self):
+        return f"{self.plate} (×{self.search_count})"

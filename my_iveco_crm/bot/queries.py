@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from clients.models import Client, Truck
-from bot.models import BotUser, BotMessageLog
+from bot.models import BotUser, BotMessageLog, UnknownPlateSearch
 from orders.models import ServiceOrder, RepairPhoto
 
 logger = logging.getLogger(__name__)
@@ -135,10 +135,24 @@ def get_my_cars_with_keyboard(bot_user):
 
 
 @sync_to_async
-def find_truck_by_plate(plate):
+def find_truck_by_plate(plate, bot_user=None):
     clean = plate.strip().upper().replace(' ', '')
+    if not clean:
+        return "Не знайдено."
     trucks = Truck.objects.filter(license_plate__icontains=clean).select_related('client')
     if not trucks:
+        try:
+            obj, created = UnknownPlateSearch.objects.get_or_create(
+                plate=clean,
+                defaults={'last_searched_by': bot_user},
+            )
+            if not created:
+                obj.search_count = (obj.search_count or 0) + 1
+                if bot_user:
+                    obj.last_searched_by = bot_user
+                obj.save(update_fields=['search_count', 'last_searched_by', 'last_searched_at'])
+        except Exception as e:
+            logger.error(f"log unknown plate failed: {e}")
         return "Не знайдено."
     return ''.join(
         f"🚚 {t.license_plate} ({t.specific_model_name})\n"

@@ -110,7 +110,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(bot_reply, parse_mode='Markdown')
 
     elif ud.get('awaiting_truck'):
-        bot_reply = await find_truck_by_plate(text)
+        bot_reply = await find_truck_by_plate(text, bot_user)
         await update.message.reply_text(bot_reply)
         ud['awaiting_truck'] = False
 

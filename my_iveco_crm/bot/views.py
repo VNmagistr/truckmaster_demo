@@ -5,9 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import BotUser, BotMessageLog, ReminderSettings
+from .models import BotUser, BotMessageLog, ReminderSettings, UnknownPlateSearch
 from .serializers import (
-    BotUserSerializer, MessageLogSerializer, ReminderSettingsSerializer
+    BotUserSerializer, MessageLogSerializer, ReminderSettingsSerializer,
+    UnknownPlateSearchSerializer,
 )
 
 
@@ -68,3 +69,15 @@ class ReminderSettingsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['bot_user', 'truck', 'reminder_type', 'is_enabled']
+
+
+class UnknownPlateSearchViewSet(viewsets.ModelViewSet):
+    """API для невідомих номерів, які шукали через бот."""
+    queryset = UnknownPlateSearch.objects.select_related('last_searched_by').all()
+    serializer_class = UnknownPlateSearchSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['plate', 'notes']
+    ordering_fields = ['last_searched_at', 'first_searched_at', 'search_count', 'plate']
+    ordering = ['-last_searched_at']
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
