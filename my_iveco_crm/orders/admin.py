@@ -3,6 +3,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     MaintenanceKit, MaintenanceKitFilter, MaintenanceRule,
     MaintenanceLog, RepairPhoto, TruckMaintenanceIntervals,
+    MaintenanceIntervalsTemplate,
 )
 
 
@@ -116,5 +117,36 @@ class MaintenanceKitFilterAdmin(admin.ModelAdmin):
 
 @admin.register(TruckMaintenanceIntervals)
 class TruckMaintenanceIntervalsAdmin(admin.ModelAdmin):
-    list_display = ('truck', 'engine_oil_interval', 'engine_oil_last_km')
+    list_display = ('truck', 'tracking_mode', 'engine_oil_interval', 'engine_oil_last_km')
+    list_filter = ('tracking_mode',)
     autocomplete_fields = ['truck']
+
+
+@admin.register(MaintenanceIntervalsTemplate)
+class MaintenanceIntervalsTemplateAdmin(admin.ModelAdmin):
+    list_display = (
+        'base_model', 'euro_standard', 'transmission_type', 'tracking_mode',
+        'engine_oil_interval', 'updated_at',
+    )
+    list_filter = ('base_model', 'euro_standard', 'transmission_type', 'tracking_mode')
+    search_fields = ('base_model__name', 'notes')
+    autocomplete_fields = ['base_model']
+    fieldsets = (
+        ('Комбінація', {
+            'fields': ('base_model', 'euro_standard', 'transmission_type', 'tracking_mode'),
+        }),
+        ('Інтервали', {
+            'fields': (
+                'engine_oil_interval',
+                'gearbox_oil_interval',
+                'auto_gearbox_oil_interval',
+                'auto_gearbox_filter_interval',
+                'rear_axle_oil_interval',
+                'belts_interval',
+                'chains_interval',
+            ),
+        }),
+        ('Інше', {
+            'fields': ('notes',),
+        }),
+    )

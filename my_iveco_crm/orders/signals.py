@@ -5,7 +5,12 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder, RepairPhoto, TruckMaintenanceIntervals
+from clients.models import Truck
+
+from .models import (
+    ServiceWork, MaintenanceKit, MaintenanceKitFilter, ServiceOrder,
+    RepairPhoto, TruckMaintenanceIntervals, MaintenanceIntervalsTemplate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -385,6 +390,69 @@ def _revert_maintenance_intervals(order):
         )
     except Exception as e:
         logger.error(f"Помилка відновлення інтервалів ТО: {e}")
+
+
+def _find_template_for_truck(truck):
+    """Шукає найбільш специфічний еталон інтервалів для цієї вантажівки.
+
+    Пріоритет (зверху вниз):
+    1. base_model + euro_standard + transmission_type точно збігаються
+    2. base_model + euro_standard (transmission порожній в шаблоні)
+    3. base_model + transmission_type (euro порожній)
+    4. base_model (обидва порожні)
+    """
+    if not truck.base_model_id:
+        return None
+
+    truck_euro = truck.euro_standard or ''
+    truck_trans = truck.transmission_type or ''
+
+    candidates = MaintenanceIntervalsTemplate.objects.filter(base_model_id=truck.base_model_id)
+
+    def _match(euro, trans):
+        return candidates.filter(euro_standard=euro, transmission_type=trans).first()
+
+    return (
+        _match(truck_euro, truck_trans)
+        or _match(truck_euro, '')
+        or _match('', truck_trans)
+        or _match('', '')
+    )
+
+
+@receiver(post_save, sender=Truck)
+def autofill_truck_maintenance_intervals(sender, instance, **kwargs):
+    """Після збереження вантажівки заповнює відсутні інтервали ТО з еталона."""
+    try:
+        template = _find_template_for_truck(instance)
+        if not template:
+            return
+
+        intervals, created = TruckMaintenanceIntervals.objects.get_or_create(truck=instance)
+
+        update_fields = []
+        # Не перезаписуємо вже заповнені поля — еталон тільки доповнює.
+        for field in MaintenanceIntervalsTemplate.INTERVAL_FIELDS:
+            if getattr(intervals, field) is None:
+                tpl_value = getattr(template, field, None)
+                if tpl_value is not None:
+                    setattr(intervals, field, tpl_value)
+                    update_fields.append(field)
+
+        # Режим обліку проставляємо лише якщо запис щойно створено,
+        # щоб не зламати ручний вибір власника майстерні.
+        if created and intervals.tracking_mode != template.tracking_mode:
+            intervals.tracking_mode = template.tracking_mode
+            update_fields.append('tracking_mode')
+
+        if update_fields:
+            intervals.save(update_fields=update_fields)
+            logger.info(
+                f"Інтервали ТО для {instance.license_plate} автозаповнено з еталона "
+                f"{template} ({len(update_fields)} полів)"
+            )
+    except Exception as e:
+        logger.error(f"autofill_truck_maintenance_intervals failed for truck {instance.pk}: {e}")
 
 
 @receiver(post_save, sender=RepairPhoto)

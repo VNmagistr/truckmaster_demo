@@ -4,7 +4,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
     BaseMaintenanceKit, BaseMaintenanceKitFilter,
-    TruckMaintenanceIntervals,
+    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate,
     OrderStatusHistory,
 )
 from clients.models import Client, Truck
@@ -416,3 +416,26 @@ class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
             'belts_interval', 'belts_last_km',
             'chains_interval', 'chains_last_km',
         ]
+
+
+class MaintenanceIntervalsTemplateSerializer(serializers.ModelSerializer):
+    """Серіалізатор еталона інтервалів ТО."""
+    base_model_name = serializers.CharField(source='base_model.name', read_only=True)
+
+    class Meta:
+        model = MaintenanceIntervalsTemplate
+        fields = [
+            'id',
+            'base_model', 'base_model_name',
+            'euro_standard', 'transmission_type', 'tracking_mode',
+            'engine_oil_interval',
+            'gearbox_oil_interval',
+            'auto_gearbox_oil_interval',
+            'auto_gearbox_filter_interval',
+            'rear_axle_oil_interval',
+            'belts_interval',
+            'chains_interval',
+            'notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']

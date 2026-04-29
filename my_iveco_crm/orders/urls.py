@@ -11,6 +11,7 @@ from .views import (
     MaintenanceKitViewSet,
     MaintenanceKitFilterViewSet,
     TruckMaintenanceIntervalsViewSet,
+    MaintenanceIntervalsTemplateViewSet,
     BaseMaintenanceKitViewSet,
 )
 
@@ -32,6 +33,7 @@ router.register(r'maintenance-logs', MaintenanceLogViewSet)
 router.register(r'maintenance-kits', MaintenanceKitViewSet, basename='maintenance-kits')
 router.register(r'maintenance-kit-filters', MaintenanceKitFilterViewSet, basename='maintenance-kit-filters')
 router.register(r'maintenance-intervals', TruckMaintenanceIntervalsViewSet, basename='maintenance-intervals')
+router.register(r'maintenance-templates', MaintenanceIntervalsTemplateViewSet, basename='maintenance-templates')
 router.register(r'base-maintenance-kits', BaseMaintenanceKitViewSet, basename='base-maintenance-kits')
 
 urlpatterns = [

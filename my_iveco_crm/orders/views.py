@@ -30,7 +30,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
     BaseMaintenanceKit, BaseMaintenanceKitFilter,
-    TruckMaintenanceIntervals,
+    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate,
     OrderStatusHistory,
 )
 from clients.models import Truck
@@ -53,7 +53,7 @@ from .serializers import (
     BaseMaintenanceKitWriteSerializer,
     BaseMaintenanceKitFilterSerializer,
     UsedPartSerializer,
-    TruckMaintenanceIntervalsSerializer,
+    TruckMaintenanceIntervalsSerializer, MaintenanceIntervalsTemplateSerializer,
     OrderStatusHistorySerializer,
 )
 
@@ -1231,6 +1231,44 @@ class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class MaintenanceIntervalsTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet для еталонів інтервалів ТО (по комбінації base_model + euro + transmission)."""
+    serializer_class = MaintenanceIntervalsTemplateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['base_model', 'euro_standard', 'transmission_type', 'tracking_mode']
+    ordering_fields = ['base_model__name', 'euro_standard', 'transmission_type', 'updated_at']
+    ordering = ['base_model__name', 'euro_standard', 'transmission_type']
+
+    def get_queryset(self):
+        return MaintenanceIntervalsTemplate.objects.select_related('base_model').all()
+
+    @action(detail=True, methods=['post'], url_path='apply-to-truck/(?P<truck_id>[^/.]+)')
+    def apply_to_truck(self, request, pk=None, truck_id=None):
+        """Застосувати конкретний еталон до конкретної вантажівки.
+        Заповнює лише порожні поля інтервалів."""
+        template = self.get_object()
+        intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck_id=truck_id)
+        update_fields = []
+        for field in MaintenanceIntervalsTemplate.INTERVAL_FIELDS:
+            if getattr(intervals, field) is None:
+                tpl_value = getattr(template, field, None)
+                if tpl_value is not None:
+                    setattr(intervals, field, tpl_value)
+                    update_fields.append(field)
+        if intervals.tracking_mode != template.tracking_mode and not any(
+            getattr(intervals, f) is not None for f in MaintenanceIntervalsTemplate.INTERVAL_FIELDS
+        ):
+            intervals.tracking_mode = template.tracking_mode
+            update_fields.append('tracking_mode')
+        if update_fields:
+            intervals.save(update_fields=update_fields)
+        return Response({
+            'updated_fields': update_fields,
+            'intervals': TruckMaintenanceIntervalsSerializer(intervals).data,
+        })
 
 
 class BaseMaintenanceKitViewSet(viewsets.ModelViewSet):

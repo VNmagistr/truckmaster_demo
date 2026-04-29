@@ -501,3 +501,81 @@ class TruckMaintenanceIntervals(models.Model):
 
     def __str__(self):
         return f"Інтервали ТО: {self.truck}"
+
+
+class MaintenanceIntervalsTemplate(models.Model):
+    """
+    Еталон інтервалів регламентних робіт за комбінацією
+    (базова модель, євростандарт, тип КПП). Після збереження
+    вантажівки сигнал заповнює її TruckMaintenanceIntervals
+    значеннями зі знайденого еталона (тільки порожні поля).
+    """
+    base_model = models.ForeignKey(
+        'clients.IvecoBaseModel',
+        on_delete=models.CASCADE,
+        related_name='interval_templates',
+        verbose_name="Базова модель",
+    )
+    euro_standard = models.CharField(
+        max_length=10,
+        blank=True, default='',
+        verbose_name="Євростандарт",
+        help_text="Залиште порожнім, щоб еталон підходив до будь-якого євростандарту",
+    )
+    transmission_type = models.CharField(
+        max_length=10,
+        blank=True, default='',
+        verbose_name="Тип КПП",
+        help_text="Залиште порожнім, щоб еталон підходив до будь-якої КПП",
+    )
+    tracking_mode = models.CharField(
+        max_length=20,
+        choices=TruckMaintenanceIntervals.TrackingMode.choices,
+        default=TruckMaintenanceIntervals.TrackingMode.MILEAGE,
+        verbose_name="Режим обліку",
+    )
+
+    engine_oil_interval          = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи двигуна")
+    gearbox_oil_interval         = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи КПП")
+    auto_gearbox_oil_interval    = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи АКПП")
+    auto_gearbox_filter_interval = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни фільтра АКПП")
+    rear_axle_oil_interval       = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни оливи заднього моста")
+    belts_interval               = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ремнів/роликів")
+    chains_interval              = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ланцюгів")
+
+    notes = models.CharField(max_length=255, blank=True, default='', verbose_name="Нотатка")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    INTERVAL_FIELDS = (
+        'engine_oil_interval',
+        'gearbox_oil_interval',
+        'auto_gearbox_oil_interval',
+        'auto_gearbox_filter_interval',
+        'rear_axle_oil_interval',
+        'belts_interval',
+        'chains_interval',
+    )
+
+    class Meta:
+        verbose_name = "Еталон регламенту ТО"
+        verbose_name_plural = "Еталони регламенту ТО"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['base_model', 'euro_standard', 'transmission_type'],
+                name='uniq_template_per_combo',
+            ),
+        ]
+        ordering = ['base_model__name', 'euro_standard', 'transmission_type']
+
+    def __str__(self):
+        parts = [self.base_model.name]
+        if self.euro_standard:
+            parts.append(self.euro_standard)
+        if self.transmission_type:
+            parts.append(self.get_transmission_type_display())
+        return ' / '.join(parts)
+
+    def get_transmission_type_display(self):
+        mapping = dict(Truck.TRANSMISSION_CHOICES)
+        return mapping.get(self.transmission_type, self.transmission_type)
