@@ -7,6 +7,7 @@ class BotUserAdmin(admin.ModelAdmin):
     list_filter = ('role', 'is_active', 'is_blocked')
     search_fields = ('username', 'first_name', 'last_name', 'phone_number', 'client__name')
     autocomplete_fields = ['client']
+    filter_horizontal = ('assigned_trucks',)
     readonly_fields = ('created_at', 'last_activity')
     
     fieldsets = (
