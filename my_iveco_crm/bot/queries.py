@@ -120,7 +120,16 @@ def get_my_cars_with_keyboard(bot_user):
     if not bot_user.client:
         return {"reply_text": "Ви не авторизовані як клієнт.", "keyboard": None}
 
-    trucks = bot_user.assigned_trucks.all()
+    # Водій бачить лише закріплені за ним авто; власник — усі авто свого клієнта.
+    if bot_user.role == 'driver':
+        trucks = bot_user.assigned_trucks.filter(marked_for_deletion=False)
+    else:
+        trucks = Truck.objects.filter(
+            client=bot_user.client,
+            marked_for_deletion=False,
+        )
+    trucks = trucks.order_by('license_plate')
+
     if not trucks.exists():
         return {"reply_text": "За вами не закріплено авто.", "keyboard": None}
 
@@ -385,7 +394,15 @@ def get_client_reminders(bot_user):
     from maintenance.models import ServiceReminder
     if not bot_user.client:
         return []
-    trucks = list(bot_user.assigned_trucks.all())
+    # Власник бачить нагадування для всіх авто свого клієнта,
+    # водій — лише для закріплених за ним.
+    if bot_user.role == 'driver':
+        trucks = list(bot_user.assigned_trucks.filter(marked_for_deletion=False))
+    else:
+        trucks = list(Truck.objects.filter(
+            client=bot_user.client,
+            marked_for_deletion=False,
+        ))
     if not trucks:
         return []
     reminders = list(
