@@ -30,7 +30,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
     BaseMaintenanceKit, BaseMaintenanceKitFilter,
-    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate,
+    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate, TemplateKitFilter,
     OrderStatusHistory,
 )
 from clients.models import Truck
@@ -1078,7 +1078,8 @@ class MaintenanceKitViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return MaintenanceKit.objects.select_related(
-            'truck', 'oil'
+            'truck', 'oil', 'rear_axle_oil', 'gearbox_oil',
+            'auto_gearbox_oil', 'auto_gearbox_filter',
         ).prefetch_related(
             'filters', 'filters__part'
         ).all()
@@ -1243,31 +1244,66 @@ class MaintenanceIntervalsTemplateViewSet(viewsets.ModelViewSet):
     ordering = ['base_model__name', 'euro_standard', 'transmission_type']
 
     def get_queryset(self):
-        return MaintenanceIntervalsTemplate.objects.select_related('base_model').all()
+        return MaintenanceIntervalsTemplate.objects.select_related(
+            'base_model', 'oil', 'rear_axle_oil', 'gearbox_oil',
+            'auto_gearbox_oil', 'auto_gearbox_filter',
+        ).prefetch_related('filters', 'filters__part').all()
 
     @action(detail=True, methods=['post'], url_path='apply-to-truck/(?P<truck_id>[^/.]+)')
     def apply_to_truck(self, request, pk=None, truck_id=None):
-        """Застосувати конкретний еталон до конкретної вантажівки.
-        Заповнює лише порожні поля інтервалів."""
+        """Застосувати еталон до вантажівки: інтервали + комплект ТО (мастила і фільтри)."""
         template = self.get_object()
-        intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck_id=truck_id)
+        truck = Truck.objects.get(pk=truck_id)
+
+        intervals, _ = TruckMaintenanceIntervals.objects.get_or_create(truck=truck)
         update_fields = []
         for field in MaintenanceIntervalsTemplate.INTERVAL_FIELDS:
-            if getattr(intervals, field) is None:
-                tpl_value = getattr(template, field, None)
-                if tpl_value is not None:
-                    setattr(intervals, field, tpl_value)
-                    update_fields.append(field)
-        if intervals.tracking_mode != template.tracking_mode and not any(
-            getattr(intervals, f) is not None for f in MaintenanceIntervalsTemplate.INTERVAL_FIELDS
-        ):
+            tpl_value = getattr(template, field, None)
+            if tpl_value is not None:
+                setattr(intervals, field, tpl_value)
+                update_fields.append(field)
+        if template.tracking_mode:
             intervals.tracking_mode = template.tracking_mode
             update_fields.append('tracking_mode')
         if update_fields:
             intervals.save(update_fields=update_fields)
+
+        kit_data = None
+        if template.oil_id:
+            kit, _ = MaintenanceKit.objects.get_or_create(
+                truck=truck,
+                defaults={'oil': template.oil, 'oil_quantity': template.oil_quantity or 0},
+            )
+            kit.oil = template.oil
+            kit.oil_quantity = template.oil_quantity or 0
+            for fk_field, qty_field in MaintenanceIntervalsTemplate.OIL_FIELDS:
+                setattr(kit, fk_field, getattr(template, fk_field))
+                setattr(kit, qty_field, getattr(template, qty_field))
+            kit.auto_gearbox_filter = template.auto_gearbox_filter
+            kit.auto_gearbox_filter_quantity = template.auto_gearbox_filter_quantity
+            kit.save()
+
+            kit.filters.all().delete()
+            tpl_filters = template.filters.select_related('part').all()
+            if tpl_filters:
+                MaintenanceKitFilter.objects.bulk_create([
+                    MaintenanceKitFilter(
+                        maintenance_kit=kit,
+                        part=f.part,
+                        quantity=f.quantity,
+                        change_interval_km=f.change_interval_km,
+                        service_type=f.service_type,
+                    )
+                    for f in tpl_filters
+                ])
+
+            kit.refresh_from_db()
+            kit_data = MaintenanceKitSerializer(kit).data
+
         return Response({
             'updated_fields': update_fields,
             'intervals': TruckMaintenanceIntervalsSerializer(intervals).data,
+            'kit': kit_data,
         })
 
 

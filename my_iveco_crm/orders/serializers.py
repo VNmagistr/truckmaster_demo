@@ -332,14 +332,42 @@ class MaintenanceKitSerializer(serializers.ModelSerializer):
     filters = MaintenanceKitFilterSerializer(many=True, read_only=True)
     oil_name = serializers.SerializerMethodField()
     oil_sku = serializers.CharField(source='oil.sku_code', read_only=True)
+    rear_axle_oil_name = serializers.SerializerMethodField()
+    rear_axle_oil_sku = serializers.CharField(source='rear_axle_oil.sku_code', read_only=True)
+    gearbox_oil_name = serializers.SerializerMethodField()
+    gearbox_oil_sku = serializers.CharField(source='gearbox_oil.sku_code', read_only=True)
+    auto_gearbox_oil_name = serializers.SerializerMethodField()
+    auto_gearbox_oil_sku = serializers.CharField(source='auto_gearbox_oil.sku_code', read_only=True)
+    auto_gearbox_filter_name = serializers.SerializerMethodField()
+    auto_gearbox_filter_sku = serializers.CharField(source='auto_gearbox_filter.sku_code', read_only=True)
+    truck_display = serializers.CharField(source='truck.__str__', read_only=True)
 
     def get_oil_name(self, obj):
         return str(obj.oil) if obj.oil else None
-    truck_display = serializers.CharField(source='truck.__str__', read_only=True)
+
+    def get_rear_axle_oil_name(self, obj):
+        return str(obj.rear_axle_oil) if obj.rear_axle_oil else None
+
+    def get_gearbox_oil_name(self, obj):
+        return str(obj.gearbox_oil) if obj.gearbox_oil else None
+
+    def get_auto_gearbox_oil_name(self, obj):
+        return str(obj.auto_gearbox_oil) if obj.auto_gearbox_oil else None
+
+    def get_auto_gearbox_filter_name(self, obj):
+        return str(obj.auto_gearbox_filter) if obj.auto_gearbox_filter else None
 
     class Meta:
         model = MaintenanceKit
-        fields = ['id', 'truck', 'truck_display', 'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'oil_change_interval_km', 'filters']
+        fields = [
+            'id', 'truck', 'truck_display',
+            'oil', 'oil_name', 'oil_sku', 'oil_quantity', 'oil_change_interval_km',
+            'rear_axle_oil', 'rear_axle_oil_name', 'rear_axle_oil_sku', 'rear_axle_oil_quantity',
+            'gearbox_oil', 'gearbox_oil_name', 'gearbox_oil_sku', 'gearbox_oil_quantity',
+            'auto_gearbox_oil', 'auto_gearbox_oil_name', 'auto_gearbox_oil_sku', 'auto_gearbox_oil_quantity',
+            'auto_gearbox_filter', 'auto_gearbox_filter_name', 'auto_gearbox_filter_sku', 'auto_gearbox_filter_quantity',
+            'filters',
+        ]
 
 
 class MaintenanceKitWriteSerializer(serializers.ModelSerializer):
