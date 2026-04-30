@@ -56,14 +56,15 @@ class ProductAdmin(admin.ModelAdmin):
                 Q(name__iregex=r'^масло\s+мотор')
             ).filter(marked_for_deletion=False)
 
-        elif model_name == 'maintenancekitfilter' and field_name == 'part':
+        elif model_name in ('maintenancekitfilter', 'templatekitfilter') and field_name == 'part':
             FILTER_TYPES = {'filter', 'фільтр', 'фільтри'}
             queryset = queryset.filter(
                 Q(subcategory__category__category_type__in=list(FILTER_TYPES)) |
                 Q(subcategory__category__name__icontains='фільтр') |
                 Q(name__iregex=r'^фільтр') |
                 Q(name__icontains='шайба пробки') |
-                Q(name__icontains='прокладка фільтра')
+                Q(name__icontains='прокладка фільтра') |
+                Q(name__icontains='кільце пробки')
             ).filter(marked_for_deletion=False)
 
         return queryset, use_distinct
