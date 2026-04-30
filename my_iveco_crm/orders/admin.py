@@ -3,7 +3,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     MaintenanceKit, MaintenanceKitFilter, MaintenanceRule,
     MaintenanceLog, RepairPhoto, TruckMaintenanceIntervals,
-    MaintenanceIntervalsTemplate,
+    MaintenanceIntervalsTemplate, TemplateKitFilter,
 )
 
 
@@ -122,15 +122,24 @@ class TruckMaintenanceIntervalsAdmin(admin.ModelAdmin):
     autocomplete_fields = ['truck']
 
 
+class TemplateKitFilterInline(admin.TabularInline):
+    model = TemplateKitFilter
+    extra = 1
+    autocomplete_fields = ['part']
+
+
 @admin.register(MaintenanceIntervalsTemplate)
 class MaintenanceIntervalsTemplateAdmin(admin.ModelAdmin):
     list_display = (
         'base_model', 'euro_standard', 'transmission_type', 'tracking_mode',
-        'engine_oil_interval', 'updated_at',
+        'engine_oil_interval', 'oil', 'updated_at',
     )
     list_filter = ('base_model', 'euro_standard', 'transmission_type', 'tracking_mode')
     search_fields = ('base_model__name', 'notes')
-    autocomplete_fields = ['base_model']
+    autocomplete_fields = [
+        'base_model', 'oil', 'rear_axle_oil', 'gearbox_oil',
+        'auto_gearbox_oil', 'auto_gearbox_filter',
+    ]
     fieldsets = (
         ('Комбінація', {
             'fields': ('base_model', 'euro_standard', 'transmission_type', 'tracking_mode'),
@@ -146,7 +155,21 @@ class MaintenanceIntervalsTemplateAdmin(admin.ModelAdmin):
                 'chains_interval',
             ),
         }),
+        ('Олива двигуна', {
+            'fields': ('oil', 'oil_quantity'),
+        }),
+        ('Олива заднього моста', {
+            'fields': ('rear_axle_oil', 'rear_axle_oil_quantity'),
+        }),
+        ('Олива КПП', {
+            'fields': ('gearbox_oil', 'gearbox_oil_quantity'),
+        }),
+        ('Олива АКПП', {
+            'fields': ('auto_gearbox_oil', 'auto_gearbox_oil_quantity',
+                       'auto_gearbox_filter', 'auto_gearbox_filter_quantity'),
+        }),
         ('Інше', {
             'fields': ('notes',),
         }),
     )
+    inlines = [TemplateKitFilterInline]

@@ -545,6 +545,53 @@ class MaintenanceIntervalsTemplate(models.Model):
     belts_interval               = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ремнів/роликів")
     chains_interval              = models.PositiveIntegerField(null=True, blank=True, verbose_name="Інтервал заміни ланцюгів")
 
+    # --- Мастила (еталонні) ---
+    oil = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='tpl_oil',
+        verbose_name="Олива двигуна",
+    )
+    oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name="Кількість оливи двигуна",
+    )
+    rear_axle_oil = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='tpl_rear_axle_oil',
+        verbose_name="Олива заднього моста",
+    )
+    rear_axle_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name="Кількість оливи заднього моста",
+    )
+    gearbox_oil = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='tpl_gearbox_oil',
+        verbose_name="Олива КПП",
+    )
+    gearbox_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name="Кількість оливи КПП",
+    )
+    auto_gearbox_oil = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='tpl_auto_gearbox_oil',
+        verbose_name="Олива АКПП",
+    )
+    auto_gearbox_oil_quantity = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        verbose_name="Кількість оливи АКПП",
+    )
+    auto_gearbox_filter = models.ForeignKey(
+        'inventory.Product', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='tpl_auto_gearbox_filter',
+        verbose_name="Фільтр АКПП",
+    )
+    auto_gearbox_filter_quantity = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Кількість фільтрів АКПП",
+    )
+
     notes = models.CharField(max_length=255, blank=True, default='', verbose_name="Нотатка")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -557,6 +604,13 @@ class MaintenanceIntervalsTemplate(models.Model):
         'rear_axle_oil_interval',
         'belts_interval',
         'chains_interval',
+    )
+
+    OIL_FIELDS = (
+        ('oil', 'oil_quantity'),
+        ('rear_axle_oil', 'rear_axle_oil_quantity'),
+        ('gearbox_oil', 'gearbox_oil_quantity'),
+        ('auto_gearbox_oil', 'auto_gearbox_oil_quantity'),
     )
 
     class Meta:
@@ -577,3 +631,37 @@ class MaintenanceIntervalsTemplate(models.Model):
         if self.transmission_type:
             parts.append(self.get_transmission_type_display())
         return ' / '.join(parts)
+
+
+class TemplateKitFilter(models.Model):
+    """Фільтр/запчастина в еталонному комплекті ТО."""
+    template = models.ForeignKey(
+        MaintenanceIntervalsTemplate,
+        on_delete=models.CASCADE,
+        related_name='filters',
+        verbose_name="Еталон ТО",
+    )
+    part = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        verbose_name="Запчастина",
+    )
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Кількість")
+    change_interval_km = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Інтервал заміни (км)",
+    )
+    service_type = models.CharField(
+        max_length=20,
+        choices=SERVICE_TYPE_CHOICES,
+        default='both',
+        verbose_name="Вид ТО",
+        help_text="В якому виді ТО використовується цей фільтр",
+    )
+
+    class Meta:
+        verbose_name = "Фільтр еталонного комплекту ТО"
+        verbose_name_plural = "Фільтри еталонного комплекту ТО"
+
+    def __str__(self):
+        return f"{self.part} × {self.quantity}"

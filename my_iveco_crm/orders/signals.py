@@ -431,7 +431,6 @@ def autofill_truck_maintenance_intervals(sender, instance, **kwargs):
         intervals, created = TruckMaintenanceIntervals.objects.get_or_create(truck=instance)
 
         update_fields = []
-        # Не перезаписуємо вже заповнені поля — еталон тільки доповнює.
         for field in MaintenanceIntervalsTemplate.INTERVAL_FIELDS:
             if getattr(intervals, field) is None:
                 tpl_value = getattr(template, field, None)
@@ -439,8 +438,6 @@ def autofill_truck_maintenance_intervals(sender, instance, **kwargs):
                     setattr(intervals, field, tpl_value)
                     update_fields.append(field)
 
-        # Режим обліку проставляємо лише якщо запис щойно створено,
-        # щоб не зламати ручний вибір власника майстерні.
         if created and intervals.tracking_mode != template.tracking_mode:
             intervals.tracking_mode = template.tracking_mode
             update_fields.append('tracking_mode')
@@ -451,8 +448,63 @@ def autofill_truck_maintenance_intervals(sender, instance, **kwargs):
                 f"Інтервали ТО для {instance.license_plate} автозаповнено з еталона "
                 f"{template} ({len(update_fields)} полів)"
             )
+
+        _autofill_maintenance_kit(instance, template)
     except Exception as e:
         logger.error(f"autofill_truck_maintenance_intervals failed for truck {instance.pk}: {e}")
+
+
+def _autofill_maintenance_kit(truck, template):
+    """Заповнює MaintenanceKit + фільтри з еталона (тільки порожні поля)."""
+    if not template.oil_id:
+        return
+
+    kit, kit_created = MaintenanceKit.objects.get_or_create(
+        truck=truck,
+        defaults={
+            'oil': template.oil,
+            'oil_quantity': template.oil_quantity or 0,
+        },
+    )
+
+    if kit_created:
+        for fk_field, qty_field in MaintenanceIntervalsTemplate.OIL_FIELDS:
+            val = getattr(template, fk_field, None)
+            if val:
+                setattr(kit, fk_field, val)
+                setattr(kit, qty_field, getattr(template, qty_field))
+        if template.auto_gearbox_filter_id:
+            kit.auto_gearbox_filter = template.auto_gearbox_filter
+            kit.auto_gearbox_filter_quantity = template.auto_gearbox_filter_quantity
+        kit.save()
+    else:
+        update_fields = []
+        for fk_field, qty_field in MaintenanceIntervalsTemplate.OIL_FIELDS:
+            if getattr(kit, f'{fk_field}_id') is None:
+                val = getattr(template, fk_field, None)
+                if val:
+                    setattr(kit, fk_field, val)
+                    setattr(kit, qty_field, getattr(template, qty_field))
+                    update_fields.extend([fk_field, qty_field])
+        if kit.auto_gearbox_filter_id is None and template.auto_gearbox_filter_id:
+            kit.auto_gearbox_filter = template.auto_gearbox_filter
+            kit.auto_gearbox_filter_quantity = template.auto_gearbox_filter_quantity
+            update_fields.extend(['auto_gearbox_filter', 'auto_gearbox_filter_quantity'])
+        if update_fields:
+            kit.save(update_fields=update_fields)
+
+    tpl_filters = template.filters.select_related('part').all()
+    if tpl_filters and kit_created:
+        MaintenanceKitFilter.objects.bulk_create([
+            MaintenanceKitFilter(
+                maintenance_kit=kit,
+                part=f.part,
+                quantity=f.quantity,
+                change_interval_km=f.change_interval_km,
+                service_type=f.service_type,
+            )
+            for f in tpl_filters
+        ])
 
 
 @receiver(post_save, sender=RepairPhoto)

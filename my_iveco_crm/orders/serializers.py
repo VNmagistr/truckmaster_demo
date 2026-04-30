@@ -4,7 +4,7 @@ from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
     BaseMaintenanceKit, BaseMaintenanceKitFilter,
-    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate,
+    TruckMaintenanceIntervals, MaintenanceIntervalsTemplate, TemplateKitFilter,
     OrderStatusHistory,
 )
 from clients.models import Client, Truck
@@ -418,9 +418,22 @@ class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
         ]
 
 
+class TemplateKitFilterSerializer(serializers.ModelSerializer):
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_sku = serializers.CharField(source='part.sku_code', read_only=True)
+
+    class Meta:
+        model = TemplateKitFilter
+        fields = [
+            'id', 'template', 'part', 'part_name', 'part_sku',
+            'quantity', 'change_interval_km', 'service_type',
+        ]
+
+
 class MaintenanceIntervalsTemplateSerializer(serializers.ModelSerializer):
     """Серіалізатор еталона інтервалів ТО."""
     base_model_name = serializers.CharField(source='base_model.name', read_only=True)
+    filters = TemplateKitFilterSerializer(many=True, read_only=True)
 
     class Meta:
         model = MaintenanceIntervalsTemplate
@@ -435,6 +448,12 @@ class MaintenanceIntervalsTemplateSerializer(serializers.ModelSerializer):
             'rear_axle_oil_interval',
             'belts_interval',
             'chains_interval',
+            'oil', 'oil_quantity',
+            'rear_axle_oil', 'rear_axle_oil_quantity',
+            'gearbox_oil', 'gearbox_oil_quantity',
+            'auto_gearbox_oil', 'auto_gearbox_oil_quantity',
+            'auto_gearbox_filter', 'auto_gearbox_filter_quantity',
+            'filters',
             'notes',
             'created_at', 'updated_at',
         ]
