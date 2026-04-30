@@ -173,3 +173,6 @@ class MaintenanceIntervalsTemplateAdmin(admin.ModelAdmin):
         }),
     )
     inlines = [TemplateKitFilterInline]
+
+    class Media:
+        js = ('admin/js/template_interval_autofill.js',)
