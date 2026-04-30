@@ -518,12 +518,14 @@ class MaintenanceIntervalsTemplate(models.Model):
     )
     euro_standard = models.CharField(
         max_length=10,
+        choices=[('', 'Будь-який')] + Truck.EURO_STANDARD_CHOICES,
         blank=True, default='',
         verbose_name="Євростандарт",
         help_text="Залиште порожнім, щоб еталон підходив до будь-якого євростандарту",
     )
     transmission_type = models.CharField(
         max_length=10,
+        choices=[('', 'Будь-який')] + Truck.TRANSMISSION_CHOICES,
         blank=True, default='',
         verbose_name="Тип КПП",
         help_text="Залиште порожнім, щоб еталон підходив до будь-якої КПП",
@@ -571,11 +573,7 @@ class MaintenanceIntervalsTemplate(models.Model):
     def __str__(self):
         parts = [self.base_model.name]
         if self.euro_standard:
-            parts.append(self.euro_standard)
+            parts.append(self.get_euro_standard_display())
         if self.transmission_type:
             parts.append(self.get_transmission_type_display())
         return ' / '.join(parts)
-
-    def get_transmission_type_display(self):
-        mapping = dict(Truck.TRANSMISSION_CHOICES)
-        return mapping.get(self.transmission_type, self.transmission_type)
