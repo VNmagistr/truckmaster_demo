@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import time
 import urllib.request
 
 import qrcode
@@ -48,6 +49,18 @@ class ContactFormView(APIView):
     throttle_classes = [ContactRateThrottle]
 
     def post(self, request):
+        if request.data.get('website', ''):
+            return Response({'success': True})
+
+        loaded_at = request.data.get('_t')
+        if loaded_at:
+            try:
+                elapsed = (time.time() * 1000 - float(loaded_at)) / 1000
+                if elapsed < 3:
+                    return Response({'success': True})
+            except (ValueError, TypeError):
+                pass
+
         name = request.data.get('name', '').strip()
         phone = request.data.get('phone', '').strip()
         message = request.data.get('message', '').strip()
