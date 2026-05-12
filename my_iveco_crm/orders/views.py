@@ -905,6 +905,59 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
             return ServiceWorkWriteSerializer
         return ServiceWorkSerializer
 
+    @action(detail=True, methods=['get'], url_path='suggest-parts')
+    def suggest_parts(self, request, pk=None):
+        """Підказка запчастин з останнього аналогічного наряду на це ж авто."""
+        work = self.get_object()
+        truck = work.service_order.truck
+        work_price = work.work
+
+        if not truck or not work_price:
+            return Response([])
+
+        last_order = (
+            ServiceOrder.objects
+            .filter(
+                truck=truck,
+                status__in=[
+                    ServiceOrder.StatusChoices.DONE,
+                    ServiceOrder.StatusChoices.CLOSED,
+                ],
+                works__work=work_price,
+            )
+            .exclude(pk=work.service_order_id)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if not last_order:
+            return Response([])
+
+        last_work = (
+            ServiceWork.objects
+            .filter(service_order=last_order, work=work_price)
+            .prefetch_related('used_parts__part')
+            .first()
+        )
+
+        if not last_work:
+            return Response([])
+
+        suggestions = []
+        for up in last_work.used_parts.select_related('part').all():
+            suggestions.append({
+                'part_id': up.part_id,
+                'part_name': up.part.name,
+                'part_sku': up.part.sku_code,
+                'part_brand': up.part.brand,
+                'quantity': up.quantity,
+                'unit_price': up.unit_price,
+                'order_number': last_order.order_number,
+                'order_date': last_order.created_at,
+            })
+
+        return Response(suggestions)
+
     @action(detail=True, methods=['post'], url_path='add-part')
     def add_part(self, request, pk=None):
         """Додати запчастину до роботи."""
