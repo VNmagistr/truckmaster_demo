@@ -319,6 +319,33 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
     @action(detail=False, methods=['get'])
+    def stale_in_progress(self, request):
+        """Наряди в статусі IN_PROGRESS більше тижня."""
+        threshold = timezone.now() - datetime.timedelta(weeks=1)
+
+        orders = ServiceOrder.objects.filter(
+            status=ServiceOrder.StatusChoices.IN_PROGRESS,
+            marked_for_deletion=False,
+        ).select_related('truck', 'client')
+
+        stale = []
+        for order in orders:
+            last_ip = order.status_history.filter(
+                to_status=ServiceOrder.StatusChoices.IN_PROGRESS
+            ).order_by('-changed_at').first()
+
+            if last_ip and last_ip.changed_at < threshold:
+                stale.append({
+                    'id': order.id,
+                    'order_number': order.order_number,
+                    'client_name': order.client.name if order.client else None,
+                    'truck_plate': order.truck.license_plate if order.truck else None,
+                    'in_progress_since': last_ip.changed_at,
+                })
+
+        return Response(stale)
+
+    @action(detail=False, methods=['get'])
     def week_detail(self, request):
         """Кількість замовлень по днях поточного тижня (Пн–Нд)."""
         today = timezone.now().date()
@@ -1218,11 +1245,16 @@ class TruckMaintenanceIntervalsViewSet(viewsets.ModelViewSet):
     """ViewSet для інтервалів ТО."""
     serializer_class = TruckMaintenanceIntervalsSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['truck']
+    search_fields = ['truck__license_plate']
+    ordering_fields = ['truck__license_plate', 'id']
+    ordering = ['truck__license_plate']
 
     def get_queryset(self):
-        return TruckMaintenanceIntervals.objects.select_related('truck').all()
+        return TruckMaintenanceIntervals.objects.select_related(
+            'truck', 'truck__client', 'truck__base_model',
+        ).all()
 
     @action(detail=False, methods=['put'], url_path='by-truck/(?P<truck_id>[^/.]+)')
     def by_truck(self, request, truck_id=None):

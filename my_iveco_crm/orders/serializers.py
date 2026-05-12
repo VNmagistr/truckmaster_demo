@@ -431,11 +431,15 @@ class BaseMaintenanceKitWriteSerializer(serializers.ModelSerializer):
 
 class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
     """Серіалізатор інтервалів ТО — для читання та редагування."""
+    truck_license_plate = serializers.CharField(source='truck.license_plate', read_only=True)
+    truck_model = serializers.CharField(source='truck.specific_model_name', read_only=True)
+    truck_client_name = serializers.SerializerMethodField()
 
     class Meta:
         model = TruckMaintenanceIntervals
         fields = [
-            'id', 'truck', 'tracking_mode',
+            'id', 'truck', 'truck_license_plate', 'truck_model', 'truck_client_name',
+            'tracking_mode',
             'engine_oil_interval', 'engine_oil_last_km',
             'gearbox_oil_interval', 'gearbox_oil_last_km',
             'auto_gearbox_oil_interval', 'auto_gearbox_oil_last_km',
@@ -444,6 +448,11 @@ class TruckMaintenanceIntervalsSerializer(serializers.ModelSerializer):
             'belts_interval', 'belts_last_km',
             'chains_interval', 'chains_last_km',
         ]
+
+    def get_truck_client_name(self, obj):
+        if obj.truck and obj.truck.client:
+            return obj.truck.client.name
+        return None
 
 
 class TemplateKitFilterSerializer(serializers.ModelSerializer):
