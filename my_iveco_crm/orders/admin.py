@@ -119,6 +119,8 @@ class MaintenanceKitFilterAdmin(admin.ModelAdmin):
 class TruckMaintenanceIntervalsAdmin(admin.ModelAdmin):
     list_display = ('truck', 'tracking_mode', 'engine_oil_interval', 'engine_oil_last_km')
     list_filter = ('tracking_mode',)
+    search_fields = ('truck__license_plate',)
+    list_per_page = 25
     autocomplete_fields = ['truck']
 
 
