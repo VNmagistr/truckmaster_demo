@@ -30,6 +30,12 @@ class ClientBriefSerializer(serializers.ModelSerializer):
 class TruckListSerializer(serializers.ModelSerializer):
     client = ClientBriefSerializer(read_only=True)
     base_model = serializers.StringRelatedField()
+    euro_standard_display = serializers.CharField(
+        source='get_euro_standard_display', read_only=True
+    )
+    transmission_type_display = serializers.CharField(
+        source='get_transmission_type_display', read_only=True
+    )
 
     class Meta:
         model = Truck
@@ -41,7 +47,10 @@ class TruckListSerializer(serializers.ModelSerializer):
             'client_id',
             'base_model',
             'last_seven_vin',
+            'euro_standard',
+            'euro_standard_display',
             'transmission_type',
+            'transmission_type_display',
             'marked_for_deletion',
         ]
 
