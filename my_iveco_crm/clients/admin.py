@@ -36,7 +36,6 @@ class ClientAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        ClientFeature.objects.get_or_create(client=obj)
 
     @admin.display(description='Функції')
     def features_summary(self, obj):
