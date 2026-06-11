@@ -755,6 +755,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order = self.get_object()
         rule_id = request.data.get('rule_id')
         service_type = request.data.get('service_type')  # 'full' | 'partial' | None
+        mechanic_id = request.data.get('mechanic')
+        work_id = request.data.get('work')
 
         if not rule_id:
             return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
@@ -792,12 +794,24 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         ServiceWork.objects.filter(service_order=order, description=rule.name).delete()
 
         # Створюємо роботу для ТО
-        service_work = ServiceWork.objects.create(
-            service_order=order,
-            description=rule.name,
-            hours_spent=0,
-            price_at_moment=0,
-        )
+        work_kwargs = {
+            'service_order': order,
+            'description': rule.name,
+            'hours_spent': 0,
+        }
+        if mechanic_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                work_kwargs['mechanic'] = User.objects.get(pk=mechanic_id)
+            except User.DoesNotExist:
+                pass
+        if work_id:
+            try:
+                work_kwargs['work'] = WorkPrice.objects.get(pk=work_id)
+            except WorkPrice.DoesNotExist:
+                pass
+        service_work = ServiceWork.objects.create(**work_kwargs)
 
         # Додаємо оливу та фільтри до роботи
         oil_part = UsedPart.objects.create(
