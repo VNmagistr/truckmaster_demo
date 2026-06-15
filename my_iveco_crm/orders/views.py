@@ -806,9 +806,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 work_kwargs['mechanic'] = User.objects.get(pk=mechanic_id)
             except User.DoesNotExist:
                 pass
-        if work_id:
+        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
+        if effective_work_id:
             try:
-                work_kwargs['work'] = WorkPrice.objects.get(pk=work_id)
+                work_kwargs['work'] = WorkPrice.objects.get(pk=effective_work_id)
             except WorkPrice.DoesNotExist:
                 pass
         service_work = ServiceWork.objects.create(**work_kwargs)

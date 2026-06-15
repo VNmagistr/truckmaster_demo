@@ -79,7 +79,7 @@ class RepairPhotoAdmin(admin.ModelAdmin):
 
 @admin.register(MaintenanceRule)
 class MaintenanceRuleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'km_interval')
+    list_display = ('name', 'km_interval', 'work')
     search_fields = ('name',)
     filter_horizontal = ('applicable_models',)
 

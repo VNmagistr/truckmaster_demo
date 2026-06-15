@@ -290,8 +290,8 @@ class OrderStatusHistorySerializer(serializers.ModelSerializer):
 
 
 class MaintenanceRuleSerializer(serializers.ModelSerializer):
-    """Серіалізатор правила ТО."""
-    
+    work_name = serializers.CharField(source='work.name', read_only=True, default=None)
+
     class Meta:
         model = MaintenanceRule
         fields = '__all__'

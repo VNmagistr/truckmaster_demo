@@ -244,12 +244,19 @@ class MaintenanceRule(models.Model):
     name = models.CharField(max_length=255, verbose_name="Назва")
     km_interval = models.PositiveIntegerField(verbose_name="Інтервал (км)")
     applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовні моделі")
-    
+    work = models.ForeignKey(
+        'WorkPrice',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='maintenance_rules',
+        verbose_name="Послуга з довідника",
+    )
+
     class Meta:
         verbose_name = "Правило ТО"
         verbose_name_plural = "Правила ТО"
-    
-    def __str__(self): 
+
+    def __str__(self):
         return self.name
 
 
