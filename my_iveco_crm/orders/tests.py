@@ -360,12 +360,15 @@ class MaintenanceRuleModelTest(TestCase):
     def setUp(self):
         self.base_model1 = IvecoBaseModel.objects.create(name='Daily')
         self.base_model2 = IvecoBaseModel.objects.create(name='Eurocargo')
+        self.work_group = WorkGroup.objects.create(name='ТО', hourly_rate=Decimal('500'))
+        self.work_price = WorkPrice.objects.create(name='Заміна оливи', work_group=self.work_group)
 
     def test_create_maintenance_rule(self):
         """Test creating a maintenance rule"""
         rule = MaintenanceRule.objects.create(
             name='Заміна оливи',
-            km_interval=15000
+            km_interval=15000,
+            work=self.work_price,
         )
         rule.applicable_models.add(self.base_model1, self.base_model2)
 
@@ -377,7 +380,8 @@ class MaintenanceRuleModelTest(TestCase):
         """Test string representation"""
         rule = MaintenanceRule.objects.create(
             name='Заміна оливи',
-            km_interval=15000
+            km_interval=15000,
+            work=self.work_price,
         )
 
         self.assertEqual(str(rule), 'Заміна оливи')

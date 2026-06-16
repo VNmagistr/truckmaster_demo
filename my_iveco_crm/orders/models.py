@@ -246,8 +246,7 @@ class MaintenanceRule(models.Model):
     applicable_models = models.ManyToManyField(IvecoBaseModel, verbose_name="Застосовні моделі")
     work = models.ForeignKey(
         'WorkPrice',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
+        on_delete=models.PROTECT,
         related_name='maintenance_rules',
         verbose_name="Послуга з довідника",
     )

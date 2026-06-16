@@ -283,12 +283,15 @@ class MaintenanceRuleAPITest(APITestCase):
         self.user = User.objects.create_user(username='testuser', password='testpass123')
         self.client.force_authenticate(user=self.user)
         self.base_model = IvecoBaseModel.objects.create(name='Daily')
+        self.work_group = WorkGroup.objects.create(name='Maintenance', hourly_rate=Decimal('500'))
+        self.work_price = WorkPrice.objects.create(name='Oil Change', work_group=self.work_group)
 
     def test_list_maintenance_rules(self):
         """Test listing maintenance rules"""
         rule = MaintenanceRule.objects.create(
             name='Oil Change',
-            km_interval=15000
+            km_interval=15000,
+            work=self.work_price,
         )
         rule.applicable_models.add(self.base_model)
 
@@ -302,7 +305,8 @@ class MaintenanceRuleAPITest(APITestCase):
         data = {
             'name': 'Filter Replacement',
             'km_interval': 30000,
-            'applicable_models': [self.base_model.id]
+            'applicable_models': [self.base_model.id],
+            'work': self.work_price.id,
         }
 
         response = self.client.post('/api/maintenance-rules/', data)
@@ -326,9 +330,12 @@ class MaintenanceLogAPITest(APITestCase):
             full_vin='ZCFC35A0001234567',
             license_plate='AA1234BB'
         )
+        self.work_group = WorkGroup.objects.create(name='Maintenance', hourly_rate=Decimal('500'))
+        self.work_price = WorkPrice.objects.create(name='Oil Change', work_group=self.work_group)
         self.rule = MaintenanceRule.objects.create(
             name='Oil Change',
-            km_interval=15000
+            km_interval=15000,
+            work=self.work_price,
         )
         self.rule.applicable_models.add(self.base_model)
 

@@ -14,6 +14,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='maintenancerule',
             name='work',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='maintenance_rules', to='orders.workprice', verbose_name='Послуга з довідника'),
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.PROTECT, related_name='maintenance_rules', to='orders.workprice', verbose_name='Послуга з довідника'),
+            preserve_default=False,
         ),
     ]

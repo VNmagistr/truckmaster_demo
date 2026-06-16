@@ -756,7 +756,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         rule_id = request.data.get('rule_id')
         service_type = request.data.get('service_type')  # 'full' | 'partial' | None
         mechanic_id = request.data.get('mechanic')
-        work_id = request.data.get('work')
 
         if not rule_id:
             return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
@@ -806,12 +805,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 work_kwargs['mechanic'] = User.objects.get(pk=mechanic_id)
             except User.DoesNotExist:
                 pass
-        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
-        if effective_work_id:
-            try:
-                work_kwargs['work'] = WorkPrice.objects.get(pk=effective_work_id)
-            except WorkPrice.DoesNotExist:
-                pass
+        work_kwargs['work'] = rule.work
         service_work = ServiceWork.objects.create(**work_kwargs)
 
         # Додаємо оливу та фільтри до роботи
