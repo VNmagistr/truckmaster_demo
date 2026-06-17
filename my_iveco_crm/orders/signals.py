@@ -201,6 +201,9 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
     if not created:
         return
 
+    if getattr(instance, '_skip_auto_kit', False):
+        return
+
     if not is_module_enabled('inventory'):
         return
 

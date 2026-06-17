@@ -806,7 +806,9 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             except User.DoesNotExist:
                 pass
         work_kwargs['work'] = rule.work
-        service_work = ServiceWork.objects.create(**work_kwargs)
+        service_work = ServiceWork(**work_kwargs)
+        service_work._skip_auto_kit = True
+        service_work.save()
 
         # Додаємо оливу та фільтри до роботи
         oil_part = UsedPart.objects.create(
