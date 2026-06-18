@@ -966,8 +966,12 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         if not last_work:
             return Response([])
 
+        existing_part_ids = set(work.used_parts.values_list('part_id', flat=True))
+
         suggestions = []
         for up in last_work.used_parts.select_related('part').all():
+            if up.part_id in existing_part_ids:
+                continue
             suggestions.append({
                 'part_id': up.part_id,
                 'part_name': up.part.name,
@@ -991,13 +995,13 @@ class ServiceWorkViewSet(viewsets.ModelViewSet):
         
         try:
             from inventory.services import StockService
-            used_part = UsedPart.objects.create(
+            used_part, created = UsedPart.objects.get_or_create(
                 service_work=service_work,
                 part_id=part_id,
-                quantity=quantity,
-                unit_price=unit_price
+                defaults={'quantity': quantity, 'unit_price': unit_price}
             )
-            StockService.deduct(used_part)
+            if created:
+                StockService.deduct(used_part)
             return Response(UsedPartSerializer(used_part).data, status=201)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
