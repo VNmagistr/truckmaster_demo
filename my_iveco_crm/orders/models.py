@@ -463,6 +463,7 @@ class MaintenanceKitFilter(models.Model):
     class Meta:
         verbose_name = "Фільтр комплекту ТО"
         verbose_name_plural = "Фільтри комплектів ТО"
+        unique_together = [['maintenance_kit', 'part']]
 
 
 class TruckMaintenanceIntervals(models.Model):
@@ -668,6 +669,7 @@ class TemplateKitFilter(models.Model):
     class Meta:
         verbose_name = "Фільтр еталонного комплекту ТО"
         verbose_name_plural = "Фільтри еталонного комплекту ТО"
+        unique_together = [['template', 'part']]
 
     def __str__(self):
         return f"{self.part} × {self.quantity}"
