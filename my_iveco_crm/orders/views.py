@@ -798,10 +798,17 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         old_works.delete()
 
         # Створюємо роботу для ТО
+        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
+        work_obj = None
+        if effective_work_id:
+            try:
+                work_obj = WorkPrice.objects.get(pk=effective_work_id)
+            except WorkPrice.DoesNotExist:
+                pass
         work_kwargs = {
             'service_order': order,
             'description': rule.name,
-            'hours_spent': 0,
+            'hours_spent': work_obj.standard_hours if work_obj else 0,
         }
         if mechanic_id:
             from django.contrib.auth import get_user_model
@@ -810,12 +817,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 work_kwargs['mechanic'] = User.objects.get(pk=mechanic_id)
             except User.DoesNotExist:
                 pass
-        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
-        if effective_work_id:
-            try:
-                work_kwargs['work'] = WorkPrice.objects.get(pk=effective_work_id)
-            except WorkPrice.DoesNotExist:
-                pass
+        if work_obj:
+            work_kwargs['work'] = work_obj
         service_work = ServiceWork(**work_kwargs)
         service_work._skip_auto_kit = True
         service_work.save()
