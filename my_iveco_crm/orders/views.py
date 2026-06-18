@@ -791,7 +791,11 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             old_part.delete()
 
         # Видаляємо попередньо застосований набір (якщо є), щоб уникнути дублювання
-        ServiceWork.objects.filter(service_order=order, description=rule.name).delete()
+        # Повертаємо залишки на склад перед видаленням
+        old_works = ServiceWork.objects.filter(service_order=order, description=rule.name)
+        for old_part in UsedPart.objects.filter(service_work__in=old_works):
+            StockService.restore(old_part)
+        old_works.delete()
 
         # Створюємо роботу для ТО
         work_kwargs = {
@@ -822,7 +826,11 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         )
         StockService.deduct(oil_part)
 
+        seen_part_ids = set()
         for kit_filter in applicable_filters:
+            if kit_filter.part_id in seen_part_ids:
+                continue
+            seen_part_ids.add(kit_filter.part_id)
             filter_part = UsedPart.objects.create(
                 service_work=service_work,
                 part=kit_filter.part,
