@@ -740,6 +740,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         order = self.get_object()
         serializer = ServiceWorkWriteSerializer(data=request.data)
         if serializer.is_valid():
+            work_price = serializer.validated_data.get('work')
+            if work_price:
+                existing = ServiceWork.objects.filter(
+                    service_order=order, work=work_price
+                ).first()
+                if existing:
+                    return Response(
+                        ServiceWorkSerializer(existing).data,
+                        status=status.HTTP_200_OK
+                    )
             serializer.save(service_order=order)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
