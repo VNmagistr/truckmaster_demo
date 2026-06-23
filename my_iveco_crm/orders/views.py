@@ -287,23 +287,24 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             created_at__date__gte=start_of_year
         ).aggregate(total=Sum('total_cost'))['total'] or 0
 
-        # Графік виторгу за останні 12 місяців
-        revenue_chart = []
+        # Графік клієнтів за останні 12 місяців (унікальні клієнти з нарядами)
+        clients_chart = []
+        ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
+                     'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
         for i in range(11, -1, -1):
             month_date = (today.replace(day=1) - datetime.timedelta(days=i * 28)).replace(day=1)
             if month_date.month == 12:
                 next_month = month_date.replace(year=month_date.year + 1, month=1)
             else:
                 next_month = month_date.replace(month=month_date.month + 1)
-            revenue = closed_qs.filter(
+            client_count = qs.filter(
                 created_at__date__gte=month_date,
                 created_at__date__lt=next_month,
-            ).aggregate(total=Sum('total_cost'))['total'] or 0
-            ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
-                         'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
-            revenue_chart.append({
+                client__isnull=False,
+            ).values('client').distinct().count()
+            clients_chart.append({
                 'name': ua_months[month_date.month - 1],
-                'revenue': float(revenue),
+                'clients': client_count,
             })
 
         stats = {
@@ -314,7 +315,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'canceled_orders': qs.filter(status='CANCELED').count(),
             'monthly_revenue': float(monthly_revenue),
             'yearly_revenue': float(yearly_revenue),
-            'revenue_chart': revenue_chart,
+            'clients_chart': clients_chart,
         }
         return Response(stats)
 
