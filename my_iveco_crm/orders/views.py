@@ -307,12 +307,17 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'clients': client_count,
             })
 
+        monthly_orders = qs.filter(
+            created_at__date__gte=start_of_month
+        ).count()
+
         stats = {
             'total_orders': qs.count(),
             'open_orders': qs.filter(status='OPEN').count(),
             'in_progress_orders': qs.filter(status='IN_PROGRESS').count(),
             'closed_orders': qs.filter(status='CLOSED').count(),
             'canceled_orders': qs.filter(status='CANCELED').count(),
+            'monthly_orders': monthly_orders,
             'monthly_revenue': float(monthly_revenue),
             'yearly_revenue': float(yearly_revenue),
             'clients_chart': clients_chart,
