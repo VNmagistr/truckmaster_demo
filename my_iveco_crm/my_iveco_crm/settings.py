@@ -309,6 +309,9 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@ital-truck.com.ua')
 FRONTEND_URL = config('FRONTEND_URL', default='https://ital-truck.com.ua')
 
+# Backups
+BACKUP_DIR = os.path.join(BASE_DIR, 'backups')
+
 # Celery
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
