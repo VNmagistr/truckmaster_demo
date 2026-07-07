@@ -1,433 +1,433 @@
-# 📱 Документація Telegram Bot TruckMaster
+# Telegram Bot Documentation — TruckMaster
 
-## Зміст
-1. [Початок роботи](#початок-роботи)
-2. [Реєстрація в боті](#реєстрація-в-боті)
-3. [Функції для всіх користувачів](#функції-для-всіх-користувачів)
-4. [Адміністративні функції](#адміністративні-функції)
-5. [Система нагадувань](#система-нагадувань)
-6. [Часті питання](#часті-питання)
-
----
-
-## Початок роботи
-
-### Як знайти бота?
-1. Відкрийте Telegram
-2. Знайдіть бота за ім'ям: **@YourBotName** *(замініть на реальне ім'я)*
-3. Або перейдіть за посиланням: `t.me/YourBotName`
-
-### Перший запуск
-Натисніть кнопку **Старт** або відправте команду `/start`
+## Table of Contents
+1. [Getting Started](#getting-started)
+2. [Bot Registration](#bot-registration)
+3. [Features for All Users](#features-for-all-users)
+4. [Admin Features](#admin-features)
+5. [Reminder System](#reminder-system)
+6. [FAQ](#faq)
 
 ---
 
-## Реєстрація в боті
+## Getting Started
 
-При першому запуску бот попросить вас поділитися номером телефону для ідентифікації.
+### How to find the bot?
+1. Open Telegram
+2. Search for the bot by name: **@YourBotName** *(replace with actual name)*
+3. Or follow the link: `t.me/YourBotName`
 
-### Крок 1: Надання номера телефону
-1. Натисніть кнопку **"Надати номер телефону"**
-2. Підтвердьте дію в діалоговому вікні Telegram
-
-### Крок 2: Прив'язка до облікового запису
-- Якщо ваш номер телефону є в базі даних TruckMaster, бот автоматично прив'яже ваш обліковий запис
-- Ви отримаєте повідомлення про успішну прив'язку
-- З'явиться клавіатура з доступними функціями
-
-⚠️ **Важливо:** Якщо ваш номер не знайдено в базі, зверніться до менеджера для реєстрації.
+### First launch
+Press the **Start** button or send the `/start` command
 
 ---
 
-## Функції для всіх користувачів
+## Bot Registration
 
-Після успішної авторизації вам доступні наступні функції:
+On first launch, the bot will ask you to share your phone number for identification.
 
-### 🚚 Мої автомобілі
+### Step 1: Provide phone number
+1. Press the **"Share phone number"** button
+2. Confirm the action in the Telegram dialog
 
-**Що робить:** Показує список всіх ваших автомобілів, зареєстрованих в системі.
+### Step 2: Link to account
+- If your phone number exists in the TruckMaster database, the bot will automatically link your account
+- You will receive a message confirming successful linking
+- A keyboard with available features will appear
 
-**Як використовувати:**
-1. Натисніть кнопку **"Мої автомобілі 🚚"**
-2. Бот покаже список ваших автомобілів
-3. Натисніть на автомобіль, щоб побачити історію ремонтів
+> **Important:** If your number is not found in the database, contact the manager for registration.
 
-**Приклад відповіді:**
+---
+
+## Features for All Users
+
+After successful authorization, the following features are available:
+
+### My Vehicles
+
+**What it does:** Shows a list of all your vehicles registered in the system.
+
+**How to use:**
+1. Press the **"My vehicles"** button
+2. The bot will show your vehicle list
+3. Tap a vehicle to see its repair history
+
+**Example response:**
 ```
-Ваші автомобілі в нашій системі. Оберіть, по якому з них показати історію:
+Your vehicles in our system. Select one to view history:
 
-🚚 АА1234ВВ (Iveco Daily)
-🚚 ВС5678НН (Iveco Eurocargo)
+Iveco Daily (AA1234BB)
+Iveco Eurocargo (BC5678HH)
 ```
 
-**Історія ремонтів:**
-Після вибору автомобіля ви побачите:
-- Номери замовлень-нарядів
-- Дати виконання робіт
-- Поточні статуси замовлень
+**Repair history:**
+After selecting a vehicle, you will see:
+- Service order numbers
+- Work completion dates
+- Current order statuses
 
-### 🧾 Перевірити статус замовлення
+### Check Order Status
 
-**Що робить:** Дозволяє перевірити статус конкретного замовлення-наряду.
+**What it does:** Check the status of a specific service order.
 
-**Як використовувати:**
-1. Натисніть кнопку **"Перевірити статус замовлення 🧾"**
-2. Введіть номер замовлення-наряду (тільки цифри)
-3. Отримайте інформацію про замовлення
+**How to use:**
+1. Press the **"Check order status"** button
+2. Enter the order number (digits only)
+3. Get order information
 
-**Приклад:**
+**Example:**
 ```
-Введіть: 12345
+Enter: 12345
 
-Відповідь бота:
-🧾 Замовлення-наряд №12345
+Bot response:
+Service Order #12345
 
-Клієнт: Ваше Ім'я
-Автомобіль: АА1234ВВ
-Статус: Виконано
-Дата створення: 15.12.2024
+Client: Your Name
+Vehicle: AA1234BB
+Status: Done
+Created: 15.12.2024
 ```
 
 ---
 
-## Адміністративні функції
+## Admin Features
 
-Доступні тільки користувачам з роллю **Адміністратор** або **Менеджер**.
+Available only to users with **Admin** or **Manager** role.
 
-### 🚛 Всі автомобілі
+### All Vehicles
 
-**Що робить:** Показує список всіх автомобілів в системі (перші 20).
+**What it does:** Shows a list of all vehicles in the system (first 20).
 
-**Інформація:**
-- Номерний знак
-- Модель автомобіля
-- Власник
-- Останні 7 цифр VIN
+**Information:**
+- License plate
+- Vehicle model
+- Owner
+- Last 7 digits of VIN
 
-**Приклад:**
+**Example:**
 ```
-📋 Всі автомобілі в системі (перші 20):
+All vehicles in the system (first 20):
 
-🚚 АА1234ВВ (Iveco Daily)
-   Власник: Іванов Іван
+Iveco Daily (AA1234BB)
+   Owner: John Smith
    VIN: ...1234567
 
-🚚 ВС5678НН (Iveco Eurocargo)
-   Власник: Петренко Петро
+Iveco Eurocargo (BC5678HH)
+   Owner: Peter Johnson
    VIN: ...7654321
 ```
 
-### 📋 Всі замовлення
+### All Orders
 
-**Що робить:** Показує останні 15 замовлень в системі.
+**What it does:** Shows the latest 15 orders in the system.
 
-**Інформація:**
-- Номер замовлення
-- Клієнт
-- Автомобіль
-- Статус
-- Дата створення
+**Information:**
+- Order number
+- Client
+- Vehicle
+- Status
+- Created date
 
-**Приклад:**
+**Example:**
 ```
-📋 Останні 15 замовлень:
+Latest 15 orders:
 
-🧾 №12345
-   Клієнт: Іванов Іван
-   Авто: АА1234ВВ
-   Статус: Виконано
-   Дата: 15.12.2024
+#12345
+   Client: John Smith
+   Vehicle: AA1234BB
+   Status: Done
+   Date: 15.12.2024
 
-🧾 №12346
-   Клієнт: Петренко Петро
-   Авто: ВС5678НН
-   Статус: В роботі
-   Дата: 16.12.2024
+#12346
+   Client: Peter Johnson
+   Vehicle: BC5678HH
+   Status: In Progress
+   Date: 16.12.2024
 ```
 
-### 🔍 Знайти авто за номером
+### Find Vehicle by Plate
 
-**Що робить:** Швидкий пошук автомобіля за номерним знаком.
+**What it does:** Quick vehicle search by license plate.
 
-**Як використовувати:**
-1. Натисніть **"Знайти авто за номером 🔍"**
-2. Введіть номерний знак (повністю або частково)
-3. Отримайте детальну інформацію
+**How to use:**
+1. Press **"Find vehicle by plate"**
+2. Enter license plate (full or partial)
+3. Get detailed information
 
-**Приклад пошуку:**
+**Search example:**
 ```
-Введіть: АА1234
+Enter: AA1234
 
-Відповідь бота (якщо знайдено 1 авто):
-🚚 Автомобіль знайдено:
+Bot response (if 1 vehicle found):
+Vehicle found:
 
-Номер: АА1234ВВ
-Модель: Iveco Daily
+Plate: AA1234BB
+Model: Iveco Daily
 VIN: ...1234567
-Власник: Іванов Іван
+Owner: John Smith
 
-📋 Останні замовлення:
-  • №12345 - Виконано (15.12.2024)
-  • №12300 - Виконано (01.12.2024)
+Recent orders:
+  - #12345 - Done (15.12.2024)
+  - #12300 - Done (01.12.2024)
 ```
 
-**Якщо знайдено кілька:**
+**If multiple found:**
 ```
-Знайдено 3 автомобілів:
+Found 3 vehicles:
 
-🚚 АА1234ВВ (Iveco Daily)
-   Власник: Іванов Іван
+Iveco Daily (AA1234BB)
+   Owner: John Smith
 
-🚚 АА1234СС (Iveco Eurocargo)
-   Власник: Сидоренко Сидір
+Iveco Eurocargo (AA1234CC)
+   Owner: Mike Williams
 
-🚚 АА1234ММ (Iveco Stralis)
-   Власник: ТОВ "Транспорт"
+Iveco Stralis (AA1234MM)
+   Owner: Transport LLC
 ```
 
-### 👤 Знайти клієнта
+### Find Client
 
-**Що робить:** Пошук клієнта за ім'ям з повною інформацією про нього та його автомобілі.
+**What it does:** Search for a client by name with full information about them and their vehicles.
 
-**Як використовувати:**
-1. Натисніть **"Знайти клієнта 👤"**
-2. Введіть ім'я або частину імені клієнта
-3. Отримайте детальну інформацію
+**How to use:**
+1. Press **"Find client"**
+2. Enter name or part of the name
+3. Get detailed information
 
-**Особливості пошуку:**
-- Пошук нечутливий до регістру (можна писати малими літерами)
-- Можна вводити частину імені
-- Можна вводити кілька слів (знайде клієнтів, які мають ВСІ ці слова в імені)
+**Search features:**
+- Case-insensitive search
+- Partial name search supported
+- Multiple words search (finds clients matching ALL words)
 
-**Приклади пошуку:**
+**Search examples:**
 
-*Приклад 1: Повне ім'я*
+*Example 1: Full name*
 ```
-Введіть: Іванов Іван
+Enter: John Smith
 
-Відповідь:
-👤 Клієнт знайдений:
+Response:
+Client found:
 
-Ім'я: Іванов Іван Петрович
-Телефон: +380501234567
-Email: ivanov@example.com
+Name: John Smith Jr.
+Phone: +380501234567
+Email: jsmith@example.com
 
-🚚 Автомобілі (2):
-  • АА1234ВВ - Iveco Daily
+Vehicles (2):
+  - AA1234BB - Iveco Daily
     VIN: ...1234567
-  • ВС5678НН - Iveco Eurocargo
+  - BC5678HH - Iveco Eurocargo
     VIN: ...7654321
 ```
 
-*Приклад 2: Частина імені*
+*Example 2: Partial name*
 ```
-Введіть: іван
+Enter: john
 
-Відповідь (якщо знайдено кілька):
-Знайдено 3 клієнтів:
+Response (if multiple found):
+Found 3 clients:
 
-👤 Іванов Іван Петрович
-   Телефон: +380501234567
-   Автомобілів: 2
+John Smith Jr.
+   Phone: +380501234567
+   Vehicles: 2
 
-👤 Іваненко Степан
-   Телефон: +380509876543
-   Автомобілів: 1
+John Williams
+   Phone: +380509876543
+   Vehicles: 1
 
-👤 ТОВ "Іванівські перевезення"
-   Телефон: +380441234567
-   Автомобілів: 5
-```
-
-*Приклад 3: Пошук юридичної особи*
-```
-Введіть: ТОВ транспорт
-
-Знайде всі компанії, які мають "ТОВ" І "транспорт" в назві
+Johnson Transport LLC
+   Phone: +380441234567
+   Vehicles: 5
 ```
 
-**Якщо нічого не знайдено:**
+*Example 3: Company search*
 ```
-Клієнта з ім'ям 'xyz' не знайдено.
+Enter: LLC transport
 
-Спробуйте ввести частину імені або прізвища.
+Finds all companies with "LLC" AND "transport" in the name
 ```
 
-### 📊 Статистика
-
-**Що робить:** Показує загальну статистику системи.
-
-**Інформація:**
-- Загальна кількість клієнтів
-- Загальна кількість автомобілів
-- Загальна кількість замовлень
-- Кількість користувачів бота
-- Кількість прив'язаних користувачів
-- Розподіл замовлень за статусами
-
-**Приклад:**
+**If nothing found:**
 ```
-📊 Статистика системи:
+No client found matching 'xyz'.
 
-👥 Клієнтів: 245
-🚚 Автомобілів: 312
-🧾 Замовлень: 1,847
-🤖 Користувачів бота: 89
-🔗 Прив'язаних: 76
+Try entering part of the name.
+```
 
-За статусами:
-  • Виконано: 1,654
-  • В роботі: 143
-  • Новий: 35
-  • Скасовано: 15
+### Statistics
+
+**What it does:** Shows overall system statistics.
+
+**Information:**
+- Total clients
+- Total vehicles
+- Total orders
+- Bot users count
+- Linked users count
+- Orders by status breakdown
+
+**Example:**
+```
+System statistics:
+
+Clients: 245
+Vehicles: 312
+Orders: 1,847
+Bot users: 89
+Linked: 76
+
+By status:
+  - Done: 1,654
+  - In Progress: 143
+  - New: 35
+  - Canceled: 15
 ```
 
 ---
 
-## Система нагадувань
+## Reminder System
 
-Система автоматично відправляє нагадування про необхідне обслуговування автомобілів.
+The system automatically sends reminders about required vehicle maintenance.
 
-### Типи нагадувань
+### Reminder Types
 
-#### 🔧 Технічне обслуговування (ТО)
-- **Коли:** Якщо минуло більше 180 днів з останнього ТО
-- **Повідомлення містить:**
-  - Номер автомобіля
-  - Модель
-  - Дату останнього ТО
-  - Кількість днів від останнього ТО
+#### Scheduled Maintenance
+- **When:** If more than 180 days since last service
+- **Message includes:**
+  - Vehicle plate
+  - Model
+  - Last service date
+  - Days since last service
 
-**Приклад нагадування:**
+**Example reminder:**
 ```
-🔔 Нагадування про ТО
+Maintenance Reminder
 
-Автомобіль: АА1234ВВ
-Модель: Iveco Daily
-Останнє ТО: 15.06.2024
-Днів тому: 185
+Vehicle: AA1234BB
+Model: Iveco Daily
+Last service: 15.06.2024
+Days ago: 185
 
-⚠️ Рекомендуємо записатися на технічне обслуговування!
+We recommend scheduling a maintenance service!
 ```
 
-#### 🛢️ Заміна мастила
-- Нагадування про необхідність заміни моторного мастила
-- Налаштовується індивідуально для кожного автомобіля
+#### Oil Change
+- Reminders for engine oil replacement
+- Configured individually per vehicle
 
-#### 📋 Техогляд
-- Нагадування про термін проходження технічного огляду
-- Відправляється за N днів до закінчення терміну
+#### Technical Inspection
+- Reminders for upcoming technical inspection
+- Sent N days before expiration
 
-#### 📝 Спеціальні нагадування
-- Налаштовуються менеджером індивідуально
-- Можуть бути про будь-що (страховка, документи тощо)
+#### Custom Reminders
+- Configured by manager individually
+- Can be about anything (insurance, documents, etc.)
 
-### Налаштування нагадувань
+### Reminder Configuration
 
-Налаштування нагадувань виконує адміністратор через веб-інтерфейс.
+Reminder settings are managed by the administrator via the web interface.
 
-**Параметри налаштування:**
-- Тип нагадування
-- Автомобіль
-- За скільки днів попереджати
-- Як часто повторювати
-- Час відправки
+**Configuration options:**
+- Reminder type
+- Vehicle
+- Days in advance to notify
+- Repeat frequency
+- Send time
 
-### Час відправки
+### Delivery Schedule
 
-**За замовчуванням:** Нагадування відправляються о **9:00 ранку** щодня.
+**Default:** Reminders are sent at **9:00 AM** daily.
 
-**Перевірка ТО:** Система перевіряє необхідність ТО кожні **6 годин**.
-
----
-
-## Часті питання
-
-### ❓ Бот не відповідає на повідомлення
-
-**Рішення:**
-1. Перевірте інтернет-з'єднання
-2. Спробуйте відправити `/start`
-3. Якщо не допомагає - зверніться до технічної підтримки
-
-### ❓ Не можу прив'язати номер телефону
-
-**Причини:**
-- Ваш номер телефону відсутній в базі даних
-- Номер введено в неправильному форматі
-
-**Рішення:**
-Зверніться до менеджера для додавання вашого номера в систему.
-
-### ❓ Не бачу свої автомобілі
-
-**Причини:**
-- Автомобілі не прив'язані до вашого облікового запису
-- Облікові дані не синхронізовані
-
-**Рішення:**
-Зверніться до адміністратора для перевірки прив'язки автомобілів.
-
-### ❓ Не приходять нагадування
-
-**Причини:**
-- Нагадування не налаштовані для ваших автомобілів
-- Нагадування вимкнені адміністратором
-- Для автомобіля немає історії обслуговування
-
-**Рішення:**
-Зверніться до менеджера для налаштування нагадувань.
-
-### ❓ Як змінити номер телефону?
-
-**Рішення:**
-Зверніться до адміністратора. Зміна номера телефону виконується через веб-інтерфейс.
-
-### ❓ Чому я не бачу адміністративні функції?
-
-**Причина:**
-У вас недостатньо прав доступу.
-
-**Рішення:**
-Якщо вам потрібен адміністративний доступ, зверніться до керівництва.
-
-### ❓ Як відписатися від нагадувань?
-
-**Рішення:**
-Зверніться до менеджера. Нагадування можна вимкнути через веб-інтерфейс.
-
-### ❓ Бот показує неправильну інформацію
-
-**Рішення:**
-1. Спробуйте перезапустити розмову: `/start`
-2. Якщо проблема залишається - зверніться до технічної підтримки з описом проблеми
+**Maintenance check:** System checks maintenance needs every **6 hours**.
 
 ---
 
-## Технічна підтримка
+## FAQ
 
-**У разі проблем звертайтесь:**
-- 📧 Email: support@example.com
-- 📞 Телефон: +380 (44) 123-45-67
-- 🕐 Години роботи: Пн-Пт 9:00-18:00
+### The bot doesn't respond to messages
+
+**Solution:**
+1. Check your internet connection
+2. Try sending `/start`
+3. If it still doesn't work, contact technical support
+
+### Can't link phone number
+
+**Causes:**
+- Your phone number is not in the database
+- Number entered in wrong format
+
+**Solution:**
+Contact the manager to add your number to the system.
+
+### Can't see my vehicles
+
+**Causes:**
+- Vehicles are not linked to your account
+- Account data is not synchronized
+
+**Solution:**
+Contact the administrator to verify vehicle assignments.
+
+### Not receiving reminders
+
+**Causes:**
+- Reminders are not configured for your vehicles
+- Reminders are disabled by administrator
+- No service history for the vehicle
+
+**Solution:**
+Contact the manager to configure reminders.
+
+### How to change phone number?
+
+**Solution:**
+Contact the administrator. Phone number changes are done via the web interface.
+
+### Why can't I see admin features?
+
+**Cause:**
+Insufficient access privileges.
+
+**Solution:**
+If you need admin access, contact management.
+
+### How to unsubscribe from reminders?
+
+**Solution:**
+Contact the manager. Reminders can be disabled via the web interface.
+
+### The bot shows incorrect information
+
+**Solution:**
+1. Try restarting the conversation: `/start`
+2. If the issue persists, contact technical support with a description of the problem
 
 ---
 
-## Корисні поради
+## Technical Support
 
-### 💡 Збереження важливої інформації
-Якщо бот надіслав важливу інформацію (номер замовлення, дату ТО), ви можете:
-- Закріпити повідомлення в чаті
-- Зберегти в "Збережені повідомлення" Telegram
-- Зробити скріншот
-
-### 💡 Швидкий доступ
-Додайте бота в обране або закріпіть чат зверху для швидкого доступу.
-
-### 💡 Групові чати
-Бот працює тільки в особистих повідомленнях. Додавання бота в групи не підтримується.
+**For issues, contact:**
+- Email: support@example.com
+- Phone: +380 (44) 123-45-67
+- Working hours: Mon-Fri 9:00-18:00
 
 ---
 
-**Версія документації:** 1.0  
-**Дата оновлення:** 16.12.2024
+## Tips
+
+### Saving Important Information
+If the bot sent important information (order number, service date), you can:
+- Pin the message in the chat
+- Save to Telegram's "Saved Messages"
+- Take a screenshot
+
+### Quick Access
+Add the bot to favorites or pin the chat for quick access.
+
+### Group Chats
+The bot works only in private messages. Adding the bot to groups is not supported.
+
+---
+
+**Documentation version:** 1.0
+**Last updated:** 16.12.2024
