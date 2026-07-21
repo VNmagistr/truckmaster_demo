@@ -264,6 +264,39 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             })
         return Response({'results': results})
 
+    @action(detail=False, methods=['get'], url_path='last-mileage')
+    def last_mileage(self, request):
+        """Повертає останній зафіксований пробіг для вантажівки.
+
+        Query params:
+            truck (int): ID вантажівки (обов'язковий)
+            exclude_id (int): ID наряду, який треба виключити (при редагуванні)
+        """
+        truck_id = request.query_params.get('truck')
+        if not truck_id:
+            return Response(
+                {'detail': "Параметр truck обов'язковий."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        qs = ServiceOrder.objects.filter(
+            truck_id=truck_id,
+            current_mileage__isnull=False,
+            marked_for_deletion=False,
+        )
+        exclude_id = request.query_params.get('exclude_id')
+        if exclude_id:
+            qs = qs.exclude(pk=exclude_id)
+        last_order = qs.order_by('-created_at').values(
+            'current_mileage', 'created_at', 'order_number',
+        ).first()
+        if not last_order:
+            return Response({'last_mileage': None})
+        return Response({
+            'last_mileage': last_order['current_mileage'],
+            'order_number': last_order['order_number'],
+            'created_at': last_order['created_at'],
+        })
+
     @action(detail=False, methods=['post'], url_path='check-maintenance')
     def check_maintenance(self, request):
         """Перевірка необхідності ТО."""

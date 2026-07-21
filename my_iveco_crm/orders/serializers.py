@@ -160,13 +160,36 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate(self, data):
-        """Автоматичне заповнення клієнта з вантажівки."""
+        """Автоматичне заповнення клієнта з вантажівки + перевірка пробігу."""
         truck = data.get('truck')
         client = data.get('client')
 
         if truck and not client:
             if truck.client:
                 data['client'] = truck.client
+
+        current_mileage = data.get('current_mileage')
+        if truck and current_mileage is not None:
+            qs = ServiceOrder.objects.filter(
+                truck=truck,
+                current_mileage__isnull=False,
+                marked_for_deletion=False,
+            )
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            last_order = qs.order_by('-created_at').values(
+                'current_mileage', 'order_number',
+            ).first()
+            if last_order and current_mileage < last_order['current_mileage']:
+                raise serializers.ValidationError({
+                    'current_mileage': (
+                        f"Пробіг {current_mileage} км менший за останній "
+                        f"зафіксований {last_order['current_mileage']} км "
+                        f"(наряд {last_order['order_number']}). "
+                        f"Перевірте коректність введених даних."
+                    )
+                })
+
         return data
 
 
