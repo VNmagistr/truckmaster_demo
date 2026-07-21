@@ -49,5 +49,5 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
     def validate_new_password(self, value):
-        validate_password(value)
+        validate_password(value, self.context.get('user'))
         return value

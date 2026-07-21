@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
   deploy:
@@ -31,11 +30,6 @@ jobs:
           # 1. Оновлюємо код
           echo "🔄 Pulling latest code..."
           git fetch origin
-          
-          # Видаляємо untracked файли міграцій, які можуть конфліктувати
-          echo "🧹 Cleaning untracked migration files..."
-          git clean -fd */migrations/
-          
           git reset --hard origin/main
 
           # 2. Активуємо venv

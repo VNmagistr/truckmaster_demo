@@ -1,4 +1,11 @@
+import logging
+
+from django.db import transaction
+from django.db.models import F
+
 from .models import StockItem, StockMovement, Warehouse
+
+logger = logging.getLogger(__name__)
 
 
 def _get_warehouse(used_part):
@@ -12,7 +19,7 @@ def _get_service_order(used_part):
         try:
             return used_part.service_work.service_order
         except Exception:
-            pass
+            logger.debug('_get_service_order: related object unavailable', exc_info=True)
     return None
 
 
@@ -23,23 +30,24 @@ class StockService:
         warehouse = _get_warehouse(used_part)
         if not warehouse:
             return
-        stock_item, _ = StockItem.objects.get_or_create(
-            warehouse=warehouse,
-            product=used_part.part,
-            defaults={'quantity': 0},
-        )
-        stock_item.quantity -= used_part.quantity
-        stock_item.save()
+        with transaction.atomic():
+            stock_item, _ = StockItem.objects.select_for_update().get_or_create(
+                warehouse=warehouse,
+                product=used_part.part,
+                defaults={'quantity': 0},
+            )
+            stock_item.quantity = F('quantity') - used_part.quantity
+            stock_item.save(update_fields=['quantity'])
 
-        service_order = _get_service_order(used_part)
-        StockMovement.objects.create(
-            movement_type='out',
-            product=used_part.part,
-            quantity=used_part.quantity,
-            warehouse_from=warehouse,
-            service_order=service_order,
-            notes=f'Списання з наряду {service_order}',
-        )
+            service_order = _get_service_order(used_part)
+            StockMovement.objects.create(
+                movement_type='out',
+                product=used_part.part,
+                quantity=used_part.quantity,
+                warehouse_from=warehouse,
+                service_order=service_order,
+                notes=f'Списання з наряду {service_order}',
+            )
 
     @staticmethod
     def restore(used_part):
@@ -47,57 +55,59 @@ class StockService:
         warehouse = _get_warehouse(used_part)
         if not warehouse:
             return
-        stock_item, _ = StockItem.objects.get_or_create(
-            warehouse=warehouse,
-            product=used_part.part,
-            defaults={'quantity': 0},
-        )
-        stock_item.quantity += used_part.quantity
-        stock_item.save()
+        with transaction.atomic():
+            stock_item, _ = StockItem.objects.select_for_update().get_or_create(
+                warehouse=warehouse,
+                product=used_part.part,
+                defaults={'quantity': 0},
+            )
+            stock_item.quantity = F('quantity') + used_part.quantity
+            stock_item.save(update_fields=['quantity'])
 
-        service_order = _get_service_order(used_part)
-        StockMovement.objects.create(
-            movement_type='return',
-            product=used_part.part,
-            quantity=used_part.quantity,
-            warehouse_to=warehouse,
-            service_order=service_order,
-            notes=f'Повернення на склад при зміні наряду {service_order}',
-        )
+            service_order = _get_service_order(used_part)
+            StockMovement.objects.create(
+                movement_type='return',
+                product=used_part.part,
+                quantity=used_part.quantity,
+                warehouse_to=warehouse,
+                service_order=service_order,
+                notes=f'Повернення на склад при зміні наряду {service_order}',
+            )
 
     @staticmethod
     def adjust(used_part, old_quantity):
         """Коригує залишок при зміні кількості UsedPart."""
-        delta = old_quantity - used_part.quantity  # > 0 = повернення, < 0 = додаткове списання
+        delta = old_quantity - used_part.quantity
         if delta == 0:
             return
         warehouse = _get_warehouse(used_part)
         if not warehouse:
             return
-        stock_item, _ = StockItem.objects.get_or_create(
-            warehouse=warehouse,
-            product=used_part.part,
-            defaults={'quantity': 0},
-        )
-        stock_item.quantity += delta
-        stock_item.save()
+        with transaction.atomic():
+            stock_item, _ = StockItem.objects.select_for_update().get_or_create(
+                warehouse=warehouse,
+                product=used_part.part,
+                defaults={'quantity': 0},
+            )
+            stock_item.quantity = F('quantity') + delta
+            stock_item.save(update_fields=['quantity'])
 
-        service_order = _get_service_order(used_part)
-        if delta < 0:
-            StockMovement.objects.create(
-                movement_type='out',
-                product=used_part.part,
-                quantity=-delta,
-                warehouse_from=warehouse,
-                service_order=service_order,
-                notes=f'Списання з наряду {service_order}',
-            )
-        else:
-            StockMovement.objects.create(
-                movement_type='return',
-                product=used_part.part,
-                quantity=delta,
-                warehouse_to=warehouse,
-                service_order=service_order,
-                notes=f'Повернення на склад при зміні наряду {service_order}',
-            )
+            service_order = _get_service_order(used_part)
+            if delta < 0:
+                StockMovement.objects.create(
+                    movement_type='out',
+                    product=used_part.part,
+                    quantity=-delta,
+                    warehouse_from=warehouse,
+                    service_order=service_order,
+                    notes=f'Списання з наряду {service_order}',
+                )
+            else:
+                StockMovement.objects.create(
+                    movement_type='return',
+                    product=used_part.part,
+                    quantity=delta,
+                    warehouse_to=warehouse,
+                    service_order=service_order,
+                    notes=f'Повернення на склад при зміні наряду {service_order}',
+                )

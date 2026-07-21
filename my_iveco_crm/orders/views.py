@@ -1,12 +1,13 @@
 import logging
 import datetime
+from dateutil.relativedelta import relativedelta
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from users.permissions import IsAdminRole, IsManagerOrAbove
 from django.utils import timezone
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncDate
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -292,11 +293,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
                      'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
         for i in range(11, -1, -1):
-            month_date = (today.replace(day=1) - datetime.timedelta(days=i * 28)).replace(day=1)
-            if month_date.month == 12:
-                next_month = month_date.replace(year=month_date.year + 1, month=1)
-            else:
-                next_month = month_date.replace(month=month_date.month + 1)
+            month_date = today.replace(day=1) - relativedelta(months=i)
+            next_month = month_date + relativedelta(months=1)
             client_count = qs.filter(
                 created_at__date__gte=month_date,
                 created_at__date__lt=next_month,
@@ -332,23 +330,23 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         orders = ServiceOrder.objects.filter(
             status=ServiceOrder.StatusChoices.IN_PROGRESS,
             marked_for_deletion=False,
-        ).select_related('truck', 'client')
+        ).select_related('truck', 'client').annotate(
+            last_ip=Max(
+                'status_history__changed_at',
+                filter=Q(status_history__to_status=ServiceOrder.StatusChoices.IN_PROGRESS),
+            )
+        ).filter(last_ip__lt=threshold)
 
-        stale = []
-        for order in orders:
-            last_ip = order.status_history.filter(
-                to_status=ServiceOrder.StatusChoices.IN_PROGRESS
-            ).order_by('-changed_at').first()
-
-            if last_ip and last_ip.changed_at < threshold:
-                stale.append({
-                    'id': order.id,
-                    'order_number': order.order_number,
-                    'client_name': order.client.name if order.client else None,
-                    'truck_plate': order.truck.license_plate if order.truck else None,
-                    'in_progress_since': last_ip.changed_at,
-                })
-
+        stale = [
+            {
+                'id': order.id,
+                'order_number': order.order_number,
+                'client_name': order.client.name if order.client else None,
+                'truck_plate': order.truck.license_plate if order.truck else None,
+                'in_progress_since': order.last_ip,
+            }
+            for order in orders
+        ]
         return Response(stale)
 
     @action(detail=False, methods=['get'])
@@ -357,6 +355,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
         qs = ServiceOrder.objects.filter(marked_for_deletion=False)
         day_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
+        monday = today - datetime.timedelta(days=today.weekday())
         sunday = monday + datetime.timedelta(days=6)
         counts = {
             r['day']: r['count']

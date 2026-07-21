@@ -17,6 +17,7 @@ db.sqlite3
 
 # Папки, що генеруються Django
 staticfiles/
+static_root/
 mediafiles/
 
 # Файли IDE

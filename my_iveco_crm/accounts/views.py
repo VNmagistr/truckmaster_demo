@@ -1,4 +1,4 @@
-﻿# accounts/views.py
+# accounts/views.py
 import io
 import json
 import logging
@@ -19,7 +19,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers import RegisterSerializer, MyTokenObtainPairSerializer
+from .serializers import MyTokenObtainPairSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,6 @@ class ContactRateThrottle(AnonRateThrottle):
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
     throttle_classes = [AuthRateThrottle]
-
-
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    throttle_classes = [AuthRateThrottle]
-    serializer_class = RegisterSerializer
 
 
 class ContactFormView(APIView):

@@ -1,6 +1,10 @@
+import logging
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import UsedPart, StockItem
+
+logger = logging.getLogger(__name__)
 
 
 @receiver([post_save, post_delete], sender=UsedPart)
@@ -15,7 +19,7 @@ def update_order_on_part_change(sender, instance, **kwargs):
         elif instance.service_order_id:
             instance.service_order.update_total_cost()
     except Exception:
-        pass  # service_work може бути вже каскадно видалений
+        logger.debug('update_order_on_part_change: related object already deleted', exc_info=True)
 
 
 @receiver([post_save, post_delete], sender=StockItem)

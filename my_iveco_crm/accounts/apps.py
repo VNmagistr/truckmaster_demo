@@ -10,7 +10,7 @@ class AccountsConfig(AppConfig):
         'label': 'Аутентифікація',
         'description': 'Вхід персоналу, реєстрація, відгуки Google, QR-коди.',
         'is_core': True,
-        'url_prefixes': ['/api/token/', '/api/register/', '/api/contact/', '/api/places-reviews/', '/api/qr/'],
+        'url_prefixes': ['/api/token/', '/api/contact/', '/api/places-reviews/', '/api/qr/'],
         'dependencies': [],
         'order': 0,
     }

@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import os
 
 from django.db.models.signals import post_save, post_delete, pre_save

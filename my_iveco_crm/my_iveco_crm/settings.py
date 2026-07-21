@@ -1,4 +1,4 @@
-﻿"""
+"""
 Django settings for my_iveco_crm project.
 """
 
@@ -197,7 +197,6 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '1000/day',
         'user': '10000/day',
-        'auth': '10/minute',  # для login та register
     },
 }
 
@@ -241,11 +240,12 @@ LOGGING = {
 }
 
 # Додаємо file handler тільки на продакшені (Linux)
-if not DEBUG:
+LOG_FILE = config('LOG_FILE', default='')
+if not DEBUG and LOG_FILE:
     LOGGING['handlers']['file'] = {
         'level': 'ERROR',
         'class': 'logging.FileHandler',
-        'filename': '/home/ubuntu/logs/django_errors.log',
+        'filename': LOG_FILE,
         'formatter': 'verbose',
     }
     LOGGING['loggers']['django']['handlers'].append('file')
@@ -278,6 +278,7 @@ CORS_ALLOW_HEADERS = [
 
 # HTTPS Security Headers (production only)
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -313,8 +314,8 @@ FRONTEND_URL = config('FRONTEND_URL', default='https://ital-truck.com.ua')
 BACKUP_DIR = os.path.join(BASE_DIR, 'backups')
 
 # Celery
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 CELERY_WORKER_POOL = 'gevent'
 CELERY_WORKER_CONCURRENCY = 20
 # gevent is not safe with persistent DB connections

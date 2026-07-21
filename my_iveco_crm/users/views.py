@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from .serializers import UserMeSerializer, ChangePasswordSerializer
 from .permissions import IsAdminRole
 
@@ -26,16 +27,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = User.objects.all()
-        
-        # Фільтр по групі
+
+        if not self.request.user.is_superuser:
+            return queryset.filter(id=self.request.user.id)
+
         group_name = self.request.query_params.get('group')
         if group_name:
             queryset = queryset.filter(groups__name=group_name)
-        
-        # Звичайний юзер бачить тільки себе (крім фільтра по групі)
-        if not self.request.user.is_superuser and not group_name:
-            queryset = queryset.filter(id=self.request.user.id)
-        
+
         return queryset.distinct()
 
     @action(detail=False, methods=['get'], url_path='mechanics')
@@ -77,25 +76,29 @@ class UserViewSet(viewsets.ModelViewSet):
             user.is_active = False
             user.save()
             return Response(
-                {"detail": "Акаунт деактивовано. Вихід із системи..."}, 
-                status=status.HTTP_204_NO_CONTENT
+                {"detail": "Акаунт деактивовано. Вихід із системи..."},
+                status=status.HTTP_200_OK
             )
 
     @action(detail=False, methods=['post'], url_path='change-password')
     def change_password(self, request):
         """Зміна паролю"""
         user = request.user
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = ChangePasswordSerializer(data=request.data, context={'user': user})
 
         if serializer.is_valid():
             if not user.check_password(serializer.data.get("old_password")):
                 return Response(
-                    {"old_password": ["Невірний старий пароль."]}, 
+                    {"old_password": ["Невірний старий пароль."]},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             user.set_password(serializer.data.get("new_password"))
             user.save()
+
+            for token in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=token)
+
             return Response({"detail": "Пароль успішно змінено"}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
