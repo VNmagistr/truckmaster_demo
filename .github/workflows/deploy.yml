@@ -13,18 +13,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install sshpass
-      run: sudo apt-get install -y sshpass
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy to Server
-      env:
-        SSHPASS: ${{ secrets.DO_PASSWORD }}
       run: |
-        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-          set -e  # Зупинити при помилці
-          
+        ssh -i ~/.ssh/deploy_key ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+          set -e
+
           echo "📦 Starting deployment..."
-          
+
           cd /home/ubuntu/truckmaster/my_iveco_crm
 
           # 1. Оновлюємо код
@@ -62,13 +64,11 @@ jobs:
           echo "📊 Checking service status..."
           sudo systemctl is-active gunicorn
           sudo systemctl is-active telegram_bot
-          
+
           echo "✅ Deployment completed successfully!"
         EOF
 
     - name: Verify Deployment
-      env:
-        SSHPASS: ${{ secrets.DO_PASSWORD }}
       run: |
         sleep 5
         echo "🔍 Verifying deployment..."
