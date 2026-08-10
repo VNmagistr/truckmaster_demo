@@ -1,8 +1,6 @@
 import logging
-import requests
-from django.conf import settings
 from django.db import transaction
-from django.utils import timezone
+from django.db.models.functions import Greatest
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -64,54 +62,51 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 {'detail': 'Скасований рахунок не можна змінити.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if new_status == 'paid':
-            stock_error = self._check_stock(invoice)
-            if stock_error:
-                return Response({'detail': stock_error}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
+            if new_status == 'paid':
+                stock_error = self._check_and_deduct_stock(invoice)
+                if stock_error:
+                    return Response({'detail': stock_error}, status=status.HTTP_400_BAD_REQUEST)
             invoice.status = new_status
             invoice.save(update_fields=['status', 'updated_at'])
-            if new_status == 'paid':
-                self._deduct_stock(invoice)
 
         return Response(InvoiceSerializer(invoice, context={'request': request}).data)
 
-    def _check_stock(self, invoice):
-        """Повертає повідомлення про помилку якщо якогось товару недостатньо, інакше None."""
-        from inventory.models import Product
-        items = invoice.items.select_related('product').all()
+    def _check_and_deduct_stock(self, invoice):
+        """Перевіряє наявність і списує зі складу атомарно з select_for_update + F()."""
+        from decimal import Decimal
+        from django.db.models import F
+        from inventory.models import Product, StockMovement
+
+        items = invoice.items.filter(product__isnull=False).select_related('product')
+        product_ids = [item.product_id for item in items]
+        locked_products = {
+            p.pk: p
+            for p in Product.objects.select_for_update().filter(pk__in=product_ids)
+        }
+
         insufficient = []
         for item in items:
-            if not item.product_id:
-                continue
-            product = Product.objects.get(pk=item.product_id)
-            if (product.current_stock or 0) < item.quantity:
+            product = locked_products[item.product_id]
+            stock = product.current_stock or Decimal('0')
+            if stock < item.quantity:
                 insufficient.append(
-                    f'{product.name}: є {product.current_stock or 0}, потрібно {item.quantity}'
+                    f'{product.name}: є {stock}, потрібно {item.quantity}'
                 )
         if insufficient:
             return 'Недостатньо товарів на складі: ' + '; '.join(insufficient)
-        return None
 
-    def _deduct_stock(self, invoice):
-        from inventory.models import StockMovement, Product
-        for item in invoice.items.select_related('product').all():
-            if not item.product_id:
-                continue
+        for item in items:
+            Product.objects.filter(pk=item.product_id).update(
+                current_stock=Greatest(F('current_stock') - item.quantity, Decimal('0')),
+            )
             StockMovement.objects.create(
-                product=item.product,
+                product_id=item.product_id,
                 movement_type='out',
                 quantity=item.quantity,
                 invoice_number=invoice.number,
                 notes=f'Продаж за рахунком {invoice.number}',
-            )
-            from decimal import Decimal
-            Product.objects.filter(pk=item.product_id).update(
-                current_stock=max(
-                    Decimal('0'),
-                    (item.product.current_stock or Decimal('0')) - item.quantity,
-                )
             )
 
     @action(detail=True, methods=['post'])
@@ -283,49 +278,20 @@ class DriverPickupLogViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def track_nova_poshta(request, number):
     """Відстеження посилки Нової Пошти за номером декларації."""
-    api_key = getattr(settings, 'NP_API_KEY', '')
-    if not api_key:
-        return Response(
-            {'detail': 'NP_API_KEY не налаштовано.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+    from django.core.cache import cache
+    from bot.nova_poshta import _np_api_track
 
-    payload = {
-        'apiKey': api_key,
-        'modelName': 'TrackingDocument',
-        'calledMethod': 'getStatusDocuments',
-        'methodProperties': {
-            'Documents': [{'DocumentNumber': number}],
-        },
-    }
+    cache_key = f'np_track_{number}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
 
-    try:
-        resp = requests.post(
-            'https://api.novaposhta.ua/v2.0/json/',
-            json=payload,
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException as e:
-        logger.error(f'Nova Poshta API error: {e}')
+    data = _np_api_track(number)
+    if 'error' in data:
         return Response(
-            {'detail': 'Помилка зв\'язку з API Нової Пошти.'},
+            {'detail': data['error']},
             status=status.HTTP_502_BAD_GATEWAY,
         )
 
-    if not data.get('success'):
-        errors = data.get('errors', [])
-        return Response(
-            {'detail': errors[0] if errors else 'Помилка API Нової Пошти.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    docs = data.get('data', [])
-    if not docs:
-        return Response(
-            {'detail': 'Декларацію не знайдено.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    return Response(docs[0])
+    cache.set(cache_key, data, timeout=120)
+    return Response(data)
