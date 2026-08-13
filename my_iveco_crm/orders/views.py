@@ -991,14 +991,17 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         service_work._skip_auto_kit = True
         service_work.save()
 
+        parts_added = []
+
         # Додаємо оливу (тільки для категорій з оливою)
-        if oil_product and oil_qty:
+        if oil_field and oil_product and oil_qty:
             oil_part = UsedPart.objects.create(
                 service_work=service_work,
                 part=oil_product,
-                quantity=int(oil_qty),
+                quantity=oil_qty,
             )
             StockService.deduct(oil_part)
+            parts_added.append(f'{oil_product.name} x{oil_qty}')
 
         # При заміні оливи АКПП — також додаємо фільтр АКПП з окремого FK-поля
         if is_auto_gearbox and kit.auto_gearbox_filter and kit.auto_gearbox_filter_quantity:
@@ -1008,6 +1011,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 quantity=kit.auto_gearbox_filter_quantity,
             )
             StockService.deduct(atf_filter_part)
+            parts_added.append(f'{kit.auto_gearbox_filter.name} x{kit.auto_gearbox_filter_quantity}')
 
         # Додаємо фільтри відповідно до категорії
         seen_part_ids = {oil_product.pk} if oil_product else set()
@@ -1023,6 +1027,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 quantity=kit_filter.quantity,
             )
             StockService.deduct(filter_part)
+            parts_added.append(f'{kit_filter.part.name} x{kit_filter.quantity}')
 
         # Логуємо виконання ТО (тільки якщо є правило)
         if rule:
@@ -1037,8 +1042,22 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         type_label = {'full': 'повне', 'partial': 'часткове'}.get(service_type, '')
         label = f' ({type_label})' if type_label else ''
+
+        debug_info = {
+            'oil_field': oil_field,
+            'oil_product': str(oil_product) if oil_product else None,
+            'oil_qty': str(oil_qty) if oil_qty else None,
+            'filters_count': applicable_filters.count(),
+        }
+        import warnings
+        warnings.warn(f"apply_maintenance_set debug: {debug_info}, parts_added={parts_added}")
+
         return Response(
-            {'detail': f'Набір ТО "{description}"{label} застосовано до наряду'},
+            {
+                'detail': f'Набір ТО "{description}"{label} застосовано до наряду',
+                'parts_added': parts_added,
+                'debug': debug_info,
+            },
             status=status.HTTP_201_CREATED
         )
 
