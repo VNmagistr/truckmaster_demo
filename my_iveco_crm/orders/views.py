@@ -798,16 +798,25 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         Параметри:
             rule_id (int): обовʼязковий
-            service_type (str): 'full' | 'partial' — вид ТО (за замовч. всі фільтри)
+            category (str): 'engine_oil' | 'gearbox_oil' | 'rear_axle_oil' | 'belts' | 'chains'
+            service_type (str): 'full' | 'partial' — вид ТО (за замовч. повне)
         """
         order = self.get_object()
         rule_id = request.data.get('rule_id')
+        category = request.data.get('category', 'engine_oil')
         service_type = request.data.get('service_type')  # 'full' | 'partial' | None
         mechanic_id = request.data.get('mechanic')
         work_id = request.data.get('work')
 
         if not rule_id:
             return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
+
+        VALID_CATEGORIES = ('engine_oil', 'gearbox_oil', 'rear_axle_oil', 'belts', 'chains')
+        if category not in VALID_CATEGORIES:
+            return Response(
+                {'detail': f"category має бути одним з: {', '.join(VALID_CATEGORIES)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if service_type and service_type not in ('full', 'partial'):
             return Response({'detail': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
@@ -825,11 +834,51 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        applicable_filters = _filters_for_service_type(kit.filters, service_type)
+        truck = order.truck
+        is_auto_gearbox = (
+            category == 'gearbox_oil'
+            and getattr(truck, 'transmission_type', None) in ('automatic', 'robotic')
+        )
+
+        OIL_MAP = {
+            'engine_oil':    ('oil',              'oil_quantity'),
+            'gearbox_oil':   ('gearbox_oil',      'gearbox_oil_quantity'),
+            'rear_axle_oil': ('rear_axle_oil',    'rear_axle_oil_quantity'),
+        }
+        if is_auto_gearbox:
+            OIL_MAP['gearbox_oil'] = ('auto_gearbox_oil', 'auto_gearbox_oil_quantity')
+
+        CATEGORY_TO_FILTER_TYPE = {
+            'engine_oil':    None,
+            'gearbox_oil':   'auto_gearbox' if is_auto_gearbox else 'gearbox',
+            'rear_axle_oil': 'rear_axle',
+            'belts':         'belts',
+            'chains':        'chains',
+        }
+
+        oil_field, qty_field = OIL_MAP.get(category, (None, None))
+        filter_type = CATEGORY_TO_FILTER_TYPE.get(category)
+
+        if filter_type is None:
+            if service_type == 'full':
+                applicable_filters = kit.filters.filter(service_type__in=['full', 'both'])
+            elif service_type == 'partial':
+                applicable_filters = kit.filters.filter(service_type__in=['partial', 'both'])
+            else:
+                applicable_filters = kit.filters.filter(service_type__in=['both', 'full', 'partial'])
+        else:
+            applicable_filters = kit.filters.filter(service_type=filter_type)
+
+        from inventory.services import StockService
+
+        oil_product = getattr(kit, oil_field, None) if oil_field else None
+        oil_qty = getattr(kit, qty_field, None) if qty_field else None
+
+        kit_part_ids = list(applicable_filters.values_list('part_id', flat=True))
+        if oil_product:
+            kit_part_ids.append(oil_product.pk)
 
         # Очищаємо старі direct_parts цього наряду від запчастин набору ТО
-        from inventory.services import StockService
-        kit_part_ids = [kit.oil_id] + list(applicable_filters.values_list('part_id', flat=True))
         for old_part in UsedPart.objects.filter(
             service_order=order,
             service_work__isnull=True,
@@ -839,7 +888,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             old_part.delete()
 
         # Видаляємо попередньо застосований набір (якщо є), щоб уникнути дублювання
-        # Повертаємо залишки на склад перед видаленням
         old_works = ServiceWork.objects.filter(service_order=order, description=rule.name)
         for old_part in UsedPart.objects.filter(service_work__in=old_works):
             StockService.restore(old_part)
@@ -871,15 +919,28 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         service_work._skip_auto_kit = True
         service_work.save()
 
-        # Додаємо оливу та фільтри до роботи
-        oil_part = UsedPart.objects.create(
-            service_work=service_work,
-            part=kit.oil,
-            quantity=kit.oil_quantity,
-        )
-        StockService.deduct(oil_part)
+        # Додаємо оливу (тільки для категорій з оливою)
+        if oil_product and oil_qty:
+            oil_part = UsedPart.objects.create(
+                service_work=service_work,
+                part=oil_product,
+                quantity=int(oil_qty),
+            )
+            StockService.deduct(oil_part)
 
-        seen_part_ids = set()
+        # При заміні оливи АКПП — також додаємо фільтр АКПП з окремого FK-поля
+        if is_auto_gearbox and kit.auto_gearbox_filter and kit.auto_gearbox_filter_quantity:
+            atf_filter_part = UsedPart.objects.create(
+                service_work=service_work,
+                part=kit.auto_gearbox_filter,
+                quantity=kit.auto_gearbox_filter_quantity,
+            )
+            StockService.deduct(atf_filter_part)
+
+        # Додаємо фільтри відповідно до категорії
+        seen_part_ids = {oil_product.pk} if oil_product else set()
+        if is_auto_gearbox and kit.auto_gearbox_filter_id:
+            seen_part_ids.add(kit.auto_gearbox_filter_id)
         for kit_filter in applicable_filters:
             if kit_filter.part_id in seen_part_ids:
                 continue
