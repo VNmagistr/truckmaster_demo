@@ -27,6 +27,80 @@ def _filters_for_service_type(kit_filters_qs, service_type):
         return kit_filters_qs.filter(service_type__in=['partial', 'both'])
     return kit_filters_qs.all()
 
+
+BELTS_KW = ('ремін', 'ремен', 'ролик', 'натяж', 'belt', 'roller', 'tensioner')
+CHAINS_KW = ('ланцюг', 'грм', 'chain', 'timing', 'зірк', 'sprocket')
+NON_ENGINE_SERVICE_TYPES = frozenset((
+    'rear_axle', 'gearbox', 'auto_gearbox', 'auto_gearbox_filter', 'belts', 'chains',
+))
+
+
+def _is_belt_or_chain(product_name):
+    """Визначає чи запчастина є ременем/роликом/ланцюгом за назвою."""
+    name = product_name.lower()
+    if any(kw in name for kw in BELTS_KW):
+        return 'belts'
+    if any(kw in name for kw in CHAINS_KW):
+        return 'chains'
+    return None
+
+
+def _get_kit_filters_for_category(kit, category, service_type, other_oil_ids):
+    """Повертає фільтри кіту для конкретної категорії ТО.
+
+    Логіка:
+    - engine_oil: фільтри, що НЕ є оливами інших типів і НЕ ремені/ланцюги.
+      Враховує service_type (full/partial/both) і ключові слова в назві запчастини.
+    - gearbox_oil / rear_axle_oil: тільки фільтри з відповідним service_type.
+    - belts: фільтри з service_type='belts' АБО з ременем/роликом у назві.
+    - chains: фільтри з service_type='chains' АБО з ланцюгом у назві.
+    """
+    if category == 'engine_oil':
+        qs = kit.filters.select_related('part').all()
+        if service_type == 'full':
+            qs = qs.filter(service_type__in=['full', 'both'])
+        elif service_type == 'partial':
+            qs = qs.filter(service_type__in=['partial', 'both'])
+        else:
+            qs = qs.exclude(service_type__in=NON_ENGINE_SERVICE_TYPES)
+        if other_oil_ids:
+            qs = qs.exclude(part_id__in=other_oil_ids)
+        exclude_by_name = set()
+        for f in qs:
+            if _is_belt_or_chain(f.part.name):
+                exclude_by_name.add(f.pk)
+        if exclude_by_name:
+            qs = qs.exclude(pk__in=exclude_by_name)
+        return qs
+
+    if category == 'belts':
+        by_type = set(kit.filters.filter(service_type='belts').values_list('part_id', flat=True))
+        by_name = set()
+        for f in kit.filters.select_related('part').all():
+            if f.part_id not in by_type and _is_belt_or_chain(f.part.name) == 'belts':
+                by_name.add(f.part_id)
+        all_ids = by_type | by_name
+        return kit.filters.filter(part_id__in=all_ids) if all_ids else kit.filters.none()
+
+    if category == 'chains':
+        by_type = set(kit.filters.filter(service_type='chains').values_list('part_id', flat=True))
+        by_name = set()
+        for f in kit.filters.select_related('part').all():
+            if f.part_id not in by_type and _is_belt_or_chain(f.part.name) == 'chains':
+                by_name.add(f.part_id)
+        all_ids = by_type | by_name
+        return kit.filters.filter(part_id__in=all_ids) if all_ids else kit.filters.none()
+
+    CATEGORY_TO_FILTER_TYPE = {
+        'gearbox_oil': 'gearbox',
+        'rear_axle_oil': 'rear_axle',
+    }
+    filter_type = CATEGORY_TO_FILTER_TYPE.get(category)
+    if filter_type:
+        return kit.filters.filter(service_type=filter_type)
+
+    return kit.filters.none()
+
 from .models import (
     ServiceOrder, ServiceWork, WorkGroup, WorkPrice,
     RepairPhoto, MaintenanceRule, MaintenanceLog, MaintenanceKit, MaintenanceKitFilter,
@@ -848,26 +922,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if is_auto_gearbox:
             OIL_MAP['gearbox_oil'] = ('auto_gearbox_oil', 'auto_gearbox_oil_quantity')
 
-        CATEGORY_TO_FILTER_TYPE = {
-            'engine_oil':    None,
-            'gearbox_oil':   'auto_gearbox' if is_auto_gearbox else 'gearbox',
-            'rear_axle_oil': 'rear_axle',
-            'belts':         'belts',
-            'chains':        'chains',
-        }
-
         oil_field, qty_field = OIL_MAP.get(category, (None, None))
-        filter_type = CATEGORY_TO_FILTER_TYPE.get(category)
 
-        if filter_type is None:
-            if service_type == 'full':
-                applicable_filters = kit.filters.filter(service_type__in=['full', 'both'])
-            elif service_type == 'partial':
-                applicable_filters = kit.filters.filter(service_type__in=['partial', 'both'])
-            else:
-                applicable_filters = kit.filters.filter(service_type__in=['both', 'full', 'partial'])
-        else:
-            applicable_filters = kit.filters.filter(service_type=filter_type)
+        # ID всіх олив/фільтрів АКПП з FK-полів кіту (не плутати з фільтрами-записами)
+        other_oil_ids = set()
+        for fk in ('oil', 'rear_axle_oil', 'gearbox_oil', 'auto_gearbox_oil', 'auto_gearbox_filter'):
+            pid = getattr(kit, f'{fk}_id', None)
+            if pid:
+                other_oil_ids.add(pid)
+
+        applicable_filters = _get_kit_filters_for_category(kit, category, service_type, other_oil_ids)
 
         from inventory.services import StockService
 

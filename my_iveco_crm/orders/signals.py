@@ -19,6 +19,19 @@ OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
 
 TO_KEYWORDS = ['то ', 'т.о.', 'заміна оливи', 'заміна масла', 'регламент', 'технічне обслуговування']
 
+_BELTS_KW = ('ремін', 'ремен', 'ролик', 'натяж', 'belt', 'roller', 'tensioner')
+_CHAINS_KW = ('ланцюг', 'грм', 'chain', 'timing', 'зірк', 'sprocket')
+
+
+def _is_belt_or_chain_product(product_name):
+    """Повертає 'belts' / 'chains' / None за назвою запчастини."""
+    name = product_name.lower()
+    if any(kw in name for kw in _BELTS_KW):
+        return 'belts'
+    if any(kw in name for kw in _CHAINS_KW):
+        return 'chains'
+    return None
+
 
 def _is_maintenance_work(work):
     """Перевіряє чи є робота технічним обслуговуванням."""
@@ -254,9 +267,31 @@ def auto_add_maintenance_kit(sender, instance, created, **kwargs):
             if f_created:
                 StockService.deduct(f_part)
 
-    # Для двигуна — фільтри both/full/partial; для інших — тільки свій service_type
+    # Збираємо ID олив з FK-полів кіту щоб виключити їх з фільтрів
+    other_oil_ids = set()
+    for fk in ('oil', 'rear_axle_oil', 'gearbox_oil', 'auto_gearbox_oil', 'auto_gearbox_filter'):
+        pid = getattr(kit, f'{fk}_id', None)
+        if pid:
+            other_oil_ids.add(pid)
+
     if work_type == 'engine_oil':
-        filters_qs = kit.filters.filter(service_type__in=('both', 'full', 'partial'))
+        filters_qs = (
+            kit.filters
+            .select_related('part')
+            .exclude(service_type__in=('rear_axle', 'gearbox', 'auto_gearbox', 'auto_gearbox_filter', 'belts', 'chains'))
+            .exclude(part_id__in=other_oil_ids)
+        )
+        exclude_pks = {f.pk for f in filters_qs if _is_belt_or_chain_product(f.part.name)}
+        if exclude_pks:
+            filters_qs = filters_qs.exclude(pk__in=exclude_pks)
+    elif work_type in ('belts', 'chains'):
+        by_type = set(kit.filters.filter(service_type=work_type).values_list('part_id', flat=True))
+        by_name = set()
+        for f in kit.filters.select_related('part').all():
+            if f.part_id not in by_type and _is_belt_or_chain_product(f.part.name) == work_type:
+                by_name.add(f.part_id)
+        all_ids = by_type | by_name
+        filters_qs = kit.filters.filter(part_id__in=all_ids) if all_ids else kit.filters.none()
     else:
         filters_qs = kit.filters.filter(service_type=work_type)
 
