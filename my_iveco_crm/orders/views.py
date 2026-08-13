@@ -871,7 +871,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         """Застосувати набір ТО до наряду.
 
         Параметри:
-            rule_id (int): обовʼязковий
+            rule_id (int): необовʼязковий — якщо не вказано, назва роботи береться з category
             category (str): 'engine_oil' | 'gearbox_oil' | 'rear_axle_oil' | 'belts' | 'chains'
             service_type (str): 'full' | 'partial' — вид ТО (за замовч. повне)
         """
@@ -881,9 +881,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         service_type = request.data.get('service_type')  # 'full' | 'partial' | None
         mechanic_id = request.data.get('mechanic')
         work_id = request.data.get('work')
-
-        if not rule_id:
-            return Response({'detail': 'rule_id є обовʼязковим'}, status=status.HTTP_400_BAD_REQUEST)
 
         VALID_CATEGORIES = ('engine_oil', 'gearbox_oil', 'rear_axle_oil', 'belts', 'chains')
         if category not in VALID_CATEGORIES:
@@ -895,10 +892,20 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if service_type and service_type not in ('full', 'partial'):
             return Response({'detail': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            rule = MaintenanceRule.objects.get(id=rule_id)
-        except MaintenanceRule.DoesNotExist:
-            return Response({'detail': 'Правило ТО не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+        CATEGORY_LABELS = {
+            'engine_oil': 'Заміна оливи в двигуні',
+            'gearbox_oil': 'Заміна оливи в КПП',
+            'rear_axle_oil': 'Заміна оливи в задньому мості',
+            'belts': 'Заміна ремнів',
+            'chains': 'Заміна ланцюгів ГРМ',
+        }
+
+        rule = None
+        if rule_id:
+            try:
+                rule = MaintenanceRule.objects.get(id=rule_id)
+            except MaintenanceRule.DoesNotExist:
+                return Response({'detail': 'Правило ТО не знайдено'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             kit = MaintenanceKit.objects.prefetch_related('filters').get(truck=order.truck)
@@ -937,6 +944,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         oil_product = getattr(kit, oil_field, None) if oil_field else None
         oil_qty = getattr(kit, qty_field, None) if qty_field else None
+        description = rule.name if rule else CATEGORY_LABELS.get(category, category)
 
         kit_part_ids = list(applicable_filters.values_list('part_id', flat=True))
         if oil_product:
@@ -952,13 +960,13 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             old_part.delete()
 
         # Видаляємо попередньо застосований набір (якщо є), щоб уникнути дублювання
-        old_works = ServiceWork.objects.filter(service_order=order, description=rule.name)
+        old_works = ServiceWork.objects.filter(service_order=order, description=description)
         for old_part in UsedPart.objects.filter(service_work__in=old_works):
             StockService.restore(old_part)
         old_works.delete()
 
         # Створюємо роботу для ТО
-        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
+        effective_work_id = work_id or (rule.work_id if rule and rule.work_id else None)
         work_obj = None
         if effective_work_id:
             try:
@@ -967,7 +975,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 pass
         work_kwargs = {
             'service_order': order,
-            'description': rule.name,
+            'description': description,
             'hours_spent': work_obj.standard_hours if work_obj else 0,
         }
         if mechanic_id:
@@ -1016,20 +1024,21 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             )
             StockService.deduct(filter_part)
 
-        # Логуємо виконання ТО
-        MaintenanceLog.objects.create(
-            truck=order.truck,
-            rule=rule,
-            date_performed=timezone.now().date(),
-            mileage=order.current_mileage,
-        )
+        # Логуємо виконання ТО (тільки якщо є правило)
+        if rule:
+            MaintenanceLog.objects.create(
+                truck=order.truck,
+                rule=rule,
+                date_performed=timezone.now().date(),
+                mileage=order.current_mileage,
+            )
 
         order.update_total_cost()
 
         type_label = {'full': 'повне', 'partial': 'часткове'}.get(service_type, '')
         label = f' ({type_label})' if type_label else ''
         return Response(
-            {'detail': f'Набір ТО "{rule.name}"{label} застосовано до наряду'},
+            {'detail': f'Набір ТО "{description}"{label} застосовано до наряду'},
             status=status.HTTP_201_CREATED
         )
 
