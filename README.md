@@ -2,7 +2,7 @@
 
 CRM system for an Iveco heavy truck service center **"Ital Truck"**.
 
-**Demo:** [http://137.184.31.33](http://137.184.31.33) | **Admin:** [http://137.184.31.33/admin/](http://137.184.31.33/admin/) (admin / admin)
+**Production:** [https://ital-truck.com.ua](https://ital-truck.com.ua) | **API:** [https://api.ital-truck.com.ua](https://api.ital-truck.com.ua)
 
 ## Tech Stack
 
@@ -199,6 +199,9 @@ GET           /api/orders/stale_in_progress/
 GET/POST      /api/service-works/
 GET           /api/service-works/{id}/suggest-parts/
 POST          /api/repair-photos/bulk_upload/
+POST          /api/orders/{id}/apply_maintenance_set/
+GET           /api/orders/{id}/maintenance-countdown/
+GET           /api/orders/last-mileage/
 
 # Maintenance
 GET/POST      /api/maintenance-intervals/
@@ -211,6 +214,12 @@ POST          /api/inventory/movements/transfer/
 POST          /api/inventory/movements/receive_stock/
 POST          /api/inventory/order-folders/{id}/receive_all/
 POST          /api/inventory/order-items/{id}/receive/
+
+# Backups
+GET/POST      /api/backups/
+GET           /api/backups/{filename}/download/
+DELETE        /api/backups/{filename}/
+POST          /api/backups/restore/
 
 # Invoices
 GET/POST      /api/invoices/
@@ -373,6 +382,18 @@ FRONTEND_URL=https://your-domain.com
 ---
 
 ## Changelog
+
+### v2.16 -- 2026-08-13
+- **Maintenance set — category-specific parts**: `apply_maintenance_set` now accepts a `category` parameter (engine_oil / gearbox_oil / rear_axle_oil / belts / chains) and adds only the relevant oil and filters for that category instead of always adding engine oil + all filters; auto-detects automatic/robotic transmission for gearbox category
+- **Fix duplicate parts**: copper drain plug washer and similar parts no longer added twice when applying a maintenance set
+
+### v2.15 -- 2026-08-13
+- Scheduled maintenance dropdown with 5 categories replacing single "Add maintenance set" button
+- Per-order postpone in stale orders reminder (3 / 7 / 14 / 30 days)
+
+### v2.14 -- 2026-07-28
+- Database backup/restore from frontend (BackupPage)
+- Snooze for stale orders reminder (1 hour / 3 hours / 1 day)
 
 ### v2.13 -- 2026-05-12
 - Auto-suggest parts from previous orders when adding work
