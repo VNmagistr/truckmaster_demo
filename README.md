@@ -385,6 +385,7 @@ FRONTEND_URL=https://your-domain.com
 
 ### v2.16 -- 2026-08-13
 - **Maintenance set — category-specific parts**: `apply_maintenance_set` now accepts a `category` parameter (engine_oil / gearbox_oil / rear_axle_oil / belts / chains) and adds only the relevant oil and filters for that category instead of always adding engine oil + all filters; auto-detects automatic/robotic transmission for gearbox category
+- **Smart filter classification**: 3-level filtering prevents wrong parts in maintenance sets — excludes by `service_type`, by FK oil fields on the kit, and by product name keywords (belts/rollers/chains); same logic applied to both `apply_maintenance_set` view and `auto_add_maintenance_kit` signal
 - **Fix duplicate parts**: copper drain plug washer and similar parts no longer added twice when applying a maintenance set
 
 ### v2.15 -- 2026-08-13
