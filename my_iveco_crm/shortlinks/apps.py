@@ -7,9 +7,9 @@ class ShortlinksConfig(AppConfig):
 
     MODULE_INFO = {
         'name': 'shortlinks',
-        'label': 'Короткі посилання (QR)',
+        'label': 'QR-коди',
         'description': (
-            'Редіректи виду /go/<slug> для друку QR на поліграфії — '
+            'QR-коди з редіректами /go/<slug> для друку на поліграфії — '
             'посилання можна змінювати без передруку.'
         ),
         'is_core': True,

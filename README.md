@@ -159,7 +159,7 @@ Core modules are always active. Optional modules are toggled in `/admin/core/mod
 
 - **i18n** — full localization in Ukrainian and English (react-i18next)
 - **PWA** — install on mobile/desktop, offline support, Service Worker
-- **QR / Short Links** — `/go/<slug>/` with click counter
+- **QR Codes** — `/go/<slug>/` short links with click counter, QR generation and download from admin panel
 - **Dashboard** — key metrics (clients, vehicles, orders, revenue by month/year), charts
 - **Audit** — user action log (create, update, delete, view, export)
 - **Module system** — enable/disable features without redeployment
@@ -277,7 +277,7 @@ truckmaster/                         # Backend repo
     bot/                             # Telegram bot (handlers, keyboards, queries)
     appointments/                    # Online booking
     alpr/                            # License plate recognition
-    shortlinks/                      # QR / short URL redirects
+    shortlinks/                      # QR codes with short URL redirects
 
 truckmaster_frontend/                # Frontend repo
   src/
