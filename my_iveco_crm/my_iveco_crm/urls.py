@@ -12,6 +12,9 @@ urlpatterns = [
     # Публічні редіректи /go/<slug>/ (для QR-кодів на поліграфії)
     path('go/', include('shortlinks.urls')),
 
+    # API управління QR-кодами
+    path('api/shortlinks/', include('shortlinks.api_urls')),
+
     # API документація
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

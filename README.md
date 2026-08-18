@@ -159,7 +159,7 @@ Core modules are always active. Optional modules are toggled in `/admin/core/mod
 
 - **i18n** — full localization in Ukrainian and English (react-i18next)
 - **PWA** — install on mobile/desktop, offline support, Service Worker
-- **QR Codes** — `/go/<slug>/` short links with click counter, QR generation and download from admin panel
+- **QR Codes** — `/go/<slug>/` short links with click counter, QR generation and download from admin panel, enable/disable toggle from CRM frontend (disabled codes show a stub page)
 - **Dashboard** — key metrics (clients, vehicles, orders, revenue by month/year), charts
 - **Audit** — user action log (create, update, delete, view, export)
 - **Module system** — enable/disable features without redeployment
@@ -239,6 +239,10 @@ GET           /api/bot/statistics/
 POST          /api/alpr/event/
 GET/POST      /api/alpr/ignored/
 GET           /api/alpr/arrivals/
+
+# QR Codes (Short Links)
+GET           /api/shortlinks/
+POST          /api/shortlinks/{id}/toggle/
 
 # Modules
 GET           /api/modules/
@@ -382,6 +386,9 @@ FRONTEND_URL=https://your-domain.com
 ---
 
 ## Changelog
+
+### v2.17 -- 2026-08-18
+- **QR code toggle**: enable/disable QR codes from the CRM frontend (`GET /api/shortlinks/`, `POST /api/shortlinks/{id}/toggle/`); disabled codes show a branded stub page instead of redirecting
 
 ### v2.16 -- 2026-08-13
 - **Maintenance set — category-specific parts**: `apply_maintenance_set` now accepts a `category` parameter (engine_oil / gearbox_oil / rear_axle_oil / belts / chains) and adds only the relevant oil and filters for that category instead of always adding engine oil + all filters; auto-detects automatic/robotic transmission for gearbox category
