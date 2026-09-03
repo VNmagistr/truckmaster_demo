@@ -178,17 +178,24 @@ class ServiceOrderWriteSerializer(serializers.ModelSerializer):
             if self.instance:
                 qs = qs.exclude(pk=self.instance.pk)
             last_order = qs.order_by('-created_at').values(
-                'current_mileage', 'order_number',
+                'current_mileage', 'order_number', 'created_at',
             ).first()
             if last_order and current_mileage < last_order['current_mileage']:
-                raise serializers.ValidationError({
-                    'current_mileage': (
-                        f"Пробіг {current_mileage} км менший за останній "
-                        f"зафіксований {last_order['current_mileage']} км "
-                        f"(наряд {last_order['order_number']}). "
-                        f"Перевірте коректність введених даних."
-                    )
-                })
+                order_date = data.get('created_at')
+                is_backdated = (
+                    order_date is not None
+                    and last_order['created_at'] is not None
+                    and order_date < last_order['created_at']
+                )
+                if not is_backdated:
+                    raise serializers.ValidationError({
+                        'current_mileage': (
+                            f"Пробіг {current_mileage} км менший за останній "
+                            f"зафіксований {last_order['current_mileage']} км "
+                            f"(наряд {last_order['order_number']}). "
+                            f"Перевірте коректність введених даних."
+                        )
+                    })
 
         return data
 
