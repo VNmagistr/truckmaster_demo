@@ -944,7 +944,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         oil_product = getattr(kit, oil_field, None) if oil_field else None
         oil_qty = getattr(kit, qty_field, None) if qty_field else None
-        description = rule.name if rule else CATEGORY_LABELS.get(category, category)
+        label = CATEGORY_LABELS.get(category, category)
+        if is_auto_gearbox:
+            label = 'Заміна оливи в АКПП'
+        description = rule.name if rule else label
 
         kit_part_ids = list(applicable_filters.values_list('part_id', flat=True))
         if oil_product:
