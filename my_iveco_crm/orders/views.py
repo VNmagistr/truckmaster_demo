@@ -995,6 +995,19 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 work_obj = WorkPrice.objects.get(pk=effective_work_id)
             except WorkPrice.DoesNotExist:
                 pass
+        if not work_obj:
+            WORK_KEYWORDS = {
+                'engine_oil': ['двигун', 'engine oil'],
+                'gearbox_oil': ['акпп', 'кпп', 'коробк', 'gearbox'],
+                'rear_axle_oil': ['задн', 'rear axle', 'міст'],
+                'belts': ['ремен', 'belt'],
+                'chains': ['ланцюг', 'грм', 'chain', 'timing'],
+            }
+            for kw in WORK_KEYWORDS.get(category, []):
+                wp = WorkPrice.objects.filter(name__icontains=kw).first()
+                if wp:
+                    work_obj = wp
+                    break
         work_kwargs = {
             'service_order': order,
             'description': description,
