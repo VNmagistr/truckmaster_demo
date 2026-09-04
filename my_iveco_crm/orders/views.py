@@ -906,6 +906,25 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 rule = MaintenanceRule.objects.get(id=rule_id)
             except MaintenanceRule.DoesNotExist:
                 return Response({'detail': 'Правило ТО не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            CATEGORY_KEYWORDS = {
+                'engine_oil': ['двигун', 'engine oil'],
+                'gearbox_oil': ['кпп', 'акпп', 'коробк', 'gearbox'],
+                'rear_axle_oil': ['задн', 'rear axle'],
+                'belts': ['ремен', 'ролик', 'belt'],
+                'chains': ['ланцюг', 'грм', 'chain', 'timing'],
+            }
+            keywords = CATEGORY_KEYWORDS.get(category, [])
+            rules_qs = MaintenanceRule.objects.all()
+            if order.truck.base_model_id:
+                model_rules = rules_qs.filter(applicable_models=order.truck.base_model)
+                if model_rules.exists():
+                    rules_qs = model_rules
+            for kw in keywords:
+                match = rules_qs.filter(name__icontains=kw).first()
+                if match:
+                    rule = match
+                    break
 
         try:
             kit = MaintenanceKit.objects.prefetch_related('filters').get(truck=order.truck)
