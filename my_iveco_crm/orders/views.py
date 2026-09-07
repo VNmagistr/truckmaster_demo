@@ -892,6 +892,12 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if service_type and service_type not in ('full', 'partial'):
             return Response({'detail': "service_type має бути 'full' або 'partial'"}, status=status.HTTP_400_BAD_REQUEST)
 
+        truck = order.truck
+        is_auto_gearbox = (
+            category == 'gearbox_oil'
+            and getattr(truck, 'transmission_type', None) in ('automatic', 'robotic')
+        )
+
         CATEGORY_LABELS = {
             'engine_oil': 'Заміна оливи в двигуні',
             'gearbox_oil': 'Заміна оливи в КПП',
@@ -909,7 +915,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         else:
             CATEGORY_KEYWORDS = {
                 'engine_oil': ['двигун', 'engine oil'],
-                'gearbox_oil': ['кпп', 'акпп', 'коробк', 'gearbox'],
+                'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
                 'rear_axle_oil': ['задн', 'rear axle'],
                 'belts': ['ремен', 'ролик', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
@@ -921,7 +927,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 if model_rules.exists():
                     rules_qs = model_rules
             for kw in keywords:
-                match = rules_qs.filter(name__icontains=kw).first()
+                qs = rules_qs.filter(name__icontains=kw)
+                if category == 'gearbox_oil' and not is_auto_gearbox:
+                    qs = qs.exclude(name__icontains='акпп')
+                match = qs.first()
                 if match:
                     rule = match
                     break
@@ -933,12 +942,6 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 {'detail': 'Для цього авто не налаштовано комплект ТО. Додайте комплект у картці авто.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-
-        truck = order.truck
-        is_auto_gearbox = (
-            category == 'gearbox_oil'
-            and getattr(truck, 'transmission_type', None) in ('automatic', 'robotic')
-        )
 
         OIL_MAP = {
             'engine_oil':    ('oil',              'oil_quantity'),
@@ -998,13 +1001,16 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         if not work_obj:
             WORK_KEYWORDS = {
                 'engine_oil': ['двигун', 'engine oil'],
-                'gearbox_oil': ['акпп', 'кпп', 'коробк', 'gearbox'],
+                'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
                 'rear_axle_oil': ['задн', 'rear axle', 'міст'],
                 'belts': ['ремен', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
             }
             for kw in WORK_KEYWORDS.get(category, []):
-                wp = WorkPrice.objects.filter(name__icontains=kw).first()
+                qs = WorkPrice.objects.filter(name__icontains=kw)
+                if category == 'gearbox_oil' and not is_auto_gearbox:
+                    qs = qs.exclude(name__icontains='акпп')
+                wp = qs.first()
                 if wp:
                     work_obj = wp
                     break
