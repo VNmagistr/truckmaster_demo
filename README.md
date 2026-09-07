@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.19 -- 2026-09-07
+- **Gearbox oil fix for manual transmission**: `apply_maintenance_set` with `gearbox_oil` category now correctly picks КПП (manual) rule and work instead of АКПП (automatic) when the truck has manual transmission; `is_auto_gearbox` detection moved before keyword lookup, and АКПП results are excluded for manual trucks
+
 ### v2.17 -- 2026-08-18
 - **QR code toggle**: enable/disable QR codes from the CRM frontend (`GET /api/shortlinks/`, `POST /api/shortlinks/{id}/toggle/`); disabled codes show a branded stub page instead of redirecting
 
