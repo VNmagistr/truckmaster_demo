@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.20 -- 2026-09-09
+- **Fix rear axle oil keyword matching**: `apply_maintenance_set` with `rear_axle_oil` category no longer picks unrelated works like "Демонтаж/монтаж задніх коліс"; keyword priority reordered (`міст` first), and wheel-related works excluded from both rule and WorkPrice lookups
+
 ### v2.19 -- 2026-09-07
 - **Gearbox oil fix for manual transmission**: `apply_maintenance_set` with `gearbox_oil` category now correctly picks КПП (manual) rule and work instead of АКПП (automatic) when the truck has manual transmission; `is_auto_gearbox` detection moved before keyword lookup, and АКПП results are excluded for manual trucks
 

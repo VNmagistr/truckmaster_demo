@@ -916,7 +916,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             CATEGORY_KEYWORDS = {
                 'engine_oil': ['двигун', 'engine oil'],
                 'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
-                'rear_axle_oil': ['задн', 'rear axle'],
+                'rear_axle_oil': ['міст', 'rear axle', 'задн'],
                 'belts': ['ремен', 'ролик', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
             }
@@ -930,6 +930,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 qs = rules_qs.filter(name__icontains=kw)
                 if category == 'gearbox_oil' and not is_auto_gearbox:
                     qs = qs.exclude(name__icontains='акпп')
+                if category == 'rear_axle_oil':
+                    qs = qs.exclude(name__icontains='коліс').exclude(name__icontains='колес')
                 match = qs.first()
                 if match:
                     rule = match
@@ -1002,7 +1004,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             WORK_KEYWORDS = {
                 'engine_oil': ['двигун', 'engine oil'],
                 'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
-                'rear_axle_oil': ['задн', 'rear axle', 'міст'],
+                'rear_axle_oil': ['міст', 'rear axle', 'задн'],
                 'belts': ['ремен', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
             }
@@ -1010,6 +1012,8 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 qs = WorkPrice.objects.filter(name__icontains=kw)
                 if category == 'gearbox_oil' and not is_auto_gearbox:
                     qs = qs.exclude(name__icontains='акпп')
+                if category == 'rear_axle_oil':
+                    qs = qs.exclude(name__icontains='коліс').exclude(name__icontains='колес')
                 wp = qs.first()
                 if wp:
                     work_obj = wp
