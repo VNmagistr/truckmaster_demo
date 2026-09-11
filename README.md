@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.22 -- 2026-09-11
+- **Fix maintenance kit autocomplete for belts/chains**: admin autocomplete for kit filter parts now includes belt, roller, tensioner, chain, and sprocket products — previously only oil filters, drain plug washers, and gaskets were selectable, making it impossible to add belt/chain parts to maintenance templates
+
 ### v2.21 -- 2026-09-11
 - **Notes for trucks and clients**: new `notes` text field on Truck and Client models; notes are displayed in the order detail page (split into two columns — truck notes on the left, owner notes on the right), truck detail page, and client detail page; editable via truck and client forms
 

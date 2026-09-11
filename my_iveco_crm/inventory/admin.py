@@ -64,7 +64,13 @@ class ProductAdmin(admin.ModelAdmin):
                 Q(name__iregex=r'^фільтр') |
                 Q(name__icontains='шайба пробки') |
                 Q(name__icontains='прокладка фільтра') |
-                Q(name__icontains='кільце пробки')
+                Q(name__icontains='кільце пробки') |
+                Q(name__icontains='ремін') |
+                Q(name__icontains='ремен') |
+                Q(name__icontains='ролик') |
+                Q(name__icontains='натяж') |
+                Q(name__icontains='ланцюг') |
+                Q(name__icontains='зірк')
             ).filter(marked_for_deletion=False)
 
         return queryset, use_distinct
