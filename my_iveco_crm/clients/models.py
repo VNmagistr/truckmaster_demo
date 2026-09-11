@@ -20,6 +20,7 @@ class Client(SoftDeleteModel):
     telegram_chat_id = models.BigIntegerField(unique=True, blank=True, null=True, db_index=True, verbose_name="ID чату Telegram")
     is_admin = models.BooleanField(default=False, verbose_name="Адміністратор бота")
     email_verified = models.BooleanField(default=False, verbose_name="Email верифіковано")
+    notes = models.TextField(blank=True, default='', verbose_name="Примітки")
     class Meta:
         verbose_name = "Клієнт"
         verbose_name_plural = "Клієнти"
@@ -61,7 +62,8 @@ class Truck(SoftDeleteModel):
     license_plate = models.CharField(max_length=20, verbose_name="Номерний знак")
     euro_standard = models.CharField(max_length=10, choices=EURO_STANDARD_CHOICES, blank=True, null=True, verbose_name="Євростандарт викидів")
     transmission_type = models.CharField(max_length=10, choices=TRANSMISSION_CHOICES, blank=True, null=True, verbose_name="Тип КПП")
-    
+    notes = models.TextField(blank=True, default='', verbose_name="Примітки")
+
     class Meta:
         verbose_name = "Вантажівка"
         verbose_name_plural = "Вантажівки"

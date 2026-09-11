@@ -4,7 +4,7 @@ from .models import Client, Truck, IvecoBaseModel
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = ['id', 'name', 'phone', 'email', 'address', 'marked_for_deletion']
+        fields = ['id', 'name', 'phone', 'email', 'address', 'notes', 'marked_for_deletion']
         extra_kwargs = {
             'phone': {'required': False, 'allow_blank': True, 'allow_null': True},
             'email': {'required': False, 'allow_blank': True, 'allow_null': True},

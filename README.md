@@ -44,8 +44,8 @@ Core modules are always active. Optional modules are toggled in `/admin/core/mod
 
 ### Clients & Vehicles
 
-- Client card with contacts, notes, linked vehicles
-- Truck registry: VIN, license plate, model, Euro standard, transmission type, mileage
+- Client card with contacts, notes, linked vehicles; internal notes visible in order detail
+- Truck registry: VIN, license plate, model, Euro standard, transmission type, mileage; internal notes visible in order detail
 - Iveco base model catalog
 - Individual feature access settings (portal, bot, notifications)
 - Ownership history and license plate changes
@@ -386,6 +386,9 @@ FRONTEND_URL=https://your-domain.com
 ---
 
 ## Changelog
+
+### v2.21 -- 2026-09-11
+- **Notes for trucks and clients**: new `notes` text field on Truck and Client models; notes are displayed in the order detail page (split into two columns — truck notes on the left, owner notes on the right), truck detail page, and client detail page; editable via truck and client forms
 
 ### v2.20 -- 2026-09-09
 - **Fix rear axle oil keyword matching**: `apply_maintenance_set` with `rear_axle_oil` category no longer picks unrelated works like "Демонтаж/монтаж задніх коліс"; keyword priority reordered (`міст` first), and wheel-related works excluded from both rule and WorkPrice lookups

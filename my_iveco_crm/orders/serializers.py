@@ -15,10 +15,10 @@ User = get_user_model()
 
 class ClientSerializerForOrder(serializers.ModelSerializer):
     """Серіалізатор клієнта для відображення в замовленні."""
-    
+
     class Meta:
         model = Client
-        fields = ['id', 'name', 'phone']
+        fields = ['id', 'name', 'phone', 'notes']
 
 
 class TruckSerializerForOrder(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class TruckSerializerForOrder(serializers.ModelSerializer):
         model = Truck
         fields = [
             'id', 'license_plate', 'specific_model_name', 'last_seven_vin',
-            'client_id', 'client_name', 'base_model_name',
+            'client_id', 'client_name', 'base_model_name', 'notes',
         ]
 
     def get_client_name(self, obj):
