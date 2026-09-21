@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.24 -- 2026-09-21
+- **Ownership history on truck detail page**: truck detail API now returns `ownership_history` (previous owners, license plates, change dates) as nested data; frontend displays it in a new "Ownership history" tab with linked client names and formatted timestamps
+
 ### v2.23 -- 2026-09-21
 - **Fix maintenance countdown showing both KPP and AKPP rows**: order detail maintenance table now uses `truck.transmission_type` as the primary source for determining gearbox type, showing only the relevant row (КПП or АКПП); falls back to interval-based detection only when transmission type is not set on the truck profile
 
