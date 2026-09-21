@@ -57,7 +57,7 @@ class TruckViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        queryset = Truck.objects.select_related('client', 'base_model').order_by('license_plate')
+        queryset = Truck.objects.select_related('client', 'base_model').prefetch_related('ownership_history__client').order_by('license_plate')
         show_deleted = self.request.query_params.get('show_deleted', 'false').lower() == 'true'
         if not show_deleted:
             queryset = queryset.filter(marked_for_deletion=False)

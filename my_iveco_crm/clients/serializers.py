@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Client, Truck, IvecoBaseModel
+from .models import Client, Truck, IvecoBaseModel, OwnershipHistory
 
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,8 +54,19 @@ class TruckListSerializer(serializers.ModelSerializer):
             'marked_for_deletion',
         ]
 
+class OwnershipHistorySerializer(serializers.ModelSerializer):
+    client_name = serializers.CharField(source='client.name', default=None, read_only=True)
+    client_id = serializers.IntegerField(source='client.id', default=None, read_only=True)
+
+    class Meta:
+        model = OwnershipHistory
+        fields = ['id', 'client_name', 'client_id', 'license_plate', 'change_date']
+
+
 # А цей - для створення та редагування (POST, PUT)
 class TruckDetailSerializer(serializers.ModelSerializer):
+    ownership_history = OwnershipHistorySerializer(many=True, read_only=True)
+
     class Meta:
         model = Truck
         fields = '__all__'
