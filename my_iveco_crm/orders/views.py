@@ -1126,20 +1126,27 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
 
         result = []
 
-        # Визначаємо тип КПП за заповненістю полів інтервалів
-        has_auto = intervals and intervals.auto_gearbox_oil_interval is not None
-        has_manual = intervals and intervals.gearbox_oil_interval is not None
-        if has_auto and not has_manual:
+        # Визначаємо тип КПП: пріоритет — поле truck.transmission_type
+        truck_trans = getattr(order.truck, 'transmission_type', None)
+        if truck_trans in ('automatic', 'robotic'):
             gearbox_types = [('auto_gearbox_oil', 'До заміни оливи в АКПП')]
-        elif has_manual and not has_auto:
+        elif truck_trans == 'manual':
             gearbox_types = [('gearbox_oil', 'До заміни оливи в КПП')]
-        elif has_auto and has_manual:
-            gearbox_types = [
-                ('gearbox_oil',      'До заміни оливи в КПП'),
-                ('auto_gearbox_oil', 'До заміни оливи в АКПП'),
-            ]
         else:
-            gearbox_types = [('gearbox_oil', 'До заміни оливи в КПП/АКПП')]
+            # transmission_type не вказано — fallback на заповненість інтервалів
+            has_auto = intervals and intervals.auto_gearbox_oil_interval is not None
+            has_manual = intervals and intervals.gearbox_oil_interval is not None
+            if has_auto and not has_manual:
+                gearbox_types = [('auto_gearbox_oil', 'До заміни оливи в АКПП')]
+            elif has_manual and not has_auto:
+                gearbox_types = [('gearbox_oil', 'До заміни оливи в КПП')]
+            elif has_auto and has_manual:
+                gearbox_types = [
+                    ('gearbox_oil',      'До заміни оливи в КПП'),
+                    ('auto_gearbox_oil', 'До заміни оливи в АКПП'),
+                ]
+            else:
+                gearbox_types = [('gearbox_oil', 'До заміни оливи в КПП/АКПП')]
 
         all_types = [TYPES[0]] + gearbox_types + TYPES[1:]
 
