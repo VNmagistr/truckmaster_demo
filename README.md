@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.23 -- 2026-09-21
+- **Fix maintenance countdown showing both KPP and AKPP rows**: order detail maintenance table now uses `truck.transmission_type` as the primary source for determining gearbox type, showing only the relevant row (КПП or АКПП); falls back to interval-based detection only when transmission type is not set on the truck profile
+
 ### v2.22 -- 2026-09-11
 - **Fix maintenance kit autocomplete for belts/chains**: admin autocomplete for kit filter parts now includes belt, roller, tensioner, chain, and sprocket products — previously only oil filters, drain plug washers, and gaskets were selectable, making it impossible to add belt/chain parts to maintenance templates
 
