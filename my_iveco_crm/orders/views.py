@@ -28,7 +28,7 @@ def _filters_for_service_type(kit_filters_qs, service_type):
     return kit_filters_qs.all()
 
 
-BELTS_KW = ('ремін', 'ремен', 'ролик', 'натяж', 'belt', 'roller', 'tensioner')
+BELTS_KW = ('ремін', 'ремен', 'ремн', 'ролик', 'натяж', 'belt', 'roller', 'tensioner')
 CHAINS_KW = ('ланцюг', 'грм', 'chain', 'timing', 'зірк', 'sprocket')
 NON_ENGINE_SERVICE_TYPES = frozenset((
     'rear_axle', 'gearbox', 'auto_gearbox', 'auto_gearbox_filter', 'belts', 'chains',
@@ -902,7 +902,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'engine_oil': 'Заміна оливи в двигуні',
             'gearbox_oil': 'Заміна оливи в КПП',
             'rear_axle_oil': 'Заміна оливи в задньому мості',
-            'belts': 'Заміна ремнів',
+            'belts': 'Заміна ремнів, роликів',
             'chains': 'Заміна ланцюгів ГРМ',
         }
 
@@ -917,7 +917,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'engine_oil': ['двигун', 'engine oil'],
                 'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
                 'rear_axle_oil': ['міст', 'rear axle', 'задн'],
-                'belts': ['ремен', 'ролик', 'belt'],
+                'belts': ['ремн', 'ремен', 'ролик', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
             }
             keywords = CATEGORY_KEYWORDS.get(category, [])
@@ -1005,7 +1005,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 'engine_oil': ['двигун', 'engine oil'],
                 'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
                 'rear_axle_oil': ['міст', 'rear axle', 'задн'],
-                'belts': ['ремен', 'belt'],
+                'belts': ['ремн', 'ремен', 'ролик', 'belt'],
                 'chains': ['ланцюг', 'грм', 'chain', 'timing'],
             }
             for kw in WORK_KEYWORDS.get(category, []):
