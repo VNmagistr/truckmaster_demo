@@ -937,6 +937,15 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                     rule = match
                     break
 
+        if not rule:
+            cat_label = CATEGORY_LABELS.get(category, category)
+            model_name = str(order.truck.base_model) if order.truck.base_model_id else str(order.truck)
+            return Response(
+                {'detail': f'Для моделі "{model_name}" не знайдено правило ТО для категорії "{cat_label}". '
+                           f'Додайте відповідне правило ТО з прив\'язкою до цієї моделі.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         try:
             kit = MaintenanceKit.objects.prefetch_related('filters').get(truck=order.truck)
         except MaintenanceKit.DoesNotExist:
@@ -992,32 +1001,14 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             StockService.restore(old_part)
         old_works.delete()
 
-        # Створюємо роботу для ТО
-        effective_work_id = work_id or (rule.work_id if rule and rule.work_id else None)
+        # Створюємо роботу для ТО (з правила або з переданого work_id)
+        effective_work_id = work_id or (rule.work_id if rule.work_id else None)
         work_obj = None
         if effective_work_id:
             try:
                 work_obj = WorkPrice.objects.get(pk=effective_work_id)
             except WorkPrice.DoesNotExist:
                 pass
-        if not work_obj:
-            WORK_KEYWORDS = {
-                'engine_oil': ['двигун', 'engine oil'],
-                'gearbox_oil': ['акпп', 'коробк', 'gearbox'] if is_auto_gearbox else ['кпп', 'коробк', 'gearbox'],
-                'rear_axle_oil': ['міст', 'rear axle', 'задн'],
-                'belts': ['ремн', 'ремен', 'ролик', 'belt'],
-                'chains': ['ланцюг', 'грм', 'chain', 'timing'],
-            }
-            for kw in WORK_KEYWORDS.get(category, []):
-                qs = WorkPrice.objects.filter(name__icontains=kw)
-                if category == 'gearbox_oil' and not is_auto_gearbox:
-                    qs = qs.exclude(name__icontains='акпп')
-                if category == 'rear_axle_oil':
-                    qs = qs.exclude(name__icontains='коліс').exclude(name__icontains='колес')
-                wp = qs.first()
-                if wp:
-                    work_obj = wp
-                    break
         work_kwargs = {
             'service_order': order,
             'description': description,
