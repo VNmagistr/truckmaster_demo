@@ -387,6 +387,9 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.25 -- 2026-09-22
+- **Fix belts maintenance keyword matching**: `apply_maintenance_set` with `belts` category failed to find WorkPrice, MaintenanceRule, and kit filters because keyword `'ремен'` does not match Ukrainian word form `'ремнів'`; added `'ремн'` as universal substring, added `'ролик'` to WorkPrice search, and fixed category label to "Заміна ремнів, роликів"
+
 ### v2.24 -- 2026-09-21
 - **Ownership history on truck detail page**: truck detail API now returns `ownership_history` (previous owners, license plates, change dates) as nested data; frontend displays it in a new "Ownership history" tab with linked client names and formatted timestamps
 
