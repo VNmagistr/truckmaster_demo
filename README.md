@@ -389,6 +389,7 @@ FRONTEND_URL=https://your-domain.com
 
 ### v2.25 -- 2026-09-22
 - **Fix belts maintenance keyword matching**: `apply_maintenance_set` with `belts` category failed to find WorkPrice, MaintenanceRule, and kit filters because keyword `'ремен'` does not match Ukrainian word form `'ремнів'`; added `'ремн'` as universal substring, added `'ролик'` to WorkPrice search, and fixed category label to "Заміна ремнів, роликів"
+- **Require matching MaintenanceRule**: `apply_maintenance_set` now returns 404 with model name and category label when no rule is found for the truck's base model, instead of falling back to keyword-based WorkPrice search that could pick a work from a wrong model (e.g. Daily instead of Stralis)
 
 ### v2.24 -- 2026-09-21
 - **Ownership history on truck detail page**: truck detail API now returns `ownership_history` (previous owners, license plates, change dates) as nested data; frontend displays it in a new "Ownership history" tab with linked client names and formatted timestamps
