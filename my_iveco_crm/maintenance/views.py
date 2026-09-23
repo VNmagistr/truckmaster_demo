@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from .models import ServiceReminder, ServiceType
 # Імпорти моделей з інших програм (для аналізу)
 from clients.models import Truck
-from orders.models import MaintenanceRule, MaintenanceLog  # Ті самі правила, що ми створили раніше
+from orders.models import MaintenanceRule, MaintenanceLog, TruckMaintenanceIntervals
 
 from .serializers import (
     ServiceReminderSerializer,
@@ -125,40 +125,35 @@ class CheckRegulationsView(views.APIView):
                     'source': 'reminder'
                 })
 
-        # 2. Перевірка ПРАВИЛ РЕГЛАМЕНТУ (MaintenanceRule з orders/models.py)
-        # Це перевірка "на льоту"
-        rules = MaintenanceRule.objects.all() # Можна додати фільтр по моделі авто
+        # 2. Перевірка регламентних робіт на основі TruckMaintenanceIntervals
+        try:
+            intervals = truck.maintenance_intervals
+        except TruckMaintenanceIntervals.DoesNotExist:
+            intervals = None
 
-        for rule in rules:
-            # Шукаємо останній запис в журналі
-            last_log = MaintenanceLog.objects.filter(truck=truck, rule=rule).order_by('-date_performed').first()
-            
-            # Тут спрощена логіка: якщо ніколи не робили АБО пройшло достатньо км
-            # В ідеалі треба зберігати "пробіг останнього ТО" в MaintenanceLog
-            
-            should_recommend = False
-            
-            if not last_log:
-                # Якщо ніколи не робили - рекомендуємо (для демо)
-                # В реальності можемо перевіряти current_mileage > rule.km_interval
-                if current_mileage >= rule.km_interval:
-                    should_recommend = True
-            else:
-                # Тут треба знати пробіг на момент останнього ТО. 
-                # Припустимо, ми додамо поле mileage в MaintenanceLog пізніше.
-                # Поки що просто перевіряємо, чи кратен пробіг інтервалу (груба перевірка)
-                pass 
-
-            # ДЕМО-ЛОГІКА (Щоб ти побачив результат):
-            # Якщо пробіг ділиться на інтервал (з похибкою 1000 км)
-            remainder = current_mileage % rule.km_interval
-            if remainder > (rule.km_interval - 1000) or remainder < 1000:
-                 recommendations.append({
-                    'id': f'rule_{rule.id}',
-                    'title': rule.name,
-                    'description': f"Регламент: кожні {rule.km_interval} км",
-                    'priority': 'high' if remainder < 500 else 'medium',
-                    'source': 'rule'
-                })
+        if intervals:
+            INTERVAL_CHECKS = [
+                ('engine_oil', 'Заміна оливи в двигуні'),
+                ('gearbox_oil', 'Заміна оливи в КПП'),
+                ('auto_gearbox_oil', 'Заміна оливи в АКПП'),
+                ('rear_axle_oil', 'Заміна оливи в задньому мості'),
+                ('belts', 'Заміна ремнів/роликів'),
+                ('chains', 'Заміна ланцюгів ГРМ'),
+            ]
+            for key, label in INTERVAL_CHECKS:
+                interval = getattr(intervals, f'{key}_interval', None)
+                last_km = getattr(intervals, f'{key}_last_km', None)
+                if not interval or not last_km:
+                    continue
+                remaining = last_km + interval - current_mileage
+                if remaining <= 1000:
+                    priority = 'high' if remaining <= 0 else 'medium'
+                    recommendations.append({
+                        'id': f'interval_{key}',
+                        'title': label,
+                        'description': f"Регламент: кожні {interval:,} км, залишок: {remaining:,} км",
+                        'priority': priority,
+                        'source': 'interval',
+                    })
 
         return Response({'recommendations': recommendations})
