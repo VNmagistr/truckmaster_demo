@@ -387,6 +387,12 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.26 -- 2026-09-23
+- **Unified maintenance rules**: Merged E5/E6 maintenance rules into one per vehicle family (e.g. "Заміна оливи в двигуні STRALIS" instead of separate E5/E6 rules); euro-specific intervals come from `TruckMaintenanceIntervals` (filled from templates), not from `rule.km_interval`
+- **Maintenance recommendations from truck profile**: `CheckRegulationsView` now uses `TruckMaintenanceIntervals` for each category (engine_oil, gearbox_oil, auto_gearbox_oil, rear_axle_oil, belts, chains) instead of iterating all `MaintenanceRule` objects with demo logic
+- **Delete kit filter from frontend**: Added delete button with confirmation to the maintenance kit filters table on truck detail page; uses existing `remove-filter` API endpoint
+- **Data migration 0023**: Renames E5 rule → unified, marks E6 rule/work as `[DEPRECATED]`, reassigns logs and service works
+
 ### v2.25 -- 2026-09-22
 - **Fix belts maintenance keyword matching**: `apply_maintenance_set` with `belts` category failed to find WorkPrice, MaintenanceRule, and kit filters because keyword `'ремен'` does not match Ukrainian word form `'ремнів'`; added `'ремн'` as universal substring, added `'ролик'` to WorkPrice search, and fixed category label to "Заміна ремнів, роликів"
 - **Require matching MaintenanceRule**: `apply_maintenance_set` now returns 404 with model name and category label when no rule is found for the truck's base model, instead of falling back to keyword-based WorkPrice search that could pick a work from a wrong model (e.g. Daily instead of Stralis)
