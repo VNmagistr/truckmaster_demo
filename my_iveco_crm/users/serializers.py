@@ -12,14 +12,17 @@ class UserMeSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source='profile.phone', required=False, allow_blank=True)
     position = serializers.CharField(source='profile.position', required=False, allow_blank=True)
     role = serializers.CharField(source='profile.get_role_display', read_only=True)
-    
+    role_key = serializers.CharField(source='profile.role', read_only=True)
+    is_superuser = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name', 
-            'full_name', 'phone', 'position', 'role', 'date_joined'
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'full_name', 'phone', 'position', 'role', 'role_key',
+            'is_superuser', 'date_joined'
         ]
-        read_only_fields = ['id', 'username', 'role', 'date_joined']
+        read_only_fields = ['id', 'username', 'role', 'role_key', 'is_superuser', 'date_joined']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
