@@ -497,7 +497,7 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='report-vehicles',
             permission_classes=[permissions.IsAuthenticated, IsAdminRole])
     def report_vehicles(self, request):
-        """Звіт: кількість унікальних авто за період (week/month/year)."""
+        """Звіт: кількість нарядів + унікальних авто за період."""
         period = request.query_params.get('period', 'month')
         today = timezone.now().date()
         qs = ServiceOrder.objects.filter(
@@ -513,11 +513,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             orders = qs.filter(
                 created_at__date__gte=monday, created_at__date__lte=sunday,
             )
-            total = orders.values('truck').distinct().count()
             per_day = dict(
                 orders.annotate(day=TruncDate('created_at'))
                 .values('day')
-                .annotate(count=Count('truck', distinct=True))
+                .annotate(count=Count('id'))
                 .values_list('day', 'count')
             )
             chart = [
@@ -527,11 +526,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
         elif period == 'year':
             start = today.replace(month=1, day=1)
             orders = qs.filter(created_at__date__gte=start)
-            total = orders.values('truck').distinct().count()
             per_month_qs = (
                 orders.annotate(month=TruncMonth('created_at'))
                 .values('month')
-                .annotate(count=Count('truck', distinct=True))
+                .annotate(count=Count('id'))
             )
             per_month = {r['month'].month: r['count'] for r in per_month_qs}
             chart = [
@@ -544,11 +542,10 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             orders = qs.filter(
                 created_at__date__gte=start, created_at__date__lt=next_month,
             )
-            total = orders.values('truck').distinct().count()
             per_day = dict(
                 orders.annotate(day=TruncDate('created_at'))
                 .values('day')
-                .annotate(count=Count('truck', distinct=True))
+                .annotate(count=Count('id'))
                 .values_list('day', 'count')
             )
             days_in_month = (next_month - start).days
@@ -560,7 +557,15 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 for i in range(days_in_month)
             ]
 
-        return Response({'total': total, 'period': period, 'chart': chart})
+        total_orders = orders.count()
+        unique_vehicles = orders.values('truck').distinct().count()
+
+        return Response({
+            'total_orders': total_orders,
+            'unique_vehicles': unique_vehicles,
+            'period': period,
+            'chart': chart,
+        })
 
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
