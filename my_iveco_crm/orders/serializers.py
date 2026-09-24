@@ -154,6 +154,9 @@ class RepairPhotoSerializer(serializers.ModelSerializer):
 class ServiceOrderWriteSerializer(serializers.ModelSerializer):
     """Серіалізатор замовлення для запису."""
     created_at = serializers.DateTimeField(required=False)
+    car_photo = serializers.ImageField(required=False, allow_null=True)
+    odometer_photo = serializers.ImageField(required=False, allow_null=True)
+    dashboard_photo = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = ServiceOrder
