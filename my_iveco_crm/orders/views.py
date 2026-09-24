@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from users.permissions import IsAdminRole, IsManagerOrAbove
 from django.utils import timezone
 from django.db.models import Count, Max, Q, Sum
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django_filters.rest_framework import DjangoFilterBackend
 
 logger = logging.getLogger(__name__)
@@ -493,6 +493,74 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'month': qs.filter(created_at__date__gte=start_of_month).count(),
             'year': qs.filter(created_at__date__gte=start_of_year).count(),
         })
+
+    @action(detail=False, methods=['get'], url_path='report-vehicles',
+            permission_classes=[permissions.IsAuthenticated, IsAdminRole])
+    def report_vehicles(self, request):
+        """Звіт: кількість унікальних авто за період (week/month/year)."""
+        period = request.query_params.get('period', 'month')
+        today = timezone.now().date()
+        qs = ServiceOrder.objects.filter(
+            marked_for_deletion=False, truck__isnull=False,
+        )
+        ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
+                     'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
+        ua_days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
+
+        if period == 'week':
+            monday = today - datetime.timedelta(days=today.weekday())
+            sunday = monday + datetime.timedelta(days=6)
+            orders = qs.filter(
+                created_at__date__gte=monday, created_at__date__lte=sunday,
+            )
+            total = orders.values('truck').distinct().count()
+            per_day = dict(
+                orders.annotate(day=TruncDate('created_at'))
+                .values('day')
+                .annotate(count=Count('truck', distinct=True))
+                .values_list('day', 'count')
+            )
+            chart = [
+                {'name': ua_days[i], 'count': per_day.get(monday + datetime.timedelta(days=i), 0)}
+                for i in range(7)
+            ]
+        elif period == 'year':
+            start = today.replace(month=1, day=1)
+            orders = qs.filter(created_at__date__gte=start)
+            total = orders.values('truck').distinct().count()
+            per_month_qs = (
+                orders.annotate(month=TruncMonth('created_at'))
+                .values('month')
+                .annotate(count=Count('truck', distinct=True))
+            )
+            per_month = {r['month'].month: r['count'] for r in per_month_qs}
+            chart = [
+                {'name': ua_months[m - 1], 'count': per_month.get(m, 0)}
+                for m in range(1, 13)
+            ]
+        else:
+            start = today.replace(day=1)
+            next_month = start + relativedelta(months=1)
+            orders = qs.filter(
+                created_at__date__gte=start, created_at__date__lt=next_month,
+            )
+            total = orders.values('truck').distinct().count()
+            per_day = dict(
+                orders.annotate(day=TruncDate('created_at'))
+                .values('day')
+                .annotate(count=Count('truck', distinct=True))
+                .values_list('day', 'count')
+            )
+            days_in_month = (next_month - start).days
+            chart = [
+                {
+                    'name': str(start.day + i),
+                    'count': per_day.get(start + datetime.timedelta(days=i), 0),
+                }
+                for i in range(days_in_month)
+            ]
+
+        return Response({'total': total, 'period': period, 'chart': chart})
 
     @action(detail=True, methods=['post'])
     def mark_for_deletion(self, request, pk=None):
