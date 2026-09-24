@@ -390,8 +390,8 @@ FRONTEND_URL=https://your-domain.com
 
 ### v2.27 -- 2026-09-24
 - **Direct order photos**: Allow uploading/replacing/deleting car, odometer and dashboard photos via PATCH without entering edit mode (`allow_null=True` on photo fields)
-- **Admin reports section**: `UserMeSerializer` now returns `role_key` and `is_superuser`; new `IsAdminRole` permission; `report_vehicles` action on `ServiceOrderViewSet` returns unique vehicle counts per period (week/month/year)
-- **Table-format reports**: Vehicle count report displayed as Ant Design Table with summary row (not charts)
+- **Admin reports section**: `UserMeSerializer` now returns `role_key` and `is_superuser`; new `IsAdminRole` permission; `report_vehicles` endpoint returns `total_orders` + `unique_vehicles` + order counts per day/month (not distinct)
+- **Service visits report**: Styled table with inline progress bars, stat cards (total orders, unique vehicles, active days), summary row with order sum
 
 ### v2.26 -- 2026-09-23
 - **Unified maintenance rules**: Merged E5/E6 maintenance rules into one per vehicle family (e.g. "Заміна оливи в двигуні STRALIS" instead of separate E5/E6 rules); euro-specific intervals come from `TruckMaintenanceIntervals` (filled from templates), not from `rule.km_interval`
