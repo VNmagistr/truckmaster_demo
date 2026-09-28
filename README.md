@@ -388,9 +388,15 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.29 -- 2026-09-28 (hotfix)
+- **Hotfix for v2.28 over-matching**: the substring-based oil detection in v2.28 wrongly classified "Фільтр оливи", "Мідна шайба пробки піддону", "Прокладка фільтра РКГ" and similar parts as oils (because their names contain `олив`/`масл`), causing the cleanup command to delete legitimate filter rows
+- **Precise `_is_oil_product`**: rewritten with three-step logic — (1) if the name contains a part-type keyword (`фільтр`, `шайб`, `прокладк`, `ущільн`, `кільц`, `болт`, `гайк`, `пробк`, `трубк`, `шланг`, `filter`, `washer`, `gasket`, `seal`, `ring`, `bolt`, `nut`, `plug`, `hose`) → NOT oil; (2) if the name starts with `олив`/`масл`/`мастил`/`oil ` → oil; (3) fallback to `category_type`
+- **Cleanup uses the same `_is_oil_product`**: iterates in Python instead of building a Q() query, guaranteeing 1:1 parity between signal auto-classification and cleanup selection
+- **Restore command**: new management command `restore_kit_filters_from_backup <backup.json>` (dry-run, `--apply` to write) selectively restores `MaintenanceKitFilter` + `TemplateKitFilter` from a `dumpdata` JSON backup without touching other tables; skips rows whose parent kit/template or product no longer exists, and rows that already exist by PK
+
 ### v2.28 -- 2026-09-28
-- **Fix oil parts leaking into maintenance kit filters**: `_is_oil_product` in `orders/signals.py` now also detects oils by product name keywords (`олив`, `масл`, `мастил`, `oil`), not only by `subcategory.category.category_type`; prevents transmission oils (and other oils with misconfigured category) from being auto-added to `MaintenanceKitFilter` when used as parts in maintenance work
-- **Cleanup command**: new management command `cleanup_oil_in_filters` (dry-run by default, `--apply` to delete) removes existing oil-typed rows from `MaintenanceKitFilter`, `BaseMaintenanceKitFilter`, and `TemplateKitFilter`
+- **Fix oil parts leaking into maintenance kit filters**: `_is_oil_product` in `orders/signals.py` now also detects oils by product name keywords, not only by `subcategory.category.category_type`
+- **Cleanup command**: new management command `cleanup_oil_in_filters` (dry-run by default, `--apply` to delete) removes oil-typed rows from `MaintenanceKitFilter`, `BaseMaintenanceKitFilter`, and `TemplateKitFilter`
 
 ### v2.27 -- 2026-09-24
 - **Direct order photos**: Allow uploading/replacing/deleting car, odometer and dashboard photos via PATCH without entering edit mode (`allow_null=True` on photo fields)

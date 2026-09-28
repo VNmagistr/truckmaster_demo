@@ -17,8 +17,23 @@ logger = logging.getLogger(__name__)
 # Типи категорій, що вважаються оливою
 OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
 
-# Ключові слова в назві, що позначають оливу/мастило (захист від некоректного category_type)
-_OIL_NAME_KW = ('олив', 'масл', 'мастил', 'oil')
+# Префікси назви, що явно вказують на оливу/мастило (перевірка startswith)
+_OIL_NAME_PREFIX = ('олив', 'масл', 'мастил', 'oil ', 'oil,')
+
+# Ключові слова в назві, що вказують на запчастину (НЕ мастило), навіть якщо
+# category_type=oil або в назві згадується "олива" (наприклад: "Фільтр оливи",
+# "Мідна шайба пробки піддону", "Прокладка фільтра РКГ"). Перевірка `in name`.
+_NOT_OIL_NAME_KW = (
+    'фільтр', 'фильтр', 'filter',
+    'шайб', 'washer',
+    'прокладк', 'gasket',
+    'ущільн', 'seal',
+    'кільц', 'кольц', 'ring',
+    'болт', 'bolt',
+    'гайк', 'nut',
+    'пробк', 'plug',
+    'трубк', 'шланг', 'hose',
+)
 
 TO_KEYWORDS = ['то ', 'т.о.', 'заміна оливи', 'заміна масла', 'регламент', 'технічне обслуговування']
 
@@ -46,18 +61,29 @@ def _is_maintenance_work(work):
 
 
 def _is_oil_product(product):
-    """Перевіряє чи є товар оливою — за типом категорії або за назвою.
+    """Перевіряє чи є товар власне оливою/мастилом (не фільтром/шайбою/прокладкою).
 
-    Захист від випадків, коли `category_type` проставлено некоректно (наприклад,
-    трансмісійна олива має category_type != 'oil'): додатково дивимось на назву.
+    Логіка (у цьому порядку):
+    1) Якщо в назві є ключове слово запчастини (фільтр/шайба/прокладка/...) —
+       це НЕ мастило, навіть якщо category_type=oil або в назві є слово "олива"
+       (як у "Фільтр оливи" чи "Прокладка фільтра оливи").
+    2) Якщо назва починається з "Олив"/"Масл"/"Мастил"/"Oil" — це мастило.
+    3) Інакше — fallback до category_type.
     """
+    name = (getattr(product, 'name', '') or '').strip().lower()
+    if not name:
+        return False
+    # 1) Запчастина в назві → точно НЕ мастило
+    if any(kw in name for kw in _NOT_OIL_NAME_KW):
+        return False
+    # 2) Явний префікс оливи в назві
+    if any(name.startswith(kw) for kw in _OIL_NAME_PREFIX):
+        return True
+    # 3) Fallback: category_type
     try:
-        if product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES:
-            return True
+        return product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES
     except AttributeError:
-        pass
-    name = (getattr(product, 'name', '') or '').lower()
-    return any(kw in name for kw in _OIL_NAME_KW)
+        return False
 
 
 @receiver(pre_save, sender=ServiceOrder)

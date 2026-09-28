@@ -1,32 +1,22 @@
 """Видалення олив, помилково доданих у фільтри комплектів ТО.
 
-Причина: signal `auto_save_maintenance_kit` до фіксу визначав оливу лише за
-`product.subcategory.category.category_type`. Якщо у товару категорія
-проставлена некоректно (наприклад, для трансмісійної оливи), він потрапляв у
-`MaintenanceKitFilter` як фільтр. Цей скрипт знаходить і видаляє такі записи.
+Використовує `orders.signals._is_oil_product` — ту саму логіку, що і signal:
+"мастило" вимагає щоб назва починалась з "Олив/Масл/Мастил/Oil" АБО щоб
+category_type був у {oil, олива, масло, мастило}, І при цьому назва НЕ містила
+жодного з ключових слів запчастин (фільтр/шайба/прокладка/...).
 
 Використання:
     python manage.py cleanup_oil_in_filters            # dry-run (показує що видалить)
     python manage.py cleanup_oil_in_filters --apply    # реально видалити
 """
 from django.core.management.base import BaseCommand
-from django.db.models import Q
 
 from orders.models import (
     MaintenanceKitFilter,
     BaseMaintenanceKitFilter,
     TemplateKitFilter,
 )
-from orders.signals import OIL_CATEGORY_TYPES, _OIL_NAME_KW
-
-
-def _oil_filter_queryset(model):
-    """Повертає записи, у яких part — олива (за category_type або назвою)."""
-    name_q = Q()
-    for kw in _OIL_NAME_KW:
-        name_q |= Q(part__name__icontains=kw)
-    cat_q = Q(part__subcategory__category__category_type__in=list(OIL_CATEGORY_TYPES))
-    return model.objects.filter(cat_q | name_q).select_related('part')
+from orders.signals import _is_oil_product
 
 
 class Command(BaseCommand):
@@ -48,14 +38,17 @@ class Command(BaseCommand):
             (BaseMaintenanceKitFilter, 'BaseMaintenanceKitFilter'),
             (TemplateKitFilter, 'TemplateKitFilter'),
         ]:
-            qs = _oil_filter_queryset(model)
-            count = qs.count()
+            qs = model.objects.select_related(
+                'part__subcategory__category',
+            ).all()
+            victims = [row for row in qs if _is_oil_product(row.part)]
+            count = len(victims)
             total += count
             self.stdout.write(self.style.WARNING(f'{label}: знайдено {count} записів'))
-            for item in qs:
+            for item in victims:
                 self.stdout.write(f'  #{item.pk} → [{item.part.sku_code}] {item.part.name}')
             if apply and count:
-                qs.delete()
+                model.objects.filter(pk__in=[v.pk for v in victims]).delete()
                 self.stdout.write(self.style.SUCCESS(f'  → видалено {count}'))
 
         if not apply:
