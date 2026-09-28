@@ -1,11 +1,8 @@
 # core/views.py
 
-import io
 import os
 import json
-from datetime import datetime
 
-from django.conf import settings
 from django.core.management import call_command
 from django.http import FileResponse
 from rest_framework import status
@@ -14,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .backup import create_backup, get_backup_dir, backup_info
 from .models import Module
 from .serializers import ModuleSerializer
 
@@ -50,21 +48,6 @@ class EnumsView(APIView):
         })
 
 
-def _get_backup_dir():
-    backup_dir = getattr(settings, 'BACKUP_DIR', os.path.join(settings.BASE_DIR, 'backups'))
-    os.makedirs(backup_dir, exist_ok=True)
-    return backup_dir
-
-
-def _backup_info(filepath):
-    stat = os.stat(filepath)
-    return {
-        'filename': os.path.basename(filepath),
-        'size': stat.st_size,
-        'created_at': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-    }
-
-
 class BackupListCreateView(APIView):
     """
     GET  /api/backups/      — list all backups
@@ -73,35 +56,16 @@ class BackupListCreateView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        backup_dir = _get_backup_dir()
+        backup_dir = get_backup_dir()
         backups = []
         for f in sorted(os.listdir(backup_dir), reverse=True):
             if f.endswith('.json') and f.startswith('backup_'):
-                backups.append(_backup_info(os.path.join(backup_dir, f)))
+                backups.append(backup_info(os.path.join(backup_dir, f)))
         return Response(backups)
 
     def post(self, request):
-        backup_dir = _get_backup_dir()
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'backup_{timestamp}.json'
-        filepath = os.path.join(backup_dir, filename)
-
-        buf = io.StringIO()
-        call_command(
-            'dumpdata',
-            '--natural-foreign',
-            '--natural-primary',
-            '--exclude=contenttypes',
-            '--exclude=auth.permission',
-            '--exclude=admin.logentry',
-            '--exclude=sessions.session',
-            '--indent=2',
-            stdout=buf,
-        )
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(buf.getvalue())
-
-        return Response(_backup_info(filepath), status=status.HTTP_201_CREATED)
+        info = create_backup()
+        return Response(info, status=status.HTTP_201_CREATED)
 
 
 class BackupDetailView(APIView):
@@ -115,7 +79,7 @@ class BackupDetailView(APIView):
         if not filename.startswith('backup_') or not filename.endswith('.json'):
             return None
         safe_name = os.path.basename(filename)
-        filepath = os.path.join(_get_backup_dir(), safe_name)
+        filepath = os.path.join(get_backup_dir(), safe_name)
         if not os.path.isfile(filepath):
             return None
         return filepath
@@ -135,7 +99,7 @@ class BackupDownloadView(APIView):
         safe_name = os.path.basename(filename)
         if not safe_name.startswith('backup_') or not safe_name.endswith('.json'):
             return Response({'detail': 'Backup not found.'}, status=status.HTTP_404_NOT_FOUND)
-        filepath = os.path.join(_get_backup_dir(), safe_name)
+        filepath = os.path.join(get_backup_dir(), safe_name)
         if not os.path.isfile(filepath):
             return Response({'detail': 'Backup not found.'}, status=status.HTTP_404_NOT_FOUND)
         return FileResponse(
@@ -170,7 +134,7 @@ class BackupRestoreView(APIView):
                 )
         elif filename:
             safe_name = os.path.basename(filename)
-            filepath = os.path.join(_get_backup_dir(), safe_name)
+            filepath = os.path.join(get_backup_dir(), safe_name)
             if not os.path.isfile(filepath):
                 return Response({'detail': 'Backup not found.'}, status=status.HTTP_404_NOT_FOUND)
             with open(filepath, 'r', encoding='utf-8') as f:
@@ -184,7 +148,7 @@ class BackupRestoreView(APIView):
         try:
             call_command('flush', '--no-input')
 
-            tmp_path = os.path.join(_get_backup_dir(), '_restore_tmp.json')
+            tmp_path = os.path.join(get_backup_dir(), '_restore_tmp.json')
             with open(tmp_path, 'w', encoding='utf-8') as f:
                 f.write(content)
             try:

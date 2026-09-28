@@ -214,6 +214,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Telegram бот: щотижневий запит пробігу у власників
 ASK_MILEAGE_ENABLED = config('ASK_MILEAGE_ENABLED', default=False, cast=bool)
 
+# Автоматичні бекапи БД (celery-beat task `core.tasks.auto_backup_database`)
+BACKUP_DIR = config('BACKUP_DIR', default=os.path.join(BASE_DIR, 'backups'))
+BACKUP_KEEP_COUNT = config('BACKUP_KEEP_COUNT', default=30, cast=int)
+
 # Логування
 LOGGING = {
     'version': 1,

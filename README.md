@@ -259,6 +259,7 @@ GET           /api/modules/
 | `ask-owners-for-mileage` | Mon 10:00 | Request mileage from owners via bot |
 | `send-appointment-reminders` | Hourly | Service booking reminders |
 | `auto-close-done-orders` | 03:00 daily | Auto-close orders >1 week in DONE |
+| `auto-backup-database` | 02:30 daily | Create JSON backup, rotate (keep last `BACKUP_KEEP_COUNT`, default 30) |
 
 ---
 
@@ -387,6 +388,11 @@ FRONTEND_URL=https://your-domain.com
 ---
 
 ## Changelog
+
+### v2.30 -- 2026-09-28
+- **Automatic daily database backups**: new Celery Beat task `core.tasks.auto_backup_database` runs daily at 02:30, creates a `dumpdata` JSON backup, and rotates old files (rolling window; default keeps last 30)
+- **Backup service refactor**: extracted `core/backup.py` (`create_backup`, `list_backup_files`, `rotate_backups`, `backup_info`, `get_backup_dir`) — single source of truth used by both the REST endpoint (`POST /api/backups/`) and the Celery task
+- **New settings**: `BACKUP_DIR` (default `<BASE_DIR>/backups`) and `BACKUP_KEEP_COUNT` (default 30), configurable via `.env`
 
 ### v2.29 -- 2026-09-28 (hotfix)
 - **Hotfix for v2.28 over-matching**: the substring-based oil detection in v2.28 wrongly classified "Фільтр оливи", "Мідна шайба пробки піддону", "Прокладка фільтра РКГ" and similar parts as oils (because their names contain `олив`/`масл`), causing the cleanup command to delete legitimate filter rows

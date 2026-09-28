@@ -31,6 +31,10 @@ app.conf.beat_schedule = {
         'task': 'orders.tasks.auto_close_done_orders',
         'schedule': crontab(hour=3, minute=0),  # щодня о 3:00 ночі
     },
+    'auto-backup-database': {
+        'task': 'core.tasks.auto_backup_database',
+        'schedule': crontab(hour=2, minute=30),  # щодня о 2:30 (до auto-close о 3:00)
+    },
 }
 
 @app.task(bind=True)
