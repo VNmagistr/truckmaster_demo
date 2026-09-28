@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 # Типи категорій, що вважаються оливою
 OIL_CATEGORY_TYPES = {'oil', 'олива', 'масло', 'мастило'}
 
+# Ключові слова в назві, що позначають оливу/мастило (захист від некоректного category_type)
+_OIL_NAME_KW = ('олив', 'масл', 'мастил', 'oil')
+
 TO_KEYWORDS = ['то ', 'т.о.', 'заміна оливи', 'заміна масла', 'регламент', 'технічне обслуговування']
 
 _BELTS_KW = ('ремін', 'ремен', 'ремн', 'ролик', 'натяж', 'belt', 'roller', 'tensioner')
@@ -43,11 +46,18 @@ def _is_maintenance_work(work):
 
 
 def _is_oil_product(product):
-    """Перевіряє чи є товар оливою по типу категорії."""
+    """Перевіряє чи є товар оливою — за типом категорії або за назвою.
+
+    Захист від випадків, коли `category_type` проставлено некоректно (наприклад,
+    трансмісійна олива має category_type != 'oil'): додатково дивимось на назву.
+    """
     try:
-        return product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES
+        if product.subcategory.category.category_type.lower() in OIL_CATEGORY_TYPES:
+            return True
     except AttributeError:
-        return False
+        pass
+    name = (getattr(product, 'name', '') or '').lower()
+    return any(kw in name for kw in _OIL_NAME_KW)
 
 
 @receiver(pre_save, sender=ServiceOrder)

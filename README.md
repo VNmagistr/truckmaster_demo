@@ -388,6 +388,10 @@ FRONTEND_URL=https://your-domain.com
 
 ## Changelog
 
+### v2.28 -- 2026-09-28
+- **Fix oil parts leaking into maintenance kit filters**: `_is_oil_product` in `orders/signals.py` now also detects oils by product name keywords (`олив`, `масл`, `мастил`, `oil`), not only by `subcategory.category.category_type`; prevents transmission oils (and other oils with misconfigured category) from being auto-added to `MaintenanceKitFilter` when used as parts in maintenance work
+- **Cleanup command**: new management command `cleanup_oil_in_filters` (dry-run by default, `--apply` to delete) removes existing oil-typed rows from `MaintenanceKitFilter`, `BaseMaintenanceKitFilter`, and `TemplateKitFilter`
+
 ### v2.27 -- 2026-09-24
 - **Direct order photos**: Allow uploading/replacing/deleting car, odometer and dashboard photos via PATCH without entering edit mode (`allow_null=True` on photo fields)
 - **Admin reports section**: `UserMeSerializer` now returns `role_key` and `is_superuser`; new `IsAdminRole` permission; `report_vehicles` endpoint returns `total_orders` + `unique_vehicles` + order counts per day/month (not distinct)
