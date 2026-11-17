@@ -35,6 +35,39 @@ NON_ENGINE_SERVICE_TYPES = frozenset((
 ))
 
 
+def _count_trucks_maintenance_due(threshold_km=1000):
+    """Count trucks where any maintenance interval has <= threshold_km remaining
+    (based on last known mileage from most recent order).
+    """
+    from .models import TruckMaintenanceIntervals, ServiceOrder as _SO
+    due = 0
+    intervals_qs = TruckMaintenanceIntervals.objects.select_related('truck').filter(
+        truck__marked_for_deletion=False,
+    )
+    categories = ['engine_oil', 'gearbox_oil', 'auto_gearbox_oil',
+                  'rear_axle_oil', 'belts', 'chains']
+    last_mileage_map = dict(
+        _SO.objects.filter(
+            marked_for_deletion=False,
+            current_mileage__isnull=False,
+        ).values('truck_id').annotate(m=Max('current_mileage')).values_list('truck_id', 'm')
+    )
+    for intervals in intervals_qs:
+        current_km = last_mileage_map.get(intervals.truck_id)
+        if not current_km:
+            continue
+        for cat in categories:
+            interval = getattr(intervals, f'{cat}_interval', None)
+            last_km = getattr(intervals, f'{cat}_last_km', None)
+            if not interval or not last_km:
+                continue
+            remaining = (last_km + interval) - current_km
+            if remaining <= threshold_km:
+                due += 1
+                break
+    return due
+
+
 def _is_belt_or_chain(product_name):
     """Визначає чи запчастина є ременем/роликом/ланцюгом за назвою."""
     name = product_name.lower()
@@ -108,7 +141,7 @@ from .models import (
     TruckMaintenanceIntervals, MaintenanceIntervalsTemplate, TemplateKitFilter,
     OrderStatusHistory,
 )
-from clients.models import Truck
+from clients.models import Client, Truck
 from inventory.models import UsedPart
 from .serializers import (
     ServiceOrderListSerializer,
@@ -380,52 +413,138 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
     def dashboard_stats(self, request):
         """Статистика для дашборду."""
         today = timezone.now().date()
+        now = timezone.now()
         start_of_month = today.replace(day=1)
+        start_of_prev_month = start_of_month - relativedelta(months=1)
         start_of_year = today.replace(month=1, day=1)
+        week_ago = today - datetime.timedelta(days=7)
+        stale_threshold = now - datetime.timedelta(weeks=1)
 
         qs = ServiceOrder.objects.filter(marked_for_deletion=False)
         closed_qs = qs.filter(status__in=['DONE', 'CLOSED'])
+        active_qs = qs.filter(status__in=['OPEN', 'IN_PROGRESS'])
 
-        # Виторг за поточний місяць і рік
         monthly_revenue = closed_qs.filter(
             created_at__date__gte=start_of_month
+        ).aggregate(total=Sum('total_cost'))['total'] or 0
+
+        prev_month_revenue = closed_qs.filter(
+            created_at__date__gte=start_of_prev_month,
+            created_at__date__lt=start_of_month,
         ).aggregate(total=Sum('total_cost'))['total'] or 0
 
         yearly_revenue = closed_qs.filter(
             created_at__date__gte=start_of_year
         ).aggregate(total=Sum('total_cost'))['total'] or 0
 
-        # Графік клієнтів за останні 12 місяців (унікальні клієнти з нарядами)
         clients_chart = []
+        revenue_trend = []
+        orders_trend_months = []
         ua_months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
                      'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру']
         for i in range(11, -1, -1):
             month_date = today.replace(day=1) - relativedelta(months=i)
             next_month = month_date + relativedelta(months=1)
-            client_count = qs.filter(
+            month_qs = qs.filter(
                 created_at__date__gte=month_date,
                 created_at__date__lt=next_month,
+            )
+            client_count = month_qs.filter(
                 client__isnull=False,
             ).values('client').distinct().count()
             clients_chart.append({
                 'name': ua_months[month_date.month - 1],
                 'clients': client_count,
             })
+            if i < 6:
+                month_revenue = closed_qs.filter(
+                    created_at__date__gte=month_date,
+                    created_at__date__lt=next_month,
+                ).aggregate(total=Sum('total_cost'))['total'] or 0
+                revenue_trend.append({
+                    'name': ua_months[month_date.month - 1],
+                    'value': float(month_revenue),
+                })
+                orders_trend_months.append({
+                    'name': ua_months[month_date.month - 1],
+                    'value': month_qs.count(),
+                })
+
+        # Sparkline daily new orders (7 days)
+        orders_trend_days = []
+        for i in range(6, -1, -1):
+            day = today - datetime.timedelta(days=i)
+            orders_trend_days.append({
+                'name': day.strftime('%d.%m'),
+                'value': qs.filter(created_at__date=day).count(),
+            })
 
         monthly_orders = qs.filter(
             created_at__date__gte=start_of_month
         ).count()
+        prev_monthly_orders = qs.filter(
+            created_at__date__gte=start_of_prev_month,
+            created_at__date__lt=start_of_month,
+        ).count()
+
+        active_orders_count = active_qs.count()
+
+        stale_orders_count = active_qs.annotate(
+            last_open=Max(
+                'status_history__changed_at',
+                filter=Q(status_history__to_status=ServiceOrder.StatusChoices.OPEN),
+            ),
+            last_ip=Max(
+                'status_history__changed_at',
+                filter=Q(status_history__to_status=ServiceOrder.StatusChoices.IN_PROGRESS),
+            ),
+        ).filter(
+            Q(
+                status=ServiceOrder.StatusChoices.IN_PROGRESS,
+                last_ip__lt=stale_threshold,
+            )
+            | Q(
+                status=ServiceOrder.StatusChoices.OPEN,
+                last_open__lt=stale_threshold,
+            )
+            | Q(
+                status=ServiceOrder.StatusChoices.OPEN,
+                last_open__isnull=True,
+                created_at__lt=stale_threshold,
+            )
+        ).count()
+
+        maintenance_due_count = _count_trucks_maintenance_due(threshold_km=1000)
+
+        clients_total = Client.objects.filter(marked_for_deletion=False).count()
+        clients_added_week = Client.objects.filter(
+            marked_for_deletion=False,
+            created_at__date__gte=week_ago,
+        ).count() if hasattr(Client, 'created_at') else 0
+
+        trucks_total = Truck.objects.filter(marked_for_deletion=False).count()
 
         stats = {
             'total_orders': qs.count(),
             'open_orders': qs.filter(status='OPEN').count(),
             'in_progress_orders': qs.filter(status='IN_PROGRESS').count(),
+            'active_orders': active_orders_count,
+            'stale_orders': stale_orders_count,
+            'maintenance_due': maintenance_due_count,
+            'clients_total': clients_total,
+            'clients_added_week': clients_added_week,
+            'trucks_total': trucks_total,
             'closed_orders': qs.filter(status='CLOSED').count(),
             'canceled_orders': qs.filter(status='CANCELED').count(),
             'monthly_orders': monthly_orders,
+            'prev_monthly_orders': prev_monthly_orders,
             'monthly_revenue': float(monthly_revenue),
+            'prev_monthly_revenue': float(prev_month_revenue),
             'yearly_revenue': float(yearly_revenue),
             'clients_chart': clients_chart,
+            'revenue_trend': revenue_trend,
+            'orders_trend_months': orders_trend_months,
+            'orders_trend_days': orders_trend_days,
         }
         return Response(stats)
 
