@@ -35,15 +35,26 @@ NON_ENGINE_SERVICE_TYPES = frozenset((
 ))
 
 
-def _count_trucks_maintenance_due(threshold_km=1000):
-    """Count trucks where any maintenance interval has <= threshold_km remaining
-    (based on last known mileage from most recent order).
+CATEGORY_LABELS = {
+    'engine_oil': 'Олива двигуна',
+    'gearbox_oil': 'Олива КПП',
+    'auto_gearbox_oil': 'Олива АКПП',
+    'rear_axle_oil': 'Олива заднього моста',
+    'belts': 'Ремені',
+    'chains': 'Ланцюги ГРМ',
+}
+
+
+def _list_trucks_maintenance_due(threshold_km=1000):
+    """Return trucks where any maintenance interval has <= threshold_km remaining.
+
+    Each entry: {truck_id, license_plate, model, remaining_km, category, category_label}
+    with the category whose remaining is smallest.
     """
     from .models import TruckMaintenanceIntervals, ServiceOrder as _SO
-    due = 0
-    intervals_qs = TruckMaintenanceIntervals.objects.select_related('truck').filter(
-        truck__marked_for_deletion=False,
-    )
+    intervals_qs = TruckMaintenanceIntervals.objects.select_related(
+        'truck', 'truck__base_model',
+    ).filter(truck__marked_for_deletion=False)
     categories = ['engine_oil', 'gearbox_oil', 'auto_gearbox_oil',
                   'rear_axle_oil', 'belts', 'chains']
     last_mileage_map = dict(
@@ -52,20 +63,40 @@ def _count_trucks_maintenance_due(threshold_km=1000):
             current_mileage__isnull=False,
         ).values('truck_id').annotate(m=Max('current_mileage')).values_list('truck_id', 'm')
     )
+    result = []
     for intervals in intervals_qs:
         current_km = last_mileage_map.get(intervals.truck_id)
         if not current_km:
             continue
+        best = None
         for cat in categories:
             interval = getattr(intervals, f'{cat}_interval', None)
             last_km = getattr(intervals, f'{cat}_last_km', None)
             if not interval or not last_km:
                 continue
             remaining = (last_km + interval) - current_km
-            if remaining <= threshold_km:
-                due += 1
-                break
-    return due
+            if remaining <= threshold_km and (best is None or remaining < best[1]):
+                best = (cat, remaining)
+        if best:
+            truck = intervals.truck
+            result.append({
+                'truck_id': truck.id,
+                'license_plate': truck.license_plate,
+                'model': (truck.base_model.name if truck.base_model else '') + (
+                    f' {truck.specific_model_name}' if truck.specific_model_name else ''
+                ),
+                'current_mileage': current_km,
+                'remaining_km': best[1],
+                'category': best[0],
+                'category_label': CATEGORY_LABELS.get(best[0], best[0]),
+            })
+    result.sort(key=lambda r: r['remaining_km'])
+    return result
+
+
+def _count_trucks_maintenance_due(threshold_km=1000):
+    """Count trucks where any maintenance interval has <= threshold_km remaining."""
+    return len(_list_trucks_maintenance_due(threshold_km=threshold_km))
 
 
 def _is_belt_or_chain(product_name):
@@ -234,6 +265,9 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(created_at__date=d)
             except ValueError:
                 pass
+
+        if str(self.request.query_params.get('active', '')).lower() == 'true':
+            queryset = queryset.filter(status__in=['OPEN', 'IN_PROGRESS'])
         return queryset
 
     def perform_create(self, serializer):
@@ -547,6 +581,18 @@ class ServiceOrderViewSet(viewsets.ModelViewSet):
             'orders_trend_days': orders_trend_days,
         }
         return Response(stats)
+
+    @action(detail=False, methods=['get'], url_path='maintenance-due-trucks')
+    def maintenance_due_trucks(self, request):
+        """Список авто, яким потрібне ТО (залишок <= порога).
+
+        Query params: threshold_km (default 1000).
+        """
+        try:
+            threshold = int(request.query_params.get('threshold_km', 1000))
+        except (TypeError, ValueError):
+            threshold = 1000
+        return Response(_list_trucks_maintenance_due(threshold_km=threshold))
 
     @action(detail=False, methods=['get'])
     def stale_in_progress(self, request):
